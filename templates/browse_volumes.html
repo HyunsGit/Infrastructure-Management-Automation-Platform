@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>볼륨용 VM명 및 ID 조회</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="static/css/menu.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+            background: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+            color: #f3f6fa;
+            min-height: 100vh;
+            background-size: 400% 400%;
+            animation: gradientBG 12s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+        .container {
+            background: rgba(27,32,46,0.96);
+            margin: 60px auto 80px auto;
+            max-width: 600px;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(33, 150, 243, 0.19);
+            padding: 36px 32px 48px 32px;
+            position: relative;
+            animation: fadeIn 0.7s;
+            transition: box-shadow 0.3s;
+            color: #f3f6fa;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(40px);}
+            to   { opacity: 1; transform: none;}
+        }
+        .container:hover {
+            box-shadow: 0 16px 40px rgba(33,150,243,0.23);
+        }
+        .form-group { margin-bottom: 22px; position: relative; }
+        label { display: block; margin-bottom: 7px; color: #bfc7d1; font-weight: 500; }
+        input[type="number"], input[type="text"] {
+            width: 100%; padding: 10px 12px; border: 1.3px solid #2b3142;
+            border-radius: 6px; background: #23263a; color: #f3f6fa;
+            font-size: 1rem; box-sizing: border-box;
+        }
+        input[type="number"]:focus, input[type="text"]:focus {
+            border: 1.5px solid #2196F3; outline: none; background: #20263a;
+            box-shadow: 0 0 0 2px #1976d2;
+        }
+        button[type="submit"] {
+            background: linear-gradient(90deg,#4CAF50,#2196F3 80%);
+            background-size: 400% 400%; color: white;
+            padding: 12px 28px; border: none; border-radius: 6px;
+            font-size: 1.1em; font-weight: bold; cursor: pointer;
+            margin-top: 10px; box-shadow: 0 2px 8px rgba(33,150,243,0.10);
+            transition: background 0.15s ease;
+        }
+        button[type="submit"]:hover {
+            background: linear-gradient(90deg,#2196F3,#4CAF50 80%);
+            box-shadow: 0 4px 16px rgba(76,175,80,0.19);
+        }
+        .custom-searchable-dropdown {
+            position: relative;
+            margin: 0 0 12px 0;
+        }
+        .search-wrapper { width: 100%; }
+        .project-search {
+            width: 100%; padding: 10px 12px; border: 1.3px solid #2b3142;
+            border-radius: 6px 6px 0 0; background: #23263a; color: #f3f6fa;
+            font-size: 1rem; border-bottom: none;
+        }
+        .project-search:focus {
+            border: 1.5px solid #2196F3; outline: none; background: #20263a;
+            box-shadow: 0 0 0 2px #1976d2; border-radius: 6px 6px 0 0;
+            border-bottom: 1.5px solid #2196F3;
+        }
+        .dropdown-list {
+            display: none;
+            position: absolute;
+            width: 100%; max-height: 200px; overflow-y: auto;
+            background: #23263a;
+            border: 1.5px solid #2196F3;
+            border-top: none; border-radius: 0 0 6px 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+            opacity: 0; transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s;
+            margin-top: -1px;
+        }
+        .dropdown-list.open {
+            display: block;
+            opacity: 1;
+            transform: none;
+        }
+        .dropdown-item {
+            padding: 10px 12px; cursor: pointer;
+            transition: background 0.1s; color: #f3f6fa;
+        }
+        .dropdown-item:hover, .dropdown-item.highlighted {
+            background: #2196F3; color: white;
+        }
+        .selected-display {
+            position: absolute;
+            top: 1px; right: 1px; bottom: 1px; left: 1px;
+            pointer-events: none; padding: 10px 12px;
+            opacity: 0.3; background: inherit;
+            border-radius: 6px; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; transition: opacity 0.1s;
+        }
+        .dropdown-icon {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            pointer-events: none; color: #bfc7d1; font-size: 0.9em; transition: color 0.2s;
+        }
+        .result pre {
+            max-height: 300px; overflow-y: auto; white-space: pre-wrap;
+            background: #222b38; padding: 10px; border-radius: 4px; margin: 0;
+        }
+        .result, .error { font-size: 1.04em; transition: box-shadow 0.2s; }
+        .result {
+            background: #26353e; border: 1.5px solid #3c5e6e; color: #c2f7e3;
+            max-height: 340px; overflow-y: auto; word-break: break-all;
+            margin-top: 34px;
+        }
+        .error {
+            background: #2b1c1c; border: 1px solid #c0392b; color: #ffb3b3;
+        }
+        /* Tooltip styling for Help Icon */
+        .help-tooltip {
+            position: relative;
+        }
+        .help-tooltip .tooltip-box {
+            display: none;
+            position: absolute;
+            left: 50%;
+            top: 110%;
+            transform: translateX(-50%);
+            background: #232946;
+            color: #fff;
+            white-space: nowrap;
+            padding: 7px 18px;
+            border-radius: 6px;
+            box-shadow: 0 4px 18px rgba(33,150,243,0.10);
+            font-size: 15px;
+            font-weight: 600;
+            z-index: 1500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s;
+        }
+        .help-tooltip:hover .tooltip-box,
+        .help-tooltip:focus .tooltip-box {
+            display: block;
+            opacity: 1;
+        }
+    
+        /* ── Light mode overrides ── */
+        body.light-mode {
+            background: #f0ebe3 !important;
+            animation: none !important;
+        }
+        body.light-mode .form-card,
+        body.light-mode .results-card { background: #faf6f0 !important; border-color: #d0c9c0 !important; }
+        body.light-mode label,
+        body.light-mode .section-title { color: #6b6258 !important; }
+        body.light-mode h2 { color: #1a1612 !important; }
+        body.light-mode input[type="text"],
+        body.light-mode input[type="search"],
+        body.light-mode input[type="number"],
+        body.light-mode select,
+        body.light-mode .project-search {
+            background: #faf6f0 !important;
+            color: #1a1612 !important;
+            border-color: #d0c9c0 !important;
+        }
+        body.light-mode input[type="number"]:focus,
+        body.light-mode .project-search:focus {
+            background: #faf6f0 !important;
+            border-color: #2196F3 !important;
+            box-shadow: 0 0 0 2px rgba(33,150,243,.25) !important;
+        }
+        body.light-mode .custom-searchable-dropdown,
+        body.light-mode .dropdown-list {
+            background: #faf6f0 !important;
+            border-color: #2196F3 !important;
+        }
+        body.light-mode .dropdown-item {
+            background: #faf6f0 !important;
+            color: #1a1612 !important;
+        }
+        body.light-mode .dropdown-item:hover,
+        body.light-mode .dropdown-item.highlighted {
+            background: #2196F3 !important;
+            color: #fff !important;
+        }
+        body.light-mode .selected-display { background: #faf6f0 !important; color: #1a1612 !important; }
+        body.light-mode .result {
+            background: #e8f5e9 !important;
+            border-color: #86efac !important;
+            color: #1a3a25 !important;
+        }
+        body.light-mode .result pre {
+            background: #d4edda !important;
+            color: #1a3a25 !important;
+        }
+        body.light-mode .result h6 { color: #1a3a25 !important; }
+        body.light-mode .result [style*="color: #a3b0c0"],
+        body.light-mode .result [style*="color:#a3b0c0"] { color: #4a6258 !important; }
+        body.light-mode .result [style*="border-top: 1px solid #3a495e"],
+        body.light-mode .result [style*="border-top:1px solid #3a495e"] { border-top-color: #86efac !important; }
+        body.light-mode .error {
+            background: #fef2f2 !important;
+            border-color: #fca5a5 !important;
+            color: #991b1b !important;
+        }
+        body.light-mode .help-tooltip .tooltip-box {
+            background: #1e2d42 !important;
+        }
+</style>
+</head>
+<body>
+    {% include 'top_menu.html' %}
+    <div class="container">
+        <h2 class="dashboard-title">볼륨명 및 ID 조회</h2>
+        <form method="POST" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="token">프로젝트명:</label>
+                <div class="custom-searchable-dropdown">
+                    <div class="search-wrapper">
+                        <input type="text" id="project-search" class="project-search" placeholder="" autocomplete="off">
+                    </div>
+                    <input type="hidden" id="token" name="token" class="searchable-dropdown-value" required>
+                    <div class="selected-display">프로젝트 선택</div>
+                    <div class="dropdown-list" role="listbox" aria-label="프로젝트 목록">
+                        {% for proj in projects %}
+                        <div class="dropdown-item" data-value="{{ proj }}" role="option" tabindex="-1">{{ proj }}</div>
+                        {% endfor %}
+                    </div>
+                    <span class="dropdown-icon" aria-hidden="true">▼</span>
+                </div>
+                <div style="color: #a3b0c0; font-size: 0.9em; margin-top: 4px;">
+                    <b style="color: #95c4e8;">직접 검색하거나 목록에서 선택하세요.</b>
+                </div>
+            </div>
+            <div style="height: 18px;"></div>
+            <div class="form-group">
+                <label for="num_items">조회 VM 수량:</label>
+                <input type="number" id="num_items" name="num_items" min="1" required>
+            </div>
+            <button type="submit">조회</button>
+        </form>
+        <div style="height: 32px;"></div>
+        {% if vm_names or vm_ids %}
+        <div class="result" aria-live="polite">
+            <h6 style="display:flex; align-items: center; margin-bottom: 8px;">
+                VM명 목록 (Project: {{ project }}):
+                <button type="button" onclick="copyToClipboard('vmNamesPre', this)" style="margin-left:8px; padding:6px 14px; border-radius:6px; background:#2196F3; color:white; border:none; cursor:pointer;">복사</button>
+            </h6>
+            <pre id="vmNamesPre">{{ vm_names | map('tojson') | join(', ') }}</pre>
+            <h6 style="display:flex; align-items: center; margin-bottom: 8px;">
+                VM ID 목록 (Project: {{ project }}):
+                <button type="button" onclick="copyToClipboard('vmIdsPre', this)" style="margin-left:8px; padding:6px 14px; border-radius:6px; background:#2196F3; color:white; border:none; cursor:pointer;">복사</button>
+            </h6>
+            <pre id="vmIdsPre">{{ vm_ids | map('tojson') | join(', ') }}</pre>
+            <div style="color: #a3b0c0; font-size: 0.95em; margin-top: 12px; border-top: 1px solid #3a495e; padding-top: 8px;">
+                <b>사용된 프로젝트 ID:</b> {{ project }}
+            </div>
+        </div>
+        {% endif %}
+        {% if error %}
+        <div class="error" role="alert">
+            <h3>Error:</h3>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- optional if not using charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/top_menu.js') }}"></script>
+    <script>
+        function copyToClipboard(elementId, btn) {
+            var text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(function() {
+                var originalText = btn.innerHTML;
+                btn.innerHTML = "복사됨!";
+                setTimeout(function() { btn.innerHTML = originalText; }, 1300);
+            }, function() { alert("복사에 실패했습니다."); });
+        }
+
+        function setupSearchableDropdown() {
+            const dropdown = document.querySelector('.custom-searchable-dropdown');
+            if (!dropdown) return;
+            const searchInput = dropdown.querySelector('.project-search');
+            const dropdownList = dropdown.querySelector('.dropdown-list');
+            const dropdownItems = dropdown.querySelectorAll('.dropdown-item');
+            const hiddenInput = dropdown.querySelector('.searchable-dropdown-value');
+            const selectedDisplay = dropdown.querySelector('.selected-display');
+            const dropdownIcon = dropdown.querySelector('.dropdown-icon');
+            const placeholderText = '프로젝트 선택';
+
+            let focusedItem = null;
+            let focusedIndex = -1;
+            let mouseOnDropdown = false;
+            let dropdownIsOpen = false;
+
+            dropdownList.style.display = 'none';
+            dropdownList.classList.remove('open');
+
+            function updatePlaceholder() {
+                if (searchInput.value) {
+                    selectedDisplay.textContent = '';
+                    selectedDisplay.style.opacity = '0';
+                } else if (hiddenInput.value) {
+                    selectedDisplay.textContent = hiddenInput.value;
+                    selectedDisplay.style.opacity = '1';
+                } else {
+                    selectedDisplay.textContent = placeholderText;
+                    selectedDisplay.style.opacity = '0.3';
+                }
+            }
+
+            function openDropdown() {
+                dropdownList.style.display = 'block';
+                setTimeout(() => {
+                    dropdownList.classList.add('open');
+                    dropdownIsOpen = true;
+                });
+            }
+            function closeDropdown() {
+                dropdownList.classList.remove('open');
+                dropdownIsOpen = false;
+                setTimeout(() => {
+                    dropdownList.style.display = 'none';
+                }, 200);
+            }
+            function resetItems() {
+                dropdownItems.forEach(item => {
+                    item.classList.remove('highlighted');
+                    item.style.display = 'block';
+                });
+                focusedItem = null;
+                focusedIndex = -1;
+            }
+            function filterItems() {
+                const value = searchInput.value.toLowerCase();
+                let anyVisible = false;
+                resetItems();
+                dropdownItems.forEach(item => {
+                    const txt = item.textContent.toLowerCase();
+                    if (txt.includes(value)) {
+                        item.style.display = 'block';
+                        anyVisible = true;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                if (anyVisible) openDropdown();
+                else closeDropdown();
+            }
+            function selectItem(item) {
+                hiddenInput.value = item.dataset.value;
+                searchInput.value = '';
+                selectedDisplay.textContent = item.dataset.value;
+                selectedDisplay.style.opacity = '1';
+                updatePlaceholder();
+                resetItems();
+                closeDropdown();
+            }
+            dropdownIcon.addEventListener('click', () => {
+                openDropdown();
+                searchInput.focus();
+                filterItems();
+            });
+            searchInput.addEventListener('focus', () => {
+                openDropdown();
+                filterItems();
+            });
+            searchInput.addEventListener('input', () => {
+                if (!searchInput.value) hiddenInput.value = '';
+                updatePlaceholder();
+                filterItems();
+            });
+            searchInput.addEventListener('keydown', function(e) {
+                const visibleItems = Array.from(dropdownItems).filter(item => item.style.display === 'block');
+                let idx = focusedIndex;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    idx = Math.min(idx + 1, visibleItems.length - 1);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    idx = Math.max(idx - 1, 0);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (visibleItems.length > 0 && idx >= 0) {
+                        selectItem(visibleItems[idx]);
+                    } else if (searchInput.value) {
+                        hiddenInput.value = searchInput.value;
+                        selectedDisplay.textContent = searchInput.value;
+                        selectedDisplay.style.opacity = '1';
+                        searchInput.value = '';
+                        closeDropdown();
+                        updatePlaceholder();
+                    }
+                    return;
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    searchInput.value = '';
+                    hiddenInput.value = '';
+                    closeDropdown();
+                    updatePlaceholder();
+                    return;
+                } else if (
+                    e.key === 'Backspace' &&
+                    !searchInput.value &&
+                    hiddenInput.value
+                ) {
+                    e.preventDefault();
+                    hiddenInput.value = '';
+                    selectedDisplay.textContent = placeholderText;
+                    selectedDisplay.style.opacity = '0.3';
+                    searchInput.value = '';
+                    setTimeout(() => { searchInput.focus(); }, 10);
+                    updatePlaceholder();
+                    openDropdown();
+                    filterItems();
+                    return;
+                } else {
+                    return;
+                }
+                if (focusedItem) focusedItem.classList.remove('highlighted');
+                if (idx >= 0 && idx < visibleItems.length) {
+                    focusedIndex = idx;
+                    focusedItem = visibleItems[idx];
+                    focusedItem.classList.add('highlighted');
+                    focusedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                } else {
+                    focusedItem = null;
+                    focusedIndex = -1;
+                }
+            });
+            dropdown.addEventListener('mouseenter', function() { mouseOnDropdown = true; });
+            dropdown.addEventListener('mouseleave', function() { mouseOnDropdown = false; });
+            searchInput.addEventListener('blur', function() {
+                setTimeout(function() {
+                    if (!mouseOnDropdown) closeDropdown();
+                }, 150);
+            });
+            dropdownItems.forEach(item => {
+                item.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    selectItem(item);
+                });
+            });
+            document.querySelector('form').addEventListener('submit', function() {
+                closeDropdown();
+            });
+            updatePlaceholder();
+            if (hiddenInput.value) {
+                selectedDisplay.textContent = hiddenInput.value;
+                selectedDisplay.style.opacity = '1';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', setupSearchableDropdown);
+    </script>
+</body>
+</html>

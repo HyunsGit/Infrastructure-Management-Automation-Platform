@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2단계 인증 — InfraPilot</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            font-family: 'Segoe UI', Arial, sans-serif; color: #f3f6fa;
+        }
+        .card {
+            background: rgba(27,32,46,0.97); border: 1px solid #2a3550;
+            border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .logo { font-size: 22px; font-weight: 700; color: #7dd3fc; margin-bottom: 6px; }
+        h2 { font-size: 17px; color: #c2d8f0; margin-bottom: 6px; }
+        .subtitle { font-size: 13px; color: #5a7a99; margin-bottom: 28px; line-height: 1.6; }
+        .icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+        .user-badge {
+            background: #0e1520; border: 1px solid #2a3550; border-radius: 6px;
+            padding: 6px 12px; font-size: 13px; color: #7dd3fc;
+            font-family: 'Courier New', monospace; text-align: center;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%; padding: 14px; background: #0e1520;
+            border: 1px solid #2a3550; border-radius: 8px; color: #f3f6fa;
+            font-size: 28px; letter-spacing: 0.4em; text-align: center;
+            outline: none; transition: border-color .2s;
+        }
+        input[type="text"]:focus { border-color: #2196F3; }
+        button {
+            width: 100%; padding: 13px; background: #2196F3; color: #fff;
+            border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
+            cursor: pointer; margin-top: 14px; transition: background .15s;
+        }
+        button:hover { background: #1976D2; }
+        .back { text-align: center; margin-top: 16px; font-size: 13px; color: #5a7a99; }
+        .back a { color: #7dd3fc; text-decoration: none; }
+        .back a:hover { text-decoration: underline; }
+        .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+        .alert-danger  { background: #1a0000; border: 1px solid #7f1d1d; color: #f87171; }
+        .alert-success { background: #0a2e1e; border: 1px solid #165c3a; color: #4caf93; }
+        .hint { font-size: 11px; color: #5a7a99; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">InfraPilot</div>
+    <div class="icon">🔐</div>
+    <h2>2단계 인증</h2>
+    <p class="subtitle">Google Authenticator 앱의 6자리 코드를 입력하세요.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="user-badge">{{ username }}</div>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="code" placeholder="000000" maxlength="6"
+               autocomplete="one-time-code" inputmode="numeric" autofocus>
+        <button type="submit">확인</button>
+    </form>
+
+    <p class="hint">코드는 30초마다 갱신됩니다</p>
+
+    <div class="back">
+        <a href="{{ url_for('login') }}">← 로그인으로 돌아가기</a>
+    </div>
+</div>
+</body>
+</html>

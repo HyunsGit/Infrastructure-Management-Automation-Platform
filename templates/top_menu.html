@@ -1,0 +1,1747 @@
+<!-- light-mode.css -->
+<link rel="stylesheet" href="/static/css/light-mode.css">
+<!-- top_menu.html -->
+<style>
+nav, nav * { box-sizing: border-box; }
+
+/* ── Main nav bar ────────────────────────────────────────── */
+nav {
+    position: fixed; top: 0; left: 0; right: 0; height: 48px;
+    z-index: 2000;
+    background: #161e2d;
+    border-bottom: 1px solid #0d1117;
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 0;
+    font-family: 'Amazon Ember', 'Helvetica Neue', Arial, sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+body { padding-top: 48px; }
+
+/* ── Logo / Brand ───────────────────────────────────────── */
+.nav-brand {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px 0 0; margin-right: 4px;
+    border-right: 1px solid #2a3550;
+    flex-shrink: 0; text-decoration: none;
+}
+.nav-brand-text {
+    font-size: 14px; font-weight: 700;
+    color: #e8eaf0; letter-spacing: -0.01em;
+}
+.nav-brand-text span { color: #f90; }
+
+/* ── Services button ─────────────────────────────────────── */
+/* ── Services button ─────────────────────────────────────── */
+.nav-services-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 14px; height: 48px;
+    font-size: 13px; font-weight: 500; color: #d1dae8;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.12s, color 0.12s;
+    border-right: 1px solid #2a3550;
+    user-select: none; flex-shrink: 0;
+}
+.nav-services-btn:hover,
+.nav-services-btn.open { background: #1f2d42; color: #fff; }
+.nav-services-btn svg { flex-shrink: 0; }
+
+/* ── Breadcrumb / current service ───────────────────────── */
+.nav-current {
+    padding: 0 14px; font-size: 13px; color: #d1dae8;
+    border-right: 1px solid #2a3550;
+    white-space: nowrap; flex-shrink: 0;
+    display: flex; align-items: center; height: 48px;
+    cursor: default;
+}
+
+/* ── Search bar ─────────────────────────────────────────── */
+.nav-search {
+    flex: 1; max-width: 480px; margin: 0 12px;
+    position: relative; display: flex; align-items: center;
+}
+.nav-search input {
+    width: 100%; height: 32px;
+    background: #0d1117; border: 1px solid #2a3550;
+    border-radius: 4px; padding: 0 12px 0 36px;
+    font-size: 13px; color: #e2e8f0;
+    outline: none; font-family: inherit;
+    transition: border-color 0.15s, background 0.15s;
+}
+.nav-search input:focus { border-color: #0073bb; background: #0a0e16; }
+.nav-search input::placeholder { color: #5a7a99; }
+.nav-search svg {
+    position: absolute; left: 10px;
+    color: #5a7a99; pointer-events: none;
+}
+
+/* ── Right items ─────────────────────────────────────────── */
+.nav-right-items {
+    margin-left: auto; display: flex; align-items: center;
+}
+.nav-right-item {
+    display: flex; align-items: center; gap: 5px;
+    padding: 0 12px; height: 48px;
+    font-size: 13px; color: #d1dae8;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.12s, color 0.12s;
+    border-left: 1px solid #2a3550;
+    user-select: none; position: relative;
+    text-decoration: none;
+}
+.nav-right-item:hover { background: #1f2d42; color: #fff; }
+.nav-right-item .caret {
+    font-size: 9px; opacity: 0.6;
+    transition: transform 0.2s; margin-top: 1px;
+}
+.nav-right-item.open .caret { transform: rotate(180deg); }
+
+/* ── Account dropdown ───────────────────────────────────── */
+.account-dd {
+    position: absolute; top: calc(100% + 1px); right: 0;
+    width: 220px;
+    background: #1a2332;
+    border: 1px solid #2a3550;
+    border-top: 2px solid #0073bb;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    display: none; z-index: 2100;
+}
+.account-dd.open { display: block; animation: ddIn 0.15s ease; }
+@keyframes ddIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+.account-dd-header {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid #2a3550;
+}
+.account-dd-name { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+.account-dd-role {
+    display: inline-block; margin-top: 4px;
+    font-size: 11px; padding: 2px 8px; border-radius: 2px; font-weight: 600;
+}
+.role-admin    { background: #0d47a1; color: #90caf9; }
+.role-operator { background: #1b5e20; color: #a5d6a7; }
+.role-viewer   { background: #2a2a3a; color: #9e9eb8; }
+.account-dd-last { font-size: 11px; color: #4a5568; margin-top: 3px; font-family: monospace; }
+.account-dd-sep { height: 1px; background: #2a3550; margin: 4px 0; }
+.account-dd-item {
+    display: block; padding: 9px 16px;
+    font-size: 13px; color: #d1dae8;
+    text-decoration: none; cursor: pointer;
+    transition: background 0.1s;
+}
+.account-dd-item:hover { background: #223048; color: #fff; }
+.account-dd-item.danger { color: #f87171; }
+.account-dd-item.danger:hover { background: #2d1515; }
+
+/* ═══════════════════════════════════════════════════════════
+   SERVICES MEGA PANEL
+═══════════════════════════════════════════════════════════ */
+.services-panel {
+    display: none;
+    position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+    z-index: 1900;
+}
+.services-panel.open {
+    display: flex;
+    animation: panelOpen .22s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.services-panel.closing {
+    display: flex;
+    animation: panelClose .18s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+@keyframes panelOpen {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes panelClose {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Backdrop */
+.services-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.6);
+}
+body.light-mode .services-backdrop {
+    background: rgba(0,0,0,0.6);
+}
+
+/* Panel card — no separate animation, panel itself animates */
+.services-card {
+    position: relative; z-index: 1;
+    width: 820px; max-width: 95vw;
+    background: #0f1923;
+    border-right: 1px solid #1e2d42;
+    box-shadow: 4px 0 40px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+
+/* Panel header */
+.services-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #1e2d42;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+}
+.services-header h3 { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+.services-close {
+    background: none; border: none; color: #7a8fa6;
+    cursor: pointer; font-size: 20px; line-height: 1;
+    transition: color 0.12s; padding: 2px 6px;
+}
+.services-close:hover { color: #fff; }
+
+/* Panel body: 3-column layout */
+.services-body {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    flex: 1; overflow: hidden;
+}
+
+/* Left: category list */
+.services-categories {
+    background: #0a1018;
+    border-right: 1px solid #1e2d42;
+    overflow-y: auto; padding: 8px 0;
+}
+.services-cat-item {
+    padding: 9px 16px;
+    font-size: 13px; color: #8a9ab8;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: background 0.1s, color 0.1s;
+    border-left: 2px solid transparent;
+    user-select: none;
+}
+.services-cat-item:hover { background: #111c2a; color: #d1dae8; }
+.services-cat-item.active {
+    background: #111c2a; color: #fff;
+    border-left-color: #0073bb; font-weight: 600;
+}
+.services-cat-item svg { flex-shrink: 0; opacity: 0.7; }
+.services-cat-item.active svg { opacity: 1; }
+
+/* Right: services grid */
+.services-content {
+    overflow-y: auto; padding: 16px 20px;
+}
+.services-section { display: none; }
+.services-section.active { display: block; }
+.services-section-title {
+    font-size: 11px; font-weight: 700; color: #5a7a99;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 8px; margin-top: 4px;
+}
+.services-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 4px; margin-bottom: 20px;
+}
+.service-link {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 4px;
+    font-size: 13px; color: #a8bbd0;
+    text-decoration: none; cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    user-select: none; position: relative;
+}
+.service-link:hover { background: #162130; color: #fff; }
+.service-link.restricted { opacity: 0.4; }
+.service-link .svc-icon {
+    width: 28px; height: 28px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+    background: #1a2d42;
+}
+.service-link .svc-name { font-size: 13px; }
+.service-link .svc-desc { font-size: 11px; color: #5a7a99; }
+.svc-fav {
+    margin-left: auto; flex-shrink: 0;
+    background: transparent; border: none; cursor: pointer;
+    font-size: 13px; padding: 2px 4px; border-radius: 3px; line-height: 1;
+    opacity: 0.4; transition: opacity .15s; color: #fbbf24;
+}
+.svc-fav:hover { opacity: 1; background: rgba(255,255,255,.1); }
+.svc-fav.active { opacity: 1; }
+
+/* Footer */
+.services-footer {
+    padding: 10px 20px; border-top: 1px solid #1e2d42;
+    font-size: 11px; color: #5a7a99; flex-shrink: 0;
+}
+
+/* ── Mobile ─────────────────────────────────────────────── */
+.burger { display: none; }
+@media (max-width: 768px) {
+    .nav-search, .nav-current { display: none; }
+    .burger {
+        display: flex; flex-direction: column; gap: 4px;
+        background: none; border: none; cursor: pointer;
+        padding: 4px; margin-left: auto;
+    }
+    .burger div { width: 20px; height: 2px; background: #d1dae8; border-radius: 2px; }
+}
+
+/* ── Notification bell ───────────────────────────────────── */
+.nav-bell {
+    position: relative; display: flex; align-items: center;
+    padding: 0 12px; height: 48px; cursor: pointer;
+    border-left: 1px solid #2a3550;
+    transition: background .12s;
+}
+.nav-bell:hover, .nav-bell.open { background: #1f2d42; }
+.nav-bell svg { color: #a0b4c8; transition: color .12s; }
+.nav-bell.open svg, .nav-bell:hover svg { color: #e2e8f0; }
+.nav-bell-badge {
+    position: absolute; top: 8px; right: 6px;
+    background: #ef4444; color: #fff;
+    font-size: 10px; font-weight: 700;
+    min-width: 16px; height: 16px;
+    border-radius: 8px; padding: 0 4px;
+    display: none; align-items: center; justify-content: center;
+}
+.notif-panel {
+    position: fixed; right: 0; top: 48px;
+    width: 380px; max-height: calc(100vh - 48px);
+    background: #0d1521;
+    border-left: 1px solid #1e2d42;
+    border-bottom: 1px solid #1e2d42;
+    box-shadow: -4px 0 32px rgba(0,0,0,.6);
+    display: none; flex-direction: column;
+    z-index: 2050;
+    animation: notifSlide .2s cubic-bezier(.4,0,.2,1);
+}
+.notif-panel.open { display: flex; }
+@keyframes notifSlide {
+    from { opacity:0; transform: translateX(20px); }
+    to   { opacity:1; transform: none; }
+}
+.notif-panel-header {
+    padding: 14px 16px 0;
+    border-bottom: 1px solid #1e2d42;
+    flex-shrink: 0;
+}
+.notif-panel-title {
+    font-size: 15px; font-weight: 700; color: #e2e8f0;
+    margin-bottom: 12px;
+}
+.notif-tabs {
+    display: flex; gap: 0;
+}
+.notif-tab {
+    padding: 8px 14px; font-size: 12px; font-weight: 500;
+    color: #7a8fa6; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color .12s, border-color .12s;
+    white-space: nowrap;
+}
+.notif-tab:hover { color: #e2e8f0; }
+.notif-tab.active { color: #7dd3fc; border-bottom-color: #2196F3; font-weight: 600; }
+        .notif-tab-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: #ef4444; color: #fff; border-radius: 10px;
+            font-size: 10px; font-weight: 700; min-width: 16px; height: 16px;
+            padding: 0 4px; margin-left: 4px; vertical-align: middle;
+        }
+.notif-panel-body { overflow-y: auto; flex: 1; max-height: 360px; }
+.notif-item {
+    padding: 12px 16px; border-bottom: 1px solid #1a2535;
+    cursor: pointer; transition: background .1s;
+}
+.notif-item:hover { background: rgba(33,150,243,.07); }
+.notif-item:last-child { border-bottom: none; }
+.notif-item-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+.notif-item-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.notif-item-title { font-size: 13px; font-weight: 600; color: #e2e8f0; line-height: 1.4; }
+.notif-item-meta { font-size: 11px; color: #4a5568; margin-top: 3px; font-family: monospace; }
+.notif-item-detail { font-size: 12px; color: #7a8fa6; margin-top: 3px; line-height: 1.4; word-break: keep-all; }
+.notif-badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 700;
+    flex-shrink: 0; margin-top: 2px; white-space: nowrap;
+}
+.nb-ansible  { background: rgba(33,150,243,.15); color: #7dd3fc; }
+.nb-puppet   { background: rgba(139,92,246,.15); color: #c4b5fd; }
+.nb-pw       { background: rgba(245,158,11,.15); color: #fbbf24; }
+.nb-iam      { background: rgba(16,185,129,.15); color: #34d399; }
+.nb-vm       { background: rgba(239,68,68,.15);  color: #f87171; }
+.nb-notice   { background: rgba(99,102,241,.15); color: #a5b4fc; }
+.nb-장애     { background: rgba(239,68,68,.15);  color: #f87171; }
+.nb-점검     { background: rgba(245,158,11,.15); color: #fbbf24; }
+.nb-안내     { background: rgba(33,150,243,.15); color: #7dd3fc; }
+.nb-보안     { background: rgba(139,92,246,.15); color: #c4b5fd; }
+.notif-empty { padding: 32px 16px; text-align: center; color: #4a5568; font-size: 13px; }
+.notif-view-all {
+    padding: 10px 16px; border-top: 1px solid #1e2d42;
+    text-align: center; font-size: 12px;
+    color: #2196F3; cursor: pointer; flex-shrink: 0;
+    transition: background .1s;
+}
+.notif-view-all:hover { background: rgba(33,150,243,.06); }
+
+/* ── Dark/Light mode toggle ──────────────────────────────── */
+body.light-mode {
+    --bg-nav: #f0f4f8;
+    --bg-nav-border: #d0d9e4;
+    --bg-nav-hover: #e2e8f0;
+    --text-nav: #2d3748;
+    --text-nav-dim: #4a5568;
+}
+body.light-mode nav {
+    background: #ffffff !important;
+    border-bottom-color: #e2e8f0 !important;
+}
+body.light-mode .nav-right-item,
+body.light-mode .nav-services-btn,
+body.light-mode .nav-current,
+body.light-mode .nav-brand-text { color: #1e293b !important; }
+body.light-mode .nav-right-item:hover,
+body.light-mode .nav-services-btn:hover,
+body.light-mode .nav-services-btn.open { background: #f1f5f9 !important; }
+body.light-mode .nav-bell svg { color: #64748b !important; }
+body.light-mode .nav-bell:hover svg,
+body.light-mode .nav-bell.open svg { color: #1e293b !important; }
+body.light-mode .nav-bell { border-color: #e2e8f0 !important; }
+body.light-mode .nav-bell:hover,
+body.light-mode .nav-bell.open { background: #f1f5f9 !important; }
+body.light-mode .nav-brand { color: #1e293b !important; }
+body.light-mode .nav-divider { background: #e2e8f0 !important; }
+
+/* Settings panel */
+body.light-mode .settings-panel {
+    background: #ffffff !important;
+    border-color: #d0d9e4 !important;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.15) !important;
+}
+body.light-mode .settings-panel-header {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    border-color: #e2e8f0 !important;
+}
+body.light-mode .settings-panel-header button { color: #94a3b8 !important; }
+body.light-mode .settings-panel-body { background: #ffffff !important; }
+body.light-mode .settings-section-label { color: #1e293b !important; }
+body.light-mode .settings-section-sub   { color: #64748b !important; }
+body.light-mode .settings-radio         { color: #4a5568 !important; }
+body.light-mode .settings-radio:hover   { color: #1e293b !important; }
+body.light-mode .settings-divider       { background: #e2e8f0 !important; }
+
+/* Notification panel */
+body.light-mode .notif-panel {
+    background: #ffffff !important;
+    border-color: #d0d9e4 !important;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.15) !important;
+}
+body.light-mode .notif-panel-header { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+body.light-mode .notif-panel-title  { color: #1e293b !important; }
+body.light-mode .notif-panel-body   { background: #ffffff !important; }
+body.light-mode .notif-tab          { color: #64748b !important; }
+body.light-mode .notif-tab:hover    { color: #1e293b !important; }
+body.light-mode .notif-tab.active   { color: #2563eb !important; border-bottom-color: #2563eb !important; }
+body.light-mode .notif-item         { border-color: #f1f5f9 !important; }
+body.light-mode .notif-item:hover   { background: #f8fafc !important; }
+body.light-mode .notif-item-title   { color: #1e293b !important; }
+body.light-mode .notif-item-detail,
+body.light-mode .notif-item-meta    { color: #64748b !important; }
+body.light-mode .notif-empty        { color: #94a3b8 !important; }
+body.light-mode .notif-view-all     { color: #2563eb !important; border-top-color: #e2e8f0 !important; background: #f8fafc !important; }
+body.light-mode .notif-view-all:hover { background: #eff6ff !important; }
+
+/* Account dropdown */
+body.light-mode .account-dd         { background: #ffffff !important; border-color: #d0d9e4 !important; }
+body.light-mode .account-dd-header  { border-color: #e2e8f0 !important; }
+body.light-mode .account-dd-name    { color: #1e293b !important; }
+body.light-mode .account-dd-last    { color: #94a3b8 !important; }
+body.light-mode .account-dd-item    { color: #4a5568 !important; }
+body.light-mode .account-dd-item:hover { background: #f1f5f9 !important; color: #1e293b !important; }
+body.light-mode .account-dd-sep     { background: #e2e8f0 !important; }
+
+/* Services panel */
+body.light-mode .services-card      { background: #ffffff !important; border-color: #d0d9e4 !important; }
+body.light-mode .services-categories{ background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+body.light-mode .services-cat-item  { color: #4a5568 !important; }
+body.light-mode .services-cat-item:hover,
+body.light-mode .services-cat-item.active { background: #e2e8f0 !important; color: #1e293b !important; }
+body.light-mode .service-link       { color: #4a5568 !important; }
+body.light-mode .service-link:hover { background: #e2e8f0 !important; color: #1e293b !important; }
+body.light-mode .svc-icon           { background: #e2e8f0 !important; }
+body.light-mode .svc-name           { color: #1e293b !important; }
+body.light-mode .svc-desc           { color: #64748b !important; }
+body.light-mode .services-section-title { color: #64748b !important; border-color: #e2e8f0 !important; }
+body.light-mode #searchInput { background: #ffffff !important; border-color: #cbd5e0 !important; color: #1e293b !important; }
+body.light-mode #searchInput::placeholder { color: #94a3b8 !important; }
+
+.theme-toggle-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 48px;
+    cursor: pointer; border: none;
+    background: none;
+    border-left: 1px solid #2a3550;
+    color: #a0b4c8;
+    transition: background .12s, color .12s;
+    font-size: 18px; padding: 0;
+}
+.theme-toggle-btn:hover { background: #1f2d42; color: #e2e8f0; }
+body.light-mode .theme-toggle-btn { border-left-color: #d0d9e4; color: #4a5568; }
+body.light-mode .theme-toggle-btn:hover { background: #e2e8f0; color: #1a202c; }
+
+/* ── Settings panel ──────────────────────────────────────── */
+.settings-panel {
+    position: fixed; right: 0; top: 48px;
+    width: 300px;
+    background: #0d1521;
+    border-left: 1px solid #1e2d42;
+    border-bottom: 1px solid #1e2d42;
+    box-shadow: -4px 0 32px rgba(0,0,0,.6);
+    display: none; flex-direction: column;
+    z-index: 2050;
+    animation: notifSlide .2s cubic-bezier(.4,0,.2,1);
+}
+.settings-panel.open { display: flex; }
+.settings-panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #1e2d42;
+    font-size: 15px; font-weight: 700; color: #e2e8f0;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.settings-panel-body { padding: 20px; overflow-y: auto; flex: 1; }
+.settings-section { margin-bottom: 24px; }
+.settings-section-label {
+    font-size: 13px; font-weight: 600; color: #e2e8f0;
+    margin-bottom: 4px;
+}
+.settings-section-sub {
+    font-size: 12px; color: #5a7a99; margin-bottom: 12px;
+}
+.settings-radio-group { display: flex; flex-direction: column; gap: 10px; }
+.settings-radio {
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; font-size: 14px; color: #a0b4c8;
+    user-select: none;
+}
+.settings-radio input[type="radio"] {
+    width: 16px; height: 16px; accent-color: #2196F3;
+    cursor: pointer; flex-shrink: 0;
+}
+.settings-radio:hover { color: #e2e8f0; }
+.settings-divider { height: 1px; background: #1e2d42; margin: 16px 0; }
+.settings-link {
+    font-size: 13px; color: #2196F3; text-decoration: none;
+    cursor: pointer;
+}
+.settings-link:hover { text-decoration: underline; }
+.nav-settings-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 48px;
+    cursor: pointer; border: none;
+    background: none;
+    border-left: 1px solid #2a3550;
+    color: #a0b4c8;
+    transition: background .12s, color .12s;
+    font-size: 18px; padding: 0;
+}
+.nav-settings-btn:hover,
+.nav-settings-btn.open { background: #1f2d42; color: #e2e8f0; }
+body.light-mode .nav-settings-btn { border-left-color: #e2e8f0 !important; color: #64748b !important; background: none !important; }
+body.light-mode .nav-settings-btn:hover,
+body.light-mode .nav-settings-btn.open { background: #f1f5f9 !important; color: #1e293b !important; }
+body.light-mode .settings-panel {
+    background: #ffffff !important;
+    border-color: #d0d9e4 !important;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.12) !important;
+}
+body.light-mode .settings-panel-header { color: #1e293b !important; background: #f8fafc !important; border-color: #e2e8f0 !important; }
+body.light-mode .settings-panel-header button { color: #94a3b8 !important; }
+body.light-mode .settings-panel-body { background: #ffffff !important; }
+body.light-mode .settings-section-label { color: #1e293b !important; }
+body.light-mode .settings-section-sub { color: #64748b !important; }
+body.light-mode .settings-radio { color: #4a5568 !important; }
+body.light-mode .settings-radio:hover { color: #1a202c !important; }
+body.light-mode .settings-divider { background: #d0d9e4 !important; }
+</style>
+
+<nav>
+    <!-- Brand -->
+    <a href="{{ url_for('home') }}" class="nav-brand">
+        <span class="nav-brand-text">Infra<span>Pilot</span></span>
+    </a>
+
+    <!-- Services button -->
+    <div class="nav-services-btn" id="servicesBtnToggle" onclick="toggleServicesPanel()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6" height="6" rx="1"/>
+            <rect x="9" y="1" width="6" height="6" rx="1"/>
+            <rect x="1" y="9" width="6" height="6" rx="1"/>
+            <rect x="9" y="9" width="6" height="6" rx="1"/>
+        </svg>
+        Services
+    </div>
+
+    <!-- Current page breadcrumb -->
+    <span class="nav-current" id="navCurrentLabel">
+        InfraPilot Console
+    </span>
+
+    <!-- Search -->
+    <div class="nav-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="navSearchInput" placeholder="서비스 검색" autocomplete="off"
+               oninput="searchServices(this.value)" onfocus="openServicesPanel()"
+               onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Right items -->
+    <div class="nav-right-items">
+        {% if current_user.is_authenticated %}
+        {% set db_me = get_db_user(current_user.get_id()) %}
+
+        <!-- Bell (left of account) -->
+        <button class="nav-settings-btn" id="settingsBtn" onclick="toggleSettings(event)" title="설정">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </button>
+
+        {% if db_me and db_me.role in ('admin', 'operator') %}
+        <div class="nav-bell" id="bellWrap" onclick="window.toggleBell(event)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="nav-bell-badge" id="bellBadge"></span>
+        </div>
+        {% endif %}
+
+        <!-- Account -->
+        <div class="nav-right-item" id="accountTrigger" onclick="toggleAccountDd(event)">
+            {{ current_user.get_id() }}
+            <span class="caret">▾</span>
+            <div class="account-dd" id="accountDd">
+                <div class="account-dd-header">
+                    <div class="account-dd-name">{{ current_user.get_id() }}</div>
+                    {% if db_me %}
+                    <span class="account-dd-role role-{{ db_me.role or 'operator' }}">
+                        {% if db_me.role == 'admin' %}Admin
+                        {% elif db_me.role == 'operator' %}Operator
+                        {% else %}Viewer{% endif %}
+                    </span>
+                    {% if db_me.last_login %}
+                    <div class="account-dd-last">{{ db_me.last_login.strftime('%m/%d %H:%M') }} KST</div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                <div class="account-dd-sep"></div>
+
+                <a href="#" class="account-dd-item danger"
+                   onclick="document.getElementById('logout-form').submit();return false;">Sign Out</a>
+            </div>
+        </div>
+
+        <form id="logout-form" action="{{ url_for('logout') }}" method="post" style="display:none">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        </form>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="nav-right-item">Sign In</a>
+        {% endif %}
+    </div>
+
+    <button class="burger" id="burgerBtn" aria-label="메뉴 열기">
+        <div></div><div></div><div></div>
+    </button>
+</nav>
+
+<!-- Notification Panel (outside nav, fixed position) -->
+{% if current_user.is_authenticated %}
+{% set db_me_np = get_db_user(current_user.get_id()) %}
+{% if db_me_np and db_me_np.role in ('admin', 'operator') %}
+<div class="notif-panel" id="notifPanel">
+    <div class="notif-panel-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="notif-panel-title" style="margin:0">Notifications</div>
+            <button onclick="window.markAllRead()" style="background:none;border:none;color:#2196F3;font-size:12px;cursor:pointer;padding:0;white-space:nowrap">모두 읽음</button>
+        </div>
+        <div class="notif-tabs">
+            <div class="notif-tab active" data-tab="recent" onclick="window.switchNotifTab('recent',this)">
+                최근 <span class="notif-tab-badge" id="badge-recent" style="display:none"></span>
+            </div>
+            <div class="notif-tab" data-tab="user" onclick="window.switchNotifTab('user',this)">
+                사용자 알림 <span class="notif-tab-badge" id="badge-user" style="display:none"></span>
+            </div>
+            <div class="notif-tab" data-tab="kc" onclick="window.switchNotifTab('kc',this)">
+                KC 공지 <span class="notif-tab-badge" id="badge-kc" style="display:none"></span>
+            </div>
+        </div>
+    </div>
+    <div class="notif-panel-body" id="notifBody">
+        <div class="notif-empty">로딩 중...</div>
+    </div>
+    <div class="notif-view-all" onclick="window.location.href='/history'">전체 기록 보기 →</div>
+</div>
+{% endif %}
+{% endif %}
+
+
+<!-- Settings Panel -->
+<div class="settings-panel" id="settingsPanel">
+    <div class="settings-panel-header">
+        <span>Current user settings</span>
+        <button onclick="toggleSettings(event)"
+            style="background:none;border:none;cursor:pointer;color:#7a8fa6;font-size:20px;line-height:1;padding:0">×</button>
+    </div>
+    <div class="settings-panel-body">
+        <div class="settings-section">
+            <div class="settings-section-label">Visual mode <span style="font-size:11px;color:#5a7a99;font-weight:400">— beta</span></div>
+            <div class="settings-section-sub"><span>Choose your preferred interface theme.</span></div>
+            <div class="settings-radio-group">
+                <label class="settings-radio">
+                    <input type="radio" name="themeMode" value="system" onchange="onThemeRadio('system')">
+                    Browser default
+                </label>
+                <label class="settings-radio">
+                    <input type="radio" name="themeMode" value="light" onchange="onThemeRadio('light')">
+                    Light
+                </label>
+                <label class="settings-radio" >
+                    <input type="radio" name="themeMode" value="dark" onchange="onThemeRadio('dark')">
+                    Dark
+                </label>
+            </div>
+        </div>
+        <div class="settings-divider"></div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SERVICES MEGA PANEL
+═══════════════════════════════════════════════════════════ -->
+<div class="services-panel" id="servicesPanel">
+    <div class="services-backdrop" onclick="closeServicesPanel()"></div>
+    <div class="services-card">
+        <div class="services-header">
+            <h3>Services</h3>
+            <button class="services-close" onclick="closeServicesPanel()">×</button>
+        </div>
+        <div class="services-body">
+            <!-- Left: categories -->
+            <div class="services-categories" id="servicesCats">
+                <div class="services-cat-item active" data-cat="all" onclick="switchCat('all', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    All
+                </div>
+                <div class="services-cat-item" data-cat="compute" onclick="switchCat('compute', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Compute
+                </div>
+                <div class="services-cat-item" data-cat="network" onclick="switchCat('network', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+                    Network
+                </div>
+                <div class="services-cat-item" data-cat="mgmt" onclick="switchCat('mgmt', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Management Tools
+                </div>
+                {% if current_user.is_authenticated %}
+                {% set db_me2 = get_db_user(current_user.get_id()) %}
+                {% if db_me2 and db_me2.role in ('admin', 'operator') %}
+                <div class="services-cat-item" data-cat="iam" onclick="switchCat('iam', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    IAM
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Right: service links -->
+            <div class="services-content" id="servicesContent">
+
+                <!-- SEARCH RESULTS (hidden, shown when user types in search bar) -->
+                <div class="services-section" id="cat-search">
+                    <div id="searchResults"></div>
+                </div>
+
+                <!-- ALL -->
+                <div class="services-section active" id="cat-all">
+                    <div class="services-section-title">Compute — Instances</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('vm_create_page') }}" class="service-link" data-name="vm create 생성" data-require-role="admin,operator">
+                            <div class="svc-icon">🖥️</div>
+                            <div><div class="svc-name">Create VM</div><div class="svc-desc">VM 인스턴스 생성</div></div>
+                        </a>
+                        <a href="{{ url_for('vm_search') }}" class="service-link" data-name="cmdb browse vm 자산">
+                            <div class="svc-icon">📋</div>
+                            <div><div class="svc-name">Browse VM</div><div class="svc-desc">VM 목록 조회</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Compute — Volumes</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('get_server_info') }}" class="service-link" data-name="list volume 볼륨 목록" data-require-role="admin,operator">
+                            <div class="svc-icon">📦</div>
+                            <div><div class="svc-name">List Volume</div><div class="svc-desc">볼륨 목록 조회</div></div>
+                        </a>
+                        <a href="{{ url_for('create_volumes') }}" class="service-link" data-name="create volume 볼륨 생성" data-require-role="admin,operator">
+                            <div class="svc-icon">➕</div>
+                            <div><div class="svc-name">Create Volume</div><div class="svc-desc">볼륨 생성</div></div>
+                        </a>
+                        <a href="{{ url_for('attach_volumes') }}" class="service-link" data-name="mount volume attach 마운트" data-require-role="admin,operator">
+                            <div class="svc-icon">🔗</div>
+                            <div><div class="svc-name">Mount Volume</div><div class="svc-desc">볼륨 마운트</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Network — VPC</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('check_connectivity') }}" class="service-link" data-name="vpc 상태 connectivity 네트워크">
+                            <div class="svc-icon">🌐</div>
+                            <div><div class="svc-name">VPC 상태</div><div class="svc-desc">네트워크 연결 확인</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Management Tools — Overview</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('summary') }}" class="service-link" data-name="infra-code 트리맵 infracode treemap">
+                            <div class="svc-icon">📊</div>
+                            <div><div class="svc-name">인프라 코드 트리맵</div><div class="svc-desc">VM 인프라 코드 현황</div></div>
+                        </a>
+                        <a href="{{ url_for('summary') }}#dashboard" class="service-link" data-name="infrastructure status 인프라 현황">
+                            <div class="svc-icon">🏗</div>
+                            <div><div class="svc-name">인프라 현황</div><div class="svc-desc">인프라 상태 대시보드</div></div>
+                        </a>
+                        <a href="{{ url_for('summary') }}#changelog" class="service-link" data-name="업데이트 로그 changelog">
+                            <div class="svc-icon">📝</div>
+                            <div><div class="svc-name">업데이트 로그</div><div class="svc-desc">릴리스 노트</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Management Tools — Provisioning</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('provisioning') }}" class="service-link" data-name="vm provisioning ansible puppet" data-require-role="admin,operator">
+                            <div class="svc-icon">⚙️</div>
+                            <div><div class="svc-name">VM Provisioning</div><div class="svc-desc">Ansible / Puppet</div></div>
+                        </a>
+                        <a href="https://puppetboard.example.in" class="service-link" target="_blank" rel="noopener" data-name="puppetboard puppet" data-require-role="admin,operator">
+                            <div class="svc-icon">🎭</div>
+                            <div><div class="svc-name">Puppetboard</div><div class="svc-desc">Puppet 대시보드</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Management Tools — Metrics</div>
+                    <div class="services-grid">
+                        <a href="https://grafana.example.in/d/xfpJB9FGzipatam/vm-instance" class="service-link" target="_blank" rel="noopener" data-name="grafana metrics dashboard" data-require-role="admin,operator">
+                            <div class="svc-icon">📈</div>
+                            <div><div class="svc-name">Grafana</div><div class="svc-desc">Metrics dashboard</div></div>
+                        </a>
+                        <a href="https://prometheus.example.in" class="service-link" target="_blank" rel="noopener" data-name="prometheus monitoring alerts" data-require-role="admin,operator">
+                            <div class="svc-icon">🔥</div>
+                            <div><div class="svc-name">Prometheus</div><div class="svc-desc">Metrics & alerts</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Management Tools — Analytics</div>
+                    <div class="services-grid">
+                        <a href="https://kibana.example.in" class="service-link" target="_blank" rel="noopener" data-name="kibana log analytics" data-require-role="admin,operator">
+                            <div class="svc-icon">🔍</div>
+                            <div><div class="svc-name">Kibana</div><div class="svc-desc">Log analytics</div></div>
+                        </a>
+                    </div>
+                    {% if current_user.is_authenticated %}
+                    {% set db_me_all = get_db_user(current_user.get_id()) %}
+                    {% if db_me_all and db_me_all.role in ('admin', 'operator') %}
+                    <div class="services-section-title">IAM</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('iam') }}" class="service-link" data-name="iam users 사용자 관리">
+                            <div class="svc-icon">👤</div>
+                            <div><div class="svc-name">Users</div><div class="svc-desc">사용자 관리</div></div>
+                        </a>
+                        <a href="{{ url_for('iam') }}#scode" class="service-link" data-name="scode s-code 규칙 관리">
+                            <div class="svc-icon">🏷</div>
+                            <div><div class="svc-name">인프라 코드</div><div class="svc-desc">VM 인프라 코드 규칙 설정</div></div>
+                        </a>
+                        <a href="{{ url_for('iam') }}#projects" class="service-link" data-name="project 프로젝트 관리">
+                            <div class="svc-icon">☁️</div>
+                            <div><div class="svc-name">Projects</div><div class="svc-desc">프로젝트 토큰 관리</div></div>
+                        </a>
+                        <a href="{{ url_for('history') }}" class="service-link" data-name="cloudtrail history logs 감사">
+                            <div class="svc-icon">📜</div>
+                            <div><div class="svc-name">Logs</div><div class="svc-desc">CloudTrail 감사 로그</div></div>
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                <!-- COMPUTE -->
+                <div class="services-section" id="cat-compute">
+                    <div class="services-section-title">Instances</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('vm_create_page') }}" class="service-link" data-name="vm create 생성" data-require-role="admin,operator">
+                            <div class="svc-icon">🖥️</div>
+                            <div><div class="svc-name">Create VM</div><div class="svc-desc">VM 인스턴스 생성</div></div>
+                        </a>
+                        <a href="{{ url_for('vm_search') }}" class="service-link" data-name="cmdb browse vm 자산">
+                            <div class="svc-icon">📋</div>
+                            <div><div class="svc-name">Browse VM</div><div class="svc-desc">VM 목록 조회</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Volumes</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('get_server_info') }}" class="service-link" data-name="list volume" data-require-role="admin,operator">
+                            <div class="svc-icon">📦</div>
+                            <div><div class="svc-name">List Volume</div><div class="svc-desc">볼륨 목록 조회</div></div>
+                        </a>
+                        <a href="{{ url_for('create_volumes') }}" class="service-link" data-name="create volume" data-require-role="admin,operator">
+                            <div class="svc-icon">➕</div>
+                            <div><div class="svc-name">Create Volume</div><div class="svc-desc">볼륨 생성</div></div>
+                        </a>
+                        <a href="{{ url_for('attach_volumes') }}" class="service-link" data-name="mount volume attach" data-require-role="admin,operator">
+                            <div class="svc-icon">🔗</div>
+                            <div><div class="svc-name">Mount Volume</div><div class="svc-desc">볼륨 마운트</div></div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- NETWORK -->
+                <div class="services-section" id="cat-network">
+                    <div class="services-section-title">VPC</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('check_connectivity') }}" class="service-link" data-name="vpc 상태 connectivity">
+                            <div class="svc-icon">🌐</div>
+                            <div><div class="svc-name">VPC 상태</div><div class="svc-desc">네트워크 연결 확인</div></div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- MANAGEMENT TOOLS -->
+                <div class="services-section" id="cat-mgmt">
+                    <div class="services-section-title">Overview</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('summary') }}" class="service-link" data-name="infra-code 트리맵 infracode treemap">
+                            <div class="svc-icon">📊</div>
+                            <div><div class="svc-name">인프라 코드 트리맵</div><div class="svc-desc">VM 인프라 코드 현황</div></div>
+                        </a>
+                        <a href="{{ url_for('summary') }}#dashboard" class="service-link" data-name="인프라 현황 dashboard">
+                            <div class="svc-icon">🏗</div>
+                            <div><div class="svc-name">인프라 현황</div><div class="svc-desc">인프라 상태 대시보드</div></div>
+                        </a>
+                        <a href="{{ url_for('summary') }}#changelog" class="service-link" data-name="업데이트 로그 changelog">
+                            <div class="svc-icon">📝</div>
+                            <div><div class="svc-name">업데이트 로그</div><div class="svc-desc">릴리스 노트</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Provisioning</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('provisioning') }}" class="service-link" data-name="vm provisioning ansible puppet" data-require-role="admin,operator">
+                            <div class="svc-icon">⚙️</div>
+                            <div><div class="svc-name">VM Provisioning</div><div class="svc-desc">Ansible / Puppet</div></div>
+                        </a>
+                        <a href="https://puppetboard.example.in" class="service-link" target="_blank" rel="noopener" data-name="puppetboard puppet" data-require-role="admin,operator">
+                            <div class="svc-icon">🎭</div>
+                            <div><div class="svc-name">Puppetboard</div><div class="svc-desc">Puppet 대시보드</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Metrics</div>
+                    <div class="services-grid">
+                        <a href="https://grafana.example.in/d/xfpJB9FGzipatam/vm-instance" class="service-link" target="_blank" rel="noopener" data-name="grafana metrics" data-require-role="admin,operator">
+                            <div class="svc-icon">📈</div>
+                            <div><div class="svc-name">Grafana</div><div class="svc-desc">Metrics dashboard</div></div>
+                        </a>
+                        <a href="https://prometheus.example.in" class="service-link" target="_blank" rel="noopener" data-name="prometheus" data-require-role="admin,operator">
+                            <div class="svc-icon">🔥</div>
+                            <div><div class="svc-name">Prometheus</div><div class="svc-desc">Metrics & alerts</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Analytics</div>
+                    <div class="services-grid">
+                        <a href="https://kibana.example.in" class="service-link" target="_blank" rel="noopener" data-name="kibana" data-require-role="admin,operator">
+                            <div class="svc-icon">🔍</div>
+                            <div><div class="svc-name">Kibana</div><div class="svc-desc">Log analytics</div></div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- IAM -->
+                <div class="services-section" id="cat-iam">
+                    <div class="services-section-title">User Managed</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('iam') }}" class="service-link" data-name="iam users 사용자">
+                            <div class="svc-icon">👤</div>
+                            <div><div class="svc-name">Users</div><div class="svc-desc">사용자 관리</div></div>
+                        </a>
+                        <a href="{{ url_for('iam') }}#scode" class="service-link" data-name="scode s-code">
+                            <div class="svc-icon">🏷</div>
+                            <div><div class="svc-name">인프라 코드</div><div class="svc-desc">VM 인프라 코드 규칙 설정</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">Cloud Managed</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('iam') }}#projects" class="service-link" data-name="project 프로젝트">
+                            <div class="svc-icon">☁️</div>
+                            <div><div class="svc-name">Projects</div><div class="svc-desc">프로젝트 토큰 관리</div></div>
+                        </a>
+                    </div>
+                    <div class="services-section-title">CloudTrail</div>
+                    <div class="services-grid">
+                        <a href="{{ url_for('history') }}" class="service-link" data-name="history logs cloudtrail 감사">
+                            <div class="svc-icon">📜</div>
+                            <div><div class="svc-name">Logs</div><div class="svc-desc">CloudTrail 감사 로그</div></div>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+        </div>
+    </div>
+</div>
+
+<aside id="sidebarMenu" style="display:none"></aside>
+<div id="overlay" style="display:none"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ── Services panel ────────────────────────────────────
+    const panel = document.getElementById('servicesPanel');
+    const btn   = document.getElementById('servicesBtnToggle');
+
+    // Close panel when clicking outside the services card (handles light mode where backdrop is hidden)
+    panel.addEventListener('click', function(e) {
+        if (!e.target.closest('.services-card')) closeServicesPanel();
+    });
+
+    // ── Hover trigger (Apple-style) ──────────────────────────
+    let _hoverTimeout = null;
+    const _servicesNavArea = document.getElementById('servicesBtnToggle');
+    const _servicesCard    = document.querySelector('.services-card');
+
+    const _clearClose = () => clearTimeout(_hoverTimeout);
+    const _scheduleClose = () => {
+        _hoverTimeout = setTimeout(() => {
+            if (panel.classList.contains('open')) closeServicesPanel();
+        }, 300);
+    };
+
+    // Open on hover over nav button
+    if (_servicesNavArea) {
+        _servicesNavArea.addEventListener('mouseenter', () => {
+            _clearClose();
+            if (!panel.classList.contains('open')) openServicesPanel();
+        });
+        _servicesNavArea.addEventListener('mouseleave', _scheduleClose);
+    }
+
+    // Keep open while hovering the card, close when leaving it
+    if (_servicesCard) {
+        _servicesCard.addEventListener('mouseenter', _clearClose);
+        _servicesCard.addEventListener('mouseleave', _scheduleClose);
+    }
+
+    // Click on backdrop also closes
+    panel.addEventListener('click', function(e) {
+        if (!e.target.closest('.services-card')) closeServicesPanel();
+    });
+
+    window.toggleServicesPanel = function() {
+        if (panel.classList.contains('open')) {
+            closeServicesPanel();
+        } else {
+            openServicesPanel();
+            document.getElementById('navSearchInput').focus();
+        }
+    };
+    window.openServicesPanel  = function() {
+        panel.classList.add('open');
+        btn.classList.add('open');
+    };
+    window.closeServicesPanel = function() {
+        if (!panel.classList.contains('open')) return;
+        panel.classList.add('closing');
+        panel.classList.remove('open');
+        setTimeout(() => {
+            panel.classList.remove('closing');
+            btn.classList.remove('open');
+            document.getElementById('navSearchInput').value = '';
+            const allBtn = document.querySelector('.services-cat-item[data-cat="all"]');
+            if (allBtn) switchCat('all', allBtn);
+        }, 180);
+    };
+
+    // ── IAM hash link interceptor ─────────────────────────────
+    document.addEventListener('click', e => {
+        const link = e.target.closest('a[href*="/iam#"]');
+        if (!link) return;
+        const hash = link.href.split('#')[1];
+        if (!hash) return;
+        const onIam = window.location.pathname.endsWith('/iam') ||
+                      window.location.pathname.endsWith('/iam/');
+        if (onIam) {
+            e.preventDefault();
+            closeServicesPanel();
+            if (typeof switchTab === 'function') switchTab(hash);
+        }
+        // If not on IAM page, let normal navigation happen
+    });
+
+    window.switchCat = function(cat, el) {
+        document.querySelectorAll('.services-cat-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.services-section').forEach(s => s.classList.remove('active'));
+        el.classList.add('active');
+        const sec = document.getElementById('cat-' + cat);
+        if (sec) sec.classList.add('active');
+    };
+
+    // ── Search ────────────────────────────────────────────
+    window.searchServices = function(q) {
+        if (!q.trim()) {
+            const first = document.querySelector('.services-cat-item');
+            if (first) switchCat(first.dataset.cat, first);
+            return;
+        }
+        q = q.toLowerCase();
+        document.querySelectorAll('.services-cat-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.services-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('cat-search').classList.add('active');
+
+        const results = document.getElementById('searchResults');
+        results.innerHTML = '';
+
+        // Only search original sections, exclude #cat-search and #cat-all to avoid duplicates
+        const seen = new Set();
+        document.querySelectorAll('.services-section:not(#cat-search):not(#cat-all)').forEach(section => {
+            const links = section.querySelectorAll('.service-link[data-name]');
+            let sectionHits = [];
+            links.forEach(link => {
+                const name = (link.dataset.name || '').toLowerCase();
+                const text = (link.querySelector('.svc-name')?.textContent || '').toLowerCase();
+                const desc = (link.querySelector('.svc-desc')?.textContent || '').toLowerCase();
+                const key  = link.href + text;
+                if ((name.includes(q) || text.includes(q) || desc.includes(q)) && !seen.has(key)) {
+                    seen.add(key);
+                    sectionHits.push(link);
+                }
+            });
+            if (sectionHits.length) {
+                // Find the nearest section title above this group of links
+                const titles = section.querySelectorAll('.services-section-title');
+                // Group hits by their preceding section title
+                const groups = new Map();
+                sectionHits.forEach(link => {
+                    let title = 'Services';
+                    titles.forEach(t => {
+                        if (t.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                            title = t.textContent.trim();
+                        }
+                    });
+                    if (!groups.has(title)) groups.set(title, []);
+                    groups.get(title).push(link);
+                });
+                groups.forEach((groupLinks, title) => {
+                    const header = document.createElement('div');
+                    header.className = 'services-section-title';
+                    header.textContent = title;
+                    results.appendChild(header);
+                    const grid = document.createElement('div');
+                    grid.className = 'services-grid';
+                    groupLinks.forEach(l => grid.appendChild(l.cloneNode(true)));
+                    results.appendChild(grid);
+                });
+            }
+        });
+        if (!results.children.length) {
+            results.innerHTML = '<div style="color:#5a7a99;font-size:13px;padding:8px">검색 결과 없음</div>';
+        }
+    };
+
+    // ── Account dropdown ──────────────────────────────────
+    window.toggleAccountDd = function(e) {
+        e.stopPropagation();
+        const dd   = document.getElementById('accountDd');
+        const trig = document.getElementById('accountTrigger');
+        const open = dd.classList.toggle('open');
+        trig.classList.toggle('open', open);
+        if (open) {
+            // Close bell and settings
+            document.getElementById('notifPanel')?.classList.remove('open');
+            document.getElementById('bellWrap')?.classList.remove('open');
+            document.getElementById('settingsPanel')?.classList.remove('open');
+            document.getElementById('settingsBtn')?.classList.remove('open');
+            clearInterval(notifPollTimer);
+        }
+    };
+    document.addEventListener('click', (e) => {
+        const trig     = document.getElementById('accountTrigger');
+        const dd       = document.getElementById('accountDd');
+        const notifP   = document.getElementById('notifPanel');
+        const bellW    = document.getElementById('bellWrap');
+        const settingsP= document.getElementById('settingsPanel');
+        const settingsB= document.getElementById('settingsBtn');
+        if (trig && dd && !trig.contains(e.target)) {
+            dd.classList.remove('open');
+            trig.classList.remove('open');
+        }
+        if (notifP && bellW && !bellW.contains(e.target) && !notifP.contains(e.target)) {
+            notifP.classList.remove('open');
+            bellW.classList.remove('open');
+            clearInterval(notifPollTimer);
+        }
+        if (settingsP && settingsB && !settingsB.contains(e.target) && !settingsP.contains(e.target)) {
+            settingsP.classList.remove('open');
+            settingsB.classList.remove('open');
+        }
+    });
+
+
+
+
+    // ── Settings panel ────────────────────────────────────
+    window.toggleSettings = function(e) {
+        e.stopPropagation();
+        const panel = document.getElementById('settingsPanel');
+        const btn   = document.getElementById('settingsBtn');
+        // Close notif panel if open
+        document.getElementById('notifPanel')?.classList.remove('open');
+        document.getElementById('bellWrap')?.classList.remove('open');
+        document.getElementById('accountDd')?.classList.remove('open');
+        document.getElementById('accountTrigger')?.classList.remove('open');
+        const isOpen = panel.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+        if (isOpen) syncThemeRadios();
+    }
+    window.syncThemeRadios = function() {
+        const saved = localStorage.getItem('infrapilot_theme') || 'dark';
+        const val   = saved === 'light' ? 'light' : saved === 'system' ? 'system' : 'dark';
+        const radio = document.querySelector(`input[name="themeMode"][value="${val}"]`);
+        if (radio) radio.checked = true;
+    }
+    window.onThemeRadio = function(val) {
+        if (val === 'system') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            applyTheme(prefersDark ? 'dark' : 'light');
+        } else {
+            applyTheme(val);
+        }
+        localStorage.setItem('infrapilot_theme', val);
+    }
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById('settingsPanel');
+        const btn   = document.getElementById('settingsBtn');
+        if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+            panel.classList.remove('open');
+            btn.classList.remove('open');
+        }
+    });
+
+    // ── Theme toggle ──────────────────────────────────────
+    function applyTheme(mode) {
+        const icon = document.getElementById('themeIcon');
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+            if (icon) icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        } else {
+            document.body.classList.remove('light-mode');
+            if (icon) icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+    }
+    function toggleTheme() {
+        const isLight = document.body.classList.contains('light-mode');
+        const newMode = isLight ? 'dark' : 'light';
+        localStorage.setItem('infrapilot_theme', newMode);
+        applyTheme(newMode);
+        // If panel is open, update backdrop color immediately for new mode
+        const backdrop = document.querySelector('.services-backdrop');
+        if (backdrop) {
+            backdrop.style.background = 'rgba(0,0,0,0.6)';
+        }
+    }
+    // Apply saved theme on load
+    applyTheme(localStorage.getItem('infrapilot_theme') || 'dark');
+
+    // ── Notification bell ─────────────────────────────────
+    let notifCurrentTab  = 'recent';
+    let notifPollTimer   = null;
+    let kcNoticesCache   = null;
+    let userEventsCache  = null;
+
+    const NOTIF_ICONS = {
+        ANSIBLE: '⚙', PUPPET: '🎭', TOKEN_REFRESH: '🔑',
+        IAM: '👤', VM: '🖥', VPC: '🌐',
+        장애: '🚨', 점검: '🔧', 안내: '📢', 보안: '🔒', DEFAULT: '📋'
+    };
+    const NOTIF_BADGE = {
+        ANSIBLE: 'nb-ansible', PUPPET: 'nb-puppet', TOKEN_REFRESH: 'nb-token',
+        IAM: 'nb-iam', VM: 'nb-vm', VPC: 'nb-vpc',
+        장애: 'nb-장애', 점검: 'nb-점검', 안내: 'nb-안내', 보안: 'nb-보안'
+    };
+
+    // Track service-link clicks for the home page "recently visited"
+    // Also close the services panel on every link click (handles same-page hash links)
+    document.querySelectorAll('.service-link').forEach(link => {
+        link.addEventListener('click', () => {
+            closeServicesPanel();
+            const url = link.getAttribute('href');
+            if (!url || url.startsWith('http')) return;  // skip external links
+            const name = link.querySelector('.svc-name')?.textContent.trim() || '';
+            const key  = url.replace(/[^a-z0-9]/gi, '_').replace(/^_+|_+$/g, '');
+            // Find nearest preceding section title (not just the first one in the section)
+            let category = '';
+            let el = link.previousElementSibling || link.parentElement;
+            while (el) {
+                if (el.classList?.contains('services-section-title')) { category = el.textContent.trim(); break; }
+                if (el.classList?.contains('services-grid'))           { el = el.previousElementSibling; continue; }
+                el = el.previousElementSibling || (el.parentElement?.classList?.contains('services-section') ? null : el.parentElement);
+            }
+            fetch('/api/activity/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json',
+                           'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                body: JSON.stringify({ page_key: key, page_label: name, page_url: url, page_category: category })
+            }).catch(() => {});
+        });
+    });
+
+    // ── 즐겨찾기 ─────────────────────────────────────────
+    let _favKeys = new Set();
+
+    async function _loadFavKeys() {
+        try {
+            const data = await fetch('/api/favorites').then(r => r.json());
+            _favKeys = new Set(data.map(f => f.page_key));
+            _updateFavButtons();
+        } catch(e) {}
+    }
+
+    function _updateFavButtons() {
+        document.querySelectorAll('.svc-fav').forEach(btn => {
+            const key = btn.dataset.key;
+            const isFav = _favKeys.has(key);
+            btn.textContent = isFav ? '⭐' : '☆';
+            btn.title       = isFav ? '즐겨찾기 제거' : '즐겨찾기 추가';
+            btn.classList.toggle('active', isFav);
+        });
+    }
+
+    function _initFavButtons() {
+        document.querySelectorAll('.service-link[data-name]').forEach(link => {
+            const url   = link.getAttribute('href');
+            if (!url) return;
+            const name  = link.querySelector('.svc-name')?.textContent.trim() || '';
+            const isExt = url.startsWith('http');
+            const key   = url.replace(/[^a-z0-9]/gi, '_').replace(/^_+|_+$/g, '');
+            // avoid adding duplicate buttons
+            if (link.querySelector('.svc-fav')) return;
+            const btn   = document.createElement('button');
+            btn.className    = 'svc-fav';
+            btn.dataset.key  = key;
+            btn.textContent  = _favKeys.has(key) ? '⭐' : '☆';
+            btn.title        = _favKeys.has(key) ? '즐겨찾기 제거' : '즐겨찾기 추가';
+            if (_favKeys.has(key)) btn.classList.add('active');
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const isFav = _favKeys.has(key);
+                if (isFav) {
+                    await fetch('/api/favorites/' + encodeURIComponent(key), {
+                        method: 'DELETE',
+                        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' }
+                    });
+                    _favKeys.delete(key);
+                } else {
+                    // find category
+                    let catEl = link.previousElementSibling;
+                    while (catEl && !catEl.classList?.contains('services-section-title')) {
+                        catEl = catEl.previousElementSibling;
+                    }
+                    const category = catEl?.textContent.trim() || '';
+                    const desc     = link.querySelector('.svc-desc')?.textContent.trim() || '';
+                    await fetch('/api/favorites', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json',
+                                   'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                        body: JSON.stringify({ page_key: key, page_label: name, page_url: url, page_category: category, page_desc: desc })
+                    });
+                    _favKeys.add(key);
+                }
+                _updateFavButtons();
+                // Refresh home page favorites card if it exists
+                if (typeof window.loadFavs === 'function') window.loadFavs();
+            });
+            link.appendChild(btn);
+        });
+    }
+
+    // Load favorites when services panel opens
+    const _origOpen = window.openServicesPanel;
+    window.openServicesPanel = function() {
+        _origOpen();
+        _loadFavKeys().then(_initFavButtons);
+    };
+    // Also init on page load in case panel is already seeded
+    _loadFavKeys();
+
+    window.toggleBell = function(e) {
+        e.stopPropagation();
+        const panel = document.getElementById('notifPanel');
+        const wrap  = document.getElementById('bellWrap');
+        if (!panel) return;
+        const isOpen = panel.classList.toggle('open');
+        wrap.classList.toggle('open', isOpen);
+        if (isOpen) {
+            // Close account dropdown and settings if open
+            document.getElementById('accountDd')?.classList.remove('open');
+            document.getElementById('accountTrigger')?.classList.remove('open');
+            document.getElementById('settingsPanel')?.classList.remove('open');
+            document.getElementById('settingsBtn')?.classList.remove('open');
+            loadNotifTab(notifCurrentTab);
+        }
+    };
+
+
+    window.switchNotifTab = function(tab, el) {
+        notifCurrentTab = tab;
+        document.querySelectorAll('.notif-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        loadNotifTab(tab);
+    }
+
+    async function loadNotifTab(tab) {
+        const body = document.getElementById('notifBody');
+        if (!body) return;
+        if (tab === 'recent') await loadRecentTab(body, tab);
+        else if (tab === 'user') await loadUserTab(body, tab);
+        else await loadKcTab(body, tab);
+    }
+
+    async function loadRecentTab(body, forTab) {
+        body.innerHTML = '<div class="notif-empty"><div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></div>로딩 중...</div>';
+        try {
+            const [pwResp, histResp, kcData] = await Promise.all([
+                fetch('/api/notifications').then(r => r.json()),
+                fetch('/api/history?limit=20').then(r => r.json()).then(d => d.events || d).catch(() => []),
+                fetchKcNotices()
+            ]);
+
+            const items = [];
+
+            // PW expiry — same grouped format as 사용자 알림
+            for (const n of (pwResp.notifications || [])) {
+                if (n.type === 'pw_expiry_group') {
+                    items.push({
+                        icon: '🔑', badge: 'nb-점검',
+                        badgeText: `PW 만료 — ${n.count}개 VM`,
+                        title: n.title,
+                        detail: n.detail,
+                        time: n.checked_at,
+                        url: '/home',
+                        is_read: n.is_read,
+                    });
+                } else if (n.type === 'iam_pending') {
+                    items.push({
+                        icon: '👤', badge: 'nb-iam', badgeText: 'IAM',
+                        title: n.title, detail: n.detail,
+                        time: n.checked_at, url: '/iam#pending',
+                        is_read: n.is_read,
+                    });
+                }
+            }
+
+            // Recent history — filter out individual PW 만료 VM events (covered by grouped item above)
+            for (const e of (histResp || []).filter(e => !(e.event_type === 'VM' && (e.title || '').includes('PW 만료'))).slice(0, 5)) {
+                items.push({
+                    icon: NOTIF_ICONS[e.event_type] || NOTIF_ICONS.DEFAULT,
+                    badge: NOTIF_BADGE[e.event_type] || 'nb-notice',
+                    badgeText: e.event_type,
+                    title: e.title, detail: e.detail || '',
+                    time: e.created_at, url: '/history',
+                });
+            }
+
+            // KC notices
+            for (const n of (kcData || []).slice(0, 3)) {
+                items.push({
+                    icon: NOTIF_ICONS[n.type] || NOTIF_ICONS.안내,
+                    badge: NOTIF_BADGE[n.type] || 'nb-안내',
+                    badgeText: n.type || '안내',
+                    title: n.title, detail: '',
+                    time: n.date, url: n.url,
+                    external: true, isNew: n.is_new,
+                });
+            }
+
+            renderNotifItems(body, items.slice(0, 6));
+        } catch(e) {
+        if (forTab !== notifCurrentTab) return;
+        body.innerHTML = '<div class="notif-empty">로드 실패</div>';
+        }
+    }
+
+    async function loadUserTab(body, forTab) {
+        body.innerHTML = '<div class="notif-empty"><div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></div>로딩 중...</div>';
+        try {
+            const data = await fetch('/api/notifications').then(r => r.json());
+            if (forTab !== notifCurrentTab) return;
+            const items = (data.notifications || []).map(n => {
+                if (n.type === 'pw_expiry_group') {
+                    const count    = n.count || 0;
+                    const badgeCls = count > 0 ? 'nb-점검' : 'nb-안내';
+                    return {
+                        icon:      '🔑',
+                        badge:     badgeCls,
+                        badgeText: `PW 만료 — ${count}개 VM`,
+                        title:     n.title,
+                        detail:    n.detail,
+                        time:      n.checked_at,
+                        url:       '/home',
+                        is_read:   n.is_read,
+                    };
+                }
+                return {
+                    icon:      '👤',
+                    badge:     'nb-안내',
+                    badgeText: n.type || '알림',
+                    title:     n.title,
+                    detail:    n.detail || '',
+                    time:      n.checked_at,
+                    url:       '/iam',
+                    is_read:   n.is_read,
+                };
+            });
+            if (forTab !== notifCurrentTab) return;
+            renderNotifItems(body, items);
+        } catch(e) {
+            if (forTab !== notifCurrentTab) return;
+            body.innerHTML = '<div class="notif-empty">로드 실패</div>';
+        }
+    }
+
+    async function loadKcTab(body, forTab) {
+        body.innerHTML = '<div class="notif-empty">KC 공지 로딩 중...</div>';
+        // Mark KC notices as seen — only fires when the KC tab is actually opened
+        markKcNoticesSeen();
+        const notices = await fetchKcNotices();
+        if (!notices || notices.length === 0) {
+        if (forTab !== notifCurrentTab) return;
+        body.innerHTML = '<div class="notif-empty">공지사항이 없습니다.</div>';
+            return;
+        }
+        const items = notices.map(n => ({
+            icon: '',
+            badge: NOTIF_BADGE[n.type] || 'nb-안내',
+            badgeText: n.type || '안내',
+            title: n.title,
+            detail: n.status || '',
+            time: n.date,
+            url: n.url,
+            isNew: n.is_new,
+            external: true
+        }));
+        renderNotifItems(body, items);
+    }
+
+    async function fetchKcNotices() {
+        if (kcNoticesCache && (Date.now() - kcNoticesCache.ts) < 5 * 60 * 1000) {
+            return kcNoticesCache.data;
+        }
+        try {
+            const data = await fetch('/api/notifications/kc_notices').then(r => r.json());
+            kcNoticesCache = { data: data.notices || [], ts: Date.now() };
+            return kcNoticesCache.data;
+        } catch(e) {
+            console.warn('KC notices fetch failed:', e);
+            return [];
+        }
+    }
+
+    function parseKcNotices(html) {
+        const notices = [];
+        const seen = new Set();
+        // Parse anchor tags pointing to notice detail pages
+        const linkRe = /href="(https:\/\/kakaocloud\.com\/more\/notices\/(\d+))"/g;
+        // Get surrounding text context
+        const parser = new DOMParser();
+        const doc    = parser.parseFromString(html, 'text/html');
+        const links  = doc.querySelectorAll('a[href*="/more/notices/"]');
+        links.forEach(a => {
+            const href = a.href || a.getAttribute('href');
+            const m    = href.match(/\/more\/notices\/(\d+)$/);
+            if (!m || seen.has(m[1])) return;
+            seen.add(m[1]);
+            const title = a.textContent.trim();
+            if (!title || title.length < 5) return;
+            // Look for date and type in parent context
+            const parent = a.closest('li, div, article') || a.parentElement;
+            const ctx    = parent?.textContent || '';
+            const dateM  = ctx.match(/(\d{4}\.\d{2}\.\d{2})/);
+            const typeM  = ctx.match(/(안내|점검|장애|보안)/);
+            const isNew  = ctx.includes('New');
+            notices.push({
+                id:     parseInt(m[1]),
+                title:  title.replace(/\s+/g, ' ').trim(),
+                url:    `https://your-cloud.example.com/more/notices/${m[1]}`,
+                date:   dateM ? dateM[1] : '',
+                type:   typeM ? typeM[1] : '안내',
+                status: ctx.includes('완료') ? '완료' : '',
+                is_new: isNew
+            });
+        });
+        notices.sort((a, b) => b.id - a.id);
+        return notices.slice(0, 20);
+    }
+
+    function renderNotifItems(body, items) {
+        if (!items || items.length === 0) {
+            body.innerHTML = '<div class="notif-empty">알림이 없습니다 ✓</div>';
+            return;
+        }
+        body.innerHTML = items.map(item => `
+            <div class="notif-item" style="${item.is_read === false ? 'border-left:3px solid #2196F3;background:rgba(33,150,243,0.05)' : ''}"
+                onclick="${item.external || (item.url && item.url.startsWith('http'))
+                    ? `window.open('${item.url}', '_blank'); event.stopPropagation();`
+                    : `window.location.href='${item.url}'`}">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                    ${item.icon ? `<span class="notif-item-icon">${item.icon}</span>` : ''}
+                    <span class="notif-badge ${item.badge}">${item.isNew ? '🆕 ' : ''}${item.badgeText}</span>
+                    <span style="margin-left:auto;font-size:11px;color:#4a5568;white-space:nowrap;flex-shrink:0">${item.time || ''}</span>
+                    ${item.is_read === false ? '<span style="width:7px;height:7px;border-radius:50%;background:#2196F3;display:inline-block;flex-shrink:0"></span>' : ''}
+                </div>
+                <div class="notif-item-title" style="white-space:normal;word-break:keep-all">${item.title}</div>
+                ${item.detail ? `<div class="notif-item-detail">${item.detail}</div>` : ''}
+            </div>
+        `).join('');
+    }
+
+    window.markAllRead = async function() {
+        try {
+            await fetch('/api/notifications/mark_read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keys: [] })
+            });
+            setTimeout(updateBellBadge, 300);
+            loadNotifTab(notifCurrentTab);
+        } catch(e) {}
+    };
+
+    async function markKcNoticesSeen() {
+        try {
+            const notices = await fetchKcNotices();
+            if (!notices || notices.length === 0) return;
+            const ids = notices.map(n => n.id);
+            await fetch('/api/notifications/kc_seen', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ notice_ids: ids })
+            });
+            setTimeout(updateBellBadge, 300);
+        } catch(e) {}
+    }
+
+    function getCsrfToken() {
+        // Try meta tag first, then find any hidden csrf input on page
+        return document.querySelector('meta[name="csrf-token"]')?.content
+            || document.querySelector('input[name="csrf_token"]')?.value
+            || '{{ csrf_token() }}';
+    }
+
+    // Update badge count — includes PW expiry + unseen KC notices
+    async function updateBellBadge() {
+        try {
+            const [pwData, kcData] = await Promise.all([
+                fetch('/api/notifications').then(r => r.json()).catch(() => ({ count: 0, unread: 0, notifications: [] })),
+                fetch('/api/notifications/kc_unseen_count').then(r => r.json()).catch(() => ({ count: 0 }))
+            ]);
+            const badge = document.getElementById('bellBadge');
+            if (!badge) return;
+
+            // Bell badge total
+            const total = (pwData.unread || 0) + (kcData.count || 0);
+            if (total > 0) {
+                badge.textContent = total > 99 ? '99+' : total;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+
+            // Tab badges
+            const setTabBadge = (id, count) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (count > 0) {
+                    el.textContent = count > 99 ? '99+' : count;
+                    el.style.display = 'inline-flex';
+                } else {
+                    el.style.display = 'none';
+                }
+            };
+
+            // Recent tab = only non-KC unread (PW expiry, IAM, history alerts)
+            setTabBadge('badge-recent', pwData.unread || 0);
+
+            // User tab = PW expiry + IAM pending (user configured alerts)
+            const userCount = (pwData.notifications || []).filter(n =>
+                n.type === 'pw_expiry_group' || n.type === 'iam_pending'
+            ).filter(n => !n.is_read).length;
+            setTabBadge('badge-user', userCount);
+
+            // KC tab = unseen KC notices
+            setTabBadge('badge-kc', kcData.count || 0);
+
+        } catch(e) {}
+    }
+
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById('notifPanel');
+        const wrap  = document.getElementById('bellWrap');
+        if (panel && wrap && !wrap.contains(e.target) && !panel.contains(e.target)) {
+            panel.classList.remove('open');
+            wrap.classList.remove('open');
+            clearInterval(notifPollTimer);
+        }
+    });
+
+    // Load badge on page load + every 5 min
+    updateBellBadge();
+    setInterval(updateBellBadge, 5 * 60 * 1000);
+
+    // ── Active page breadcrumb ────────────────────────────
+
+    const path = window.location.pathname;
+    const pageNames = {
+        '{{ url_for("summary") }}':          'Infrastructure Status',
+        '{{ url_for("provisioning") }}':      'VM Provisioning',
+        '{{ url_for("vm_search") }}':         'CMDB',
+        '{{ url_for("check_connectivity") }}':'VPC 상태',
+        '{{ url_for("get_server_info") }}':   'List Volume',
+        '{{ url_for("create_volumes") }}':    'Create Volume',
+        '{{ url_for("attach_volumes") }}':    'Mount Volume',
+        '{{ url_for("iam") }}':               'IAM',
+    };
+    const current = document.getElementById('navCurrentLabel');
+    if (current && pageNames[path]) current.textContent = pageNames[path];
+
+    // ── Role enforcement ──────────────────────────────────
+    const role = '{{ db_me.role if (current_user.is_authenticated and db_me) else "viewer" }}';
+    document.querySelectorAll('[data-require-role]').forEach(el => {
+        const allowed = el.dataset.requireRole.split(',');
+        if (!allowed.includes(role)) {
+            el.classList.add('restricted');
+            el.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                window.location.href = '/insufficient_role';
+            });
+        }
+    });
+
+    // ── Keyboard shortcuts ────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeServicesPanel();
+        if (e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+            e.preventDefault();
+            openServicesPanel();
+            document.getElementById('navSearchInput').focus();
+        }
+    });
+
+});
+</script>
+    <button class="burger" id="burgerBtn" aria-label="메뉴 열기">
+        <div></div><div></div><div></div>
+    </button>
+
+<script>
+</script>

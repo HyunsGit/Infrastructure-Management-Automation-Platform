@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>Subnet Connectivity Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="static/css/menu.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+            background: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+            color: #f3f6fa;
+            min-height: 100vh;
+            background-size: 400% 400%;
+            animation: gradientBG 12s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+
+        .cell-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid #283874;
+            border-top: 3px solid #48cae4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg);}
+            100% { transform: rotate(360deg);}
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(36, 46, 68, 0.97);
+            color: #d6fff2;
+            font-size: 1rem;
+            box-shadow: 0 8px 24px rgba(33, 150, 243, 0.18);
+        }
+        thead {
+            background: linear-gradient(90deg, #2196F3 0%, #237ece 100%);
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 1.5px solid rgba(44,56,77, 0.5);
+        }
+        tbody tr {
+            background: rgba(30,37,51, 0.8);
+            transition: background 0.2s;
+        }
+        tbody tr:nth-child(even) {
+            background: rgba(44,56,77, 0.55);
+        }
+        tbody tr:hover {
+            background: rgba(52, 152, 219, 0.14);
+        }
+        .status-dot {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin: auto;
+        }
+        .status-ok-dot {
+            background-color: #34ff8a;
+            box-shadow: 0 0 6px #34ff8aaa;
+        }
+        .status-fail-dot {
+            background-color: #ff5f96;
+            box-shadow: 0 0 6px #ff5f96aa;
+        }
+        .cell-error {
+            color: #ffd65a;
+            font-size: 0.92em;
+            font-weight: 700;
+            text-align: center;
+        }
+        #connectivity-table p {
+            margin-top: 8px !important; /* or 0 to remove completely */
+            font-weight: 700;
+            color: #ffb3b3;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        #refreshBtn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2980b9;
+            transition: color 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+        }
+        #refreshBtn:hover, #refreshBtn:focus {
+            color: #1c5d90;
+            outline: none;
+        }
+        /* 반응형 (모바일) */
+        @media (max-width: 900px) {
+            .menu, .right-menu { display: none; }
+            .burger { display: flex; }
+        }
+        @media (max-width: 700px) {
+            .burger { display: flex; }
+        }
+        /* ── Light mode ── */
+        body.light-mode .table-wrapper,
+        body.light-mode table {
+            background: #faf6f0 !important;
+            color: #1a1612 !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,.08) !important;
+        }
+        body.light-mode thead,
+        body.light-mode thead tr,
+        body.light-mode thead tr th,
+        body.light-mode thead th {
+            background: linear-gradient(90deg, #1976d2 0%, #1565c0 100%) !important;
+            color: #fff !important;
+            border-bottom-color: rgba(255,255,255,.2) !important;
+        }
+        body.light-mode td {
+            color: #1a1612 !important;
+            border-bottom-color: #e0d8ce !important;
+        }
+        body.light-mode tbody tr {
+            background: #faf6f0 !important;
+        }
+        body.light-mode tbody tr:nth-child(even) {
+            background: #f0ebe3 !important;
+        }
+        body.light-mode tbody tr:hover {
+            background: rgba(25,118,210,.12) !important;
+        }
+        body.light-mode tbody tr:hover td {
+            color: #1a1612 !important;
+        }
+        body.light-mode .card {
+            background: #faf6f0 !important;
+            border-color: #d0c9c0 !important;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    {% include 'top_menu.html' %}
+    <div class="container">
+        <h2 class="dashboard-title">Subnet Status</h2>
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <span id="lastRefreshed" style="color: #2980b9; font-weight: 600; font-size: 0.9rem;"></span>
+        <button 
+            id="refreshBtn" 
+            type="button" 
+            aria-label="상태 새로 고침 버튼"
+            title="새로 고침"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" 
+                width="24" height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" stroke="currentColor" stroke-width="2" 
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+            </svg>
+        </button>
+    </div>
+    <div id="connectivity-table" aria-live="polite"></div>
+</main>
+
+<script>
+    // Hosts injected from backend via Jinja
+    const MONITOR_HOSTS = [
+    # List of VPC subnet hosts to monitor for PING/SSH/DNS connectivity.
+    # Populate with your internal VPC subnet host identifiers.
+    # Example: "vpc-prod-a", "vpc-prod-b", ...
+];
+
+    // Private IP mapping passed from backend
+    const PRIVATE_IP_MAP = {
+    # Maps host identifier → CIDR subnet string.
+    # Example: "vpc-prod-a": "10.0.0.0/24",
+}
+            "{{ host }}": "{{ PRIVATE_IP_MAP[host] if PRIVATE_IP_MAP and host in PRIVATE_IP_MAP else 'N/A' }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    const logoBtn = document.getElementById('logoBtn');
+    if (logoBtn) {
+        logoBtn.addEventListener('click', () => {
+            location.reload();
+        });
+        logoBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                location.reload();
+            }
+        });
+    }
+
+    // Render table including Private IP and added DNS Status column
+    function renderSkeletonTable(hostList) {
+        let table = '<table><thead><tr><th>Host</th><th>CIDR Range</th><th>Ping Status</th><th>SSH Status</th><th>DNS Status</th></tr></thead><tbody>';
+        if (hostList.length === 0) {
+            table += `<tr><td colspan="5" style="color:#888;">모니터링 대상 호스트가 없습니다.</td></tr>`;
+        } else {
+            hostList.forEach((host) => {
+                const ip = PRIVATE_IP_MAP[host] || 'N/A';
+                // Use hostnames in element IDs for direct lookup
+                table += `<tr data-host="${host}">
+                    <td>${host}</td>
+                    <td>${ip}</td>
+                    <td id="ping-${host}"><div class="cell-spinner" aria-label="Ping 상태 로딩 중" role="status"></div></td>
+                    <td id="ssh-${host}"><div class="cell-spinner" aria-label="SSH 상태 로딩 중" role="status"></div></td>
+                    <td id="dns-${host}"><div class="cell-spinner" aria-label="DNS 상태 로딩 중" role="status"></div></td>
+                </tr>`;
+            });
+        }
+        table += '</tbody></table>';
+        document.getElementById('connectivity-table').innerHTML = table;
+    }
+
+    // Update status cells with colored dots including DNS status, using hostname keys
+    function updateStatusCells(statusData) {
+        statusData.forEach((row) => {
+            const host = row.host;
+
+            // Update Ping Status
+            const pingTd = document.getElementById(`ping-${host}`);
+            if (pingTd) {
+                pingTd.className = "";
+                if ('ping' in row) {
+                    pingTd.innerHTML = row.ping
+                        ? '<span class="status-dot status-ok-dot" aria-label="정상"></span>'
+                        : '<span class="status-dot status-fail-dot" aria-label="실패"></span>';
+                    pingTd.setAttribute('aria-label', `Ping 상태: ${row.ping ? '정상' : '실패'}`);
+                } else {
+                    pingTd.innerHTML = '<span class="cell-error">오류</span>';
+                    pingTd.setAttribute('aria-label', 'Ping 상태 오류');
+                }
+            }
+
+            // Update SSH Status
+            const sshTd = document.getElementById(`ssh-${host}`);
+            if (sshTd) {
+                sshTd.className = "";
+                if ('ssh' in row) {
+                    sshTd.innerHTML = row.ssh
+                        ? '<span class="status-dot status-ok-dot" aria-label="정상"></span>'
+                        : '<span class="status-dot status-fail-dot" aria-label="실패"></span>';
+                    sshTd.setAttribute('aria-label', `SSH 상태: ${row.ssh ? '정상' : '실패'}`);
+                } else {
+                    sshTd.innerHTML = '<span class="cell-error">오류</span>';
+                    sshTd.setAttribute('aria-label', 'SSH 상태 오류');
+                }
+            }
+
+            // Update DNS Status
+            const dnsTd = document.getElementById(`dns-${host}`);
+            if (dnsTd) {
+                dnsTd.className = "";
+                if ('dns' in row) {
+                    dnsTd.innerHTML = row.dns
+                        ? '<span class="status-dot status-ok-dot" aria-label="정상"></span>'
+                        : '<span class="status-dot status-fail-dot" aria-label="실패"></span>';
+                    dnsTd.setAttribute('aria-label', `DNS 상태: ${row.dns ? '정상' : '실패'}`);
+                } else {
+                    dnsTd.innerHTML = '<span class="cell-error">오류</span>';
+                    dnsTd.setAttribute('aria-label', 'DNS 상태 오류');
+                }
+            }
+        });
+    }
+
+    // Fetch connectivity data from backend API and update table accordingly
+    function fetchConnectivityStatus() {
+        $.getJSON("{{ url_for('connectivity_status') }}")
+            .done(function(data) {
+                updateStatusCells(data);
+            })
+            .fail(function() {
+                MONITOR_HOSTS.forEach((host) => {
+                    const pingTd = document.getElementById(`ping-${host}`);
+                    const sshTd = document.getElementById(`ssh-${host}`);
+                    const dnsTd = document.getElementById(`dns-${host}`);
+                    if (pingTd) {
+                        pingTd.innerHTML = '<span class="cell-error">오류</span>';
+                        pingTd.setAttribute('aria-label', 'Ping 상태 오류');
+                    }
+                    if (sshTd) {
+                        sshTd.innerHTML = '<span class="cell-error">오류</span>';
+                        sshTd.setAttribute('aria-label', 'SSH 상태 오류');
+                    }
+                    if (dnsTd) {
+                        dnsTd.innerHTML = '<span class="cell-error">오류</span>';
+                        dnsTd.setAttribute('aria-label', 'DNS 상태 오류');
+                    }
+                });
+            });
+    }
+
+    function updateLastRefreshed() {
+        const now = new Date();
+
+        // Convert to UTC+9 (KST)
+        const kstOffset = 9 * 60; // in minutes
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const kstTime = new Date(utc + (kstOffset * 60000));
+
+        // Format as yyyy-mm-dd hh:mm:ss
+        const year = kstTime.getFullYear();
+        const month = String(kstTime.getMonth() + 1).padStart(2, '0');
+        const day = String(kstTime.getDate()).padStart(2, '0');
+        const hours = String(kstTime.getHours()).padStart(2, '0');
+        const minutes = String(kstTime.getMinutes()).padStart(2, '0');
+        const seconds = String(kstTime.getSeconds()).padStart(2, '0');
+
+        const formatted = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} KST`;
+
+        const lastRefreshedElem = document.getElementById('lastRefreshed');
+        if (lastRefreshedElem) {
+            lastRefreshedElem.textContent = `Last updated: ${formatted}`;
+        }
+    }
+
+
+    // Initialize on page load
+    $(function() {
+        renderSkeletonTable(MONITOR_HOSTS);
+        fetchConnectivityStatus();
+        updateLastRefreshed();  // initial update
+
+        // Auto-refresh every 60 seconds
+        setInterval(function() {
+            renderSkeletonTable(MONITOR_HOSTS);
+            fetchConnectivityStatus();
+            updateLastRefreshed();
+        }, 60 * 1000);
+
+        // Manual refresh button click
+        $('#refreshBtn').on('click', function() {
+            renderSkeletonTable(MONITOR_HOSTS);
+            fetchConnectivityStatus();
+            updateLastRefreshed();
+        });
+    });
+</script>
+</body>
+</html>

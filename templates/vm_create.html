@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>VM 생성 — InfraPilot</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+        background: var(--bg-page);
+        color: var(--text);
+        min-height: 100vh;
+        font-size: 14px;
+        padding-top: 48px;
+    }
+    .page-outer { max-width: 1400px; margin: 0 auto; padding: 24px; display: flex; gap: 20px; align-items: flex-start; }
+    .page-main { flex: 1; min-width: 0; }
+    .page-header { margin-bottom: 20px; }
+
+    /* ── VM Summary Sidebar ──────────────────────────────── */
+    .vm-sidebar {
+        width: 300px; flex-shrink: 0;
+        position: sticky; top: 64px; max-height: calc(100vh - 88px);
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: 10px; overflow: hidden;
+        display: flex; flex-direction: column;
+    }
+    .vm-sidebar-header {
+        padding: 11px 14px; border-bottom: 1px solid var(--border-subtle);
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .07em; color: var(--text-dim);
+        display: flex; align-items: center; justify-content: space-between;
+        flex-shrink: 0;
+    }
+    .vm-sidebar-count {
+        background: var(--bg-elevated); border-radius: 10px;
+        padding: 1px 7px; font-size: 11px; color: var(--text-muted);
+    }
+    .vm-sidebar-list {
+        padding: 8px; display: flex; flex-direction: column; gap: 6px;
+        overflow-y: auto; flex: 1;
+    }
+    .vm-sidebar-item {
+        padding: 10px 12px; border-radius: 7px; cursor: pointer;
+        border: 1px solid transparent; transition: all .12s;
+    }
+    .vm-sidebar-item:hover { background: var(--bg-hover); border-color: var(--border); }
+    .vm-sidebar-item-name {
+        font-size: 12.5px; font-weight: 600; color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        margin-bottom: 6px;
+    }
+    .vm-sidebar-row {
+        display: flex; gap: 4px; align-items: baseline; margin-top: 3px;
+    }
+    .vm-sidebar-label {
+        font-size: 10px; color: var(--text-dim); font-weight: 600;
+        text-transform: uppercase; letter-spacing: .04em;
+        flex-shrink: 0; width: 48px;
+    }
+    .vm-sidebar-val {
+        font-size: 11px; color: var(--text-secondary);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        flex: 1;
+    }
+    .vm-sidebar-val.missing { color: var(--text-dim); font-style: italic; }
+    .vm-sidebar-dot {
+        display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+        background: var(--text-dim); margin-right: 6px; flex-shrink: 0;
+        vertical-align: middle; margin-bottom: 1px;
+    }
+    .vm-sidebar-dot.configured { background: var(--accent); }
+    .vm-sidebar-dot.created    { background: #4ade80; }
+    .vm-sidebar-empty {
+        padding: 16px 12px; text-align: center;
+        font-size: 12px; color: var(--text-dim);
+    }
+    .page-title { font-size: 24px; font-weight: 700; color: var(--text); }
+    .page-subtitle { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+    /* ── Paste import box ────────────────────────────────────── */
+    .paste-box {
+        background: var(--bg-card); border: 1px dashed var(--border);
+        border-radius: 10px; padding: 16px; margin-bottom: 20px;
+    }
+    .paste-box-header {
+        display: flex; align-items: center; justify-content: space-between;
+        cursor: pointer; user-select: none;
+    }
+    .paste-box-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+    .paste-box-body { margin-top: 12px; display: none; }
+    .paste-box-body.open { display: block; }
+    .paste-textarea {
+        width: 100%; min-height: 100px; background: var(--bg-input);
+        border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+        font-family: monospace; font-size: 12px; padding: 10px; resize: vertical;
+    }
+    .paste-btn-row { display: flex; gap: 8px; margin-top: 10px; }
+    .btn {
+        padding: 8px 16px; border-radius: 7px; border: none; cursor: pointer;
+        font-size: 13px; font-weight: 600;
+    }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: #1976d2; }
+    .btn-accent:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline {
+        background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+    }
+    .btn-outline:hover { background: var(--bg-hover); }
+    .paste-result { font-size: 12px; color: var(--text-dim); margin-top: 8px; white-space: pre-wrap; }
+
+    /* ── VM block cards ───────────────────────────────────────── */
+    #vmBlocks { display: flex; flex-direction: column; gap: 12px; }
+    .vm-block {
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-left: 3px solid var(--border);
+        border-radius: 10px;
+        /* NO overflow:hidden — allows dropdowns to extend outside the card */
+        transition: border-left-color .2s;
+    }
+    .vm-block.configured  { border-left-color: var(--accent) !important; }
+    .vm-block.created     { border-left-color: #4ade80 !important; }
+    .vm-block-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 16px; border-bottom: 1px solid var(--border-subtle);
+        gap: 10px; border-radius: 10px 10px 0 0;
+        background: var(--bg-elevated);
+    }
+    .vm-block-header-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .vm-block-num {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: var(--bg-hover); border: 1px solid var(--border);
+        font-size: 13px; font-weight: 700; color: var(--text-muted);
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .vm-block.configured  .vm-block-num { background: rgba(33,150,243,.15); border-color: var(--accent); color: var(--accent); }
+    .vm-block.created     .vm-block-num { background: rgba(74,222,128,.12); border-color: #4ade80; color: #4ade80; }
+    .vm-block-name-wrap { flex: 1; min-width: 0; }
+
+    /* VM name — prominent, big, stands out */
+    .vm-block-title input {
+        background: transparent; border: none;
+        border-bottom: 2px solid var(--accent);
+        color: var(--text); font-weight: 700; font-size: 16px;
+        padding: 2px 4px; width: 240px;
+    }
+    .vm-block-title input::placeholder { color: var(--text-dim); font-weight: 400; font-style: italic; }
+    .vm-block-title input:focus { outline: none; border-bottom-color: var(--accent); }
+
+    .vm-block-summary {
+        font-size: 12px; color: var(--text-dim); margin-top: 3px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vm-block-status {
+        font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 5px;
+        flex-shrink: 0;
+        background: var(--bg-hover); color: var(--text-dim); border: 1px solid var(--border);
+    }
+    .vm-block.configured  .vm-block-status { background: rgba(33,150,243,.12); color: var(--accent); border-color: rgba(33,150,243,.3); }
+    .vm-block.created     .vm-block-status { background: rgba(74,222,128,.1); color: #4ade80; border-color: rgba(74,222,128,.3); }
+    .vm-block-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .vm-block-remove {
+        background: transparent; border: none; color: #f87171; cursor: pointer; font-size: 13px;
+    }
+    .vm-block-duplicate {
+        background: transparent; border: 1px solid var(--border);
+        color: var(--text-muted); cursor: pointer; font-size: 12px;
+        border-radius: 5px; padding: 4px 10px;
+    }
+    .vm-block-duplicate:hover { background: var(--bg-hover); color: var(--text); }
+
+    /* two-column body */
+    .vm-block-body {
+        display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .vm-col { padding: 14px 18px; }
+    .vm-col:first-child { border-right: 1px solid var(--border-subtle); }
+    .vm-col-title {
+        font-size: 12px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: var(--text-secondary); margin-bottom: 12px;
+    }
+    .vm-field-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .vm-field label {
+        display: block; font-size: 12px; color: var(--text-muted);
+        margin-bottom: 4px; font-weight: 600;
+    }
+    .vm-field input[type=text], .vm-field input[type=number] {
+        width: 100%; padding: 8px 10px; background: var(--bg-input);
+        border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+        font-size: 13px;
+    }
+    .vm-field input:focus { outline: none; border-color: var(--accent); }
+
+    /* searchable dropdown */
+    .sdrop { position: relative; }
+    .sdrop-input {
+        width: 100%; padding: 8px 10px; background: var(--bg-input);
+        border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+        font-size: 13px; cursor: pointer; user-select: none;
+    }
+    .sdrop-input.placeholder { color: var(--text-dim); }
+    .sdrop-list {
+        display: none; position: absolute; top: 100%; left: 0; right: 0;
+        max-height: 220px; overflow-y: auto; background: var(--bg-elevated);
+        border: 1px solid var(--accent); border-radius: 6px; z-index: 200;
+        margin-top: 2px; box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+    .sdrop-list.open { display: block; }
+    .sdrop-search {
+        width: 100%; padding: 7px 10px; background: var(--bg-input); border: none;
+        border-bottom: 1px solid var(--border); color: var(--text); font-size: 12.5px;
+        position: sticky; top: 0;
+    }
+    .sdrop-search:focus { outline: none; }
+    .sdrop-item { padding: 7px 10px; font-size: 12.5px; color: var(--text); cursor: pointer; }
+    .sdrop-item:hover, .sdrop-item.active { background: var(--accent); color: #fff; }
+    .sdrop-item.checked::before { content: "✓ "; }
+    .sdrop-empty { padding: 10px; font-size: 12px; color: var(--text-dim); text-align: center; }
+    .sdrop-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .sdrop-tag {
+        background: var(--bg-hover); border-radius: 4px; padding: 2px 6px; font-size: 11px;
+        color: var(--text-secondary); display: flex; align-items: center; gap: 4px;
+    }
+    .sdrop-tag span { cursor: pointer; color: #f87171; font-weight: 700; }
+
+    /* extra volumes */
+    .vol-section { margin-top: 8px; }
+    .vol-row {
+        display: flex; gap: 8px; align-items: center; margin-top: 5px;
+    }
+    .vol-row input[type=text] { flex: 2; }
+    .vol-row input[type=number] { flex: 1; }
+    .vol-row-remove { background: transparent; border: none; color: #f87171; cursor: pointer; font-size: 13px; }
+    .vol-add-btn {
+        margin-top: 7px; font-size: 11px; background: transparent;
+        border: 1px dashed var(--border); color: var(--text-muted);
+        border-radius: 6px; padding: 5px 9px; cursor: pointer; width: 100%; text-align: left;
+    }
+    .vol-add-btn:hover { background: var(--bg-hover); }
+
+    /* ── Bottom action bar ────────────────────────────────────── */
+    .bottom-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle);
+    }
+    .add-vm-btn {
+        background: transparent; border: 1px dashed var(--border); color: var(--text-muted);
+        border-radius: 8px; padding: 12px; cursor: pointer; font-size: 13px;
+        width: 100%; text-align: center; margin-top: 14px;
+    }
+    .add-vm-btn:hover { background: var(--bg-hover); }
+
+    /* ── Progress panel ───────────────────────────────────────── */
+    /* ── Progress floating popup ──────────────────────────── */
+    #progressPanel {
+        display: none; position: fixed; bottom: 24px; right: 24px;
+        width: 460px; max-width: calc(100vw - 48px); max-height: 400px;
+        background: #0d1424; border: 1px solid #2a3550;
+        border-radius: 12px; z-index: 9000;
+        box-shadow: 0 20px 60px rgba(0,0,0,.6);
+        flex-direction: column; overflow: hidden;
+    }
+    #progressPanel.open { display: flex; }
+    .progress-popup-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 14px; border-bottom: 1px solid #1e2d42;
+        font-size: 12px; font-weight: 700; color: #8ab0cc; flex-shrink: 0;
+    }
+    .progress-popup-close {
+        background: transparent; border: none; color: #5a7a99;
+        cursor: pointer; font-size: 18px; line-height: 1; padding: 0;
+    }
+    .progress-popup-close:hover { color: #e2e8f0; }
+    .progress-popup-body {
+        overflow-y: auto; flex: 1; padding: 10px 14px;
+        font-family: monospace; font-size: 12px;
+        color: #d1f0d1; white-space: pre-wrap;
+    }
+    body.light-mode #progressPanel { background: #1a1612; border-color: #3d3028; }
+    body.light-mode .progress-popup-header { color: #6b6258; border-color: #3d3028; }
+    body.light-mode .progress-popup-body { color: #b8e0b8; }
+    .progress-line.fail { color: #f87171; }
+    .progress-line.done { color: #4ade80; font-weight: 700; }
+
+    .field-missing { border-color: #f87171 !important; }
+</style>
+</head>
+<body>
+{% include 'top_menu.html' %}
+
+<div class="page-outer">
+<div class="page-main">
+    <div class="page-header">
+        <div class="page-title">VM 생성</div>
+        <div class="page-subtitle">Image / Flavor / Volume 등 모든 항목을 선택해 한 번에 여러 VM을 생성합니다.</div>
+    </div>
+
+    <!-- Paste-from-spreadsheet import -->
+    <div class="paste-box">
+        <div class="paste-box-header" onclick="togglePasteBox()">
+            <div class="paste-box-title">📋 스프레드시트에서 붙여넣기</div>
+            <div id="pasteToggleIcon" style="color:var(--text-dim)">▸</div>
+        </div>
+        <div class="paste-box-body" id="pasteBoxBody">
+            <textarea class="paste-textarea" id="pasteArea"
+                placeholder="구글 스프레드시트에서 헤더 포함하여 복사 후 붙여넣으세요 (탭으로 구분된 데이터)"></textarea>
+            <div class="paste-btn-row">
+                <button class="btn btn-accent" onclick="parsePastedData()">가져오기</button>
+                <button class="btn btn-outline" onclick="document.getElementById('pasteArea').value=''">지우기</button>
+            </div>
+            <div class="paste-result" id="pasteResult"></div>
+        </div>
+    </div>
+
+    <div id="vmBlocks"></div>
+
+    <button class="add-vm-btn" onclick="addVmBlock()">+ VM 추가</button>
+
+    <div class="bottom-bar">
+        <div style="font-size:13px;color:var(--text-dim)" id="vmCountLabel">0개 VM 구성됨</div>
+        <button class="btn btn-accent" id="createBtn" onclick="startVmCreation()" style="padding:12px 28px;font-size:14px">
+            VM 생성 시작
+        </button>
+    </div>
+
+    <div id="progressPanel">
+        <div class="progress-popup-header">
+            <span id="progressTitle">🔄 VM 생성 중...</span>
+            <button class="progress-popup-close" onclick="document.getElementById('progressPanel').classList.remove('open')" title="닫기">×</button>
+        </div>
+        <div class="progress-popup-body" id="progressBody"></div>
+    </div>
+</div><!-- /page-main -->
+
+<!-- VM Summary Sidebar -->
+<div class="vm-sidebar" id="vmSidebar">
+    <div class="vm-sidebar-header">
+        VM 목록
+        <span class="vm-sidebar-count" id="sidebarCount">0</span>
+    </div>
+    <div class="vm-sidebar-list" id="sidebarList">
+        <div class="vm-sidebar-empty">추가된 VM이 없습니다</div>
+    </div>
+</div>
+
+</div><!-- /page-outer -->
+
+<script>
+const PROJECTS = {{ projects | tojson }};
+let vmBlockSeq = 0;
+let resourceCache = {};  // project_key -> { subnets, security_groups, keypairs, flavors, images }
+
+// ════════════════════════════════════════════════════════════
+// Helpers
+// ════════════════════════════════════════════════════════════
+function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+function togglePasteBox() {
+    document.getElementById('pasteBoxBody').classList.toggle('open');
+    const icon = document.getElementById('pasteToggleIcon');
+    icon.textContent = document.getElementById('pasteBoxBody').classList.contains('open') ? '▾' : '▸';
+}
+
+function updateVmCountLabel() {
+    const count = document.querySelectorAll('.vm-block').length;
+    document.getElementById('vmCountLabel').textContent = `${count}개 VM 구성됨`;
+    updateSidebar();
+}
+
+function updateSidebar() {
+    const list      = document.getElementById('sidebarList');
+    const countEl   = document.getElementById('sidebarCount');
+    const blocks    = Array.from(document.querySelectorAll('.vm-block'));
+    countEl.textContent = blocks.length;
+
+    if (!blocks.length) {
+        list.innerHTML = '<div class="vm-sidebar-empty">추가된 VM이 없습니다</div>';
+        return;
+    }
+
+    list.innerHTML = blocks.map((bl, i) => {
+        const name      = bl.querySelector('.vm-name-input')?.value.trim() || `VM ${i + 1}`;
+        const dd        = bl._dropdowns || {};
+        const project   = dd.project?.getSelected();
+        const image     = dd.image?.getSelected();
+        const flavor    = dd.flavor?.getSelected();
+        const subnet    = dd.subnet?.getSelected();
+        const keypair   = dd.keypair?.getSelected();
+        const sgLabels  = dd.sg?.getSelectedLabels() || [];
+        const rootVol   = bl.querySelector('.root-vol-input')?.value || '50';
+        const extraVols = Array.from(bl.querySelectorAll('.vol-row')).map(r => {
+            const n = r.querySelector('.vol-name-input')?.value.trim();
+            const s = r.querySelector('.vol-size-input')?.value;
+            return n && s ? `${s}GB(${n})` : null;
+        }).filter(Boolean);
+
+        const statusTxt = bl.querySelector('[id$="-status"]')?.textContent?.trim() || '';
+        const status    = statusTxt === '생성 완료' ? 'created'
+                        : statusTxt === '완료'      ? 'configured' : '';
+
+        function row(label, val) {
+            const cls = val ? '' : 'missing';
+            const display = val || '미선택';
+            return `<div class="vm-sidebar-row">
+                <span class="vm-sidebar-label">${label}</span>
+                <span class="vm-sidebar-val ${cls}">${display}</span>
+            </div>`;
+        }
+
+        return `<div class="vm-sidebar-item" onclick="document.getElementById('${bl.id}')?.scrollIntoView({behavior:'smooth',block:'center'})">
+            <div class="vm-sidebar-item-name">
+                <span class="vm-sidebar-dot ${status}"></span>${name}
+            </div>
+            ${row('프로젝트', project ? (project.alias ? `${project.key} (${project.alias})` : project.key) : '')}
+            ${row('이미지', image?.name || '')}
+            ${row('플레이버', flavor?.name || '')}
+            ${row('서브넷', subnet?.name || '')}
+            ${row('키페어', keypair ? (keypair.name || keypair.key_name) : '')}
+            ${row('보안그룹', sgLabels.length ? sgLabels.join(', ') : '')}
+            ${row('루트볼륨', rootVol ? `${rootVol}GB` : '')}
+            ${extraVols.length ? row('추가볼륨', extraVols.join(', ')) : ''}
+        </div>`;
+    }).join('');
+}
+
+async function fetchProjectResources(projectKey) {
+    if (resourceCache[projectKey]) return resourceCache[projectKey];
+    const res = await fetch(`/api/vm_create/resources?project=${encodeURIComponent(projectKey)}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    resourceCache[projectKey] = data;
+    return data;
+}
+
+// Simple fuzzy match: exact match, then substring, then all-words-present.
+function fuzzyFind(needle, items, getLabel) {
+    if (!needle) return null;
+    const n = needle.trim().toLowerCase();
+    if (!n) return null;
+    let hit = items.find(i => getLabel(i).toLowerCase() === n);
+    if (hit) return hit;
+    hit = items.find(i => getLabel(i).toLowerCase().includes(n));
+    if (hit) return hit;
+    const words = n.replace(/[^a-z0-9가-힣.]+/g, ' ').split(' ').filter(Boolean);
+    hit = items.find(i => {
+        const label = getLabel(i).toLowerCase();
+        return words.every(w => label.includes(w));
+    });
+    return hit || null;
+}
+
+// ════════════════════════════════════════════════════════════
+// Searchable dropdown component (single-select, with type-to-filter)
+// ════════════════════════════════════════════════════════════
+function buildSearchDropdown(container, items, getLabel, getValue, onSelect, placeholder) {
+    container.innerHTML = `
+        <div class="sdrop-input placeholder">${placeholder || '선택하세요'}</div>
+        <div class="sdrop-list">
+            <input type="text" class="sdrop-search" placeholder="검색...">
+            <div class="sdrop-items"></div>
+        </div>
+    `;
+    const inputEl  = container.querySelector('.sdrop-input');
+    const listEl   = container.querySelector('.sdrop-list');
+    const searchEl = container.querySelector('.sdrop-search');
+    const itemsEl  = container.querySelector('.sdrop-items');
+    let selected = null;
+    let activeIdx = -1;
+
+    function getItemEls() { return Array.from(itemsEl.querySelectorAll('.sdrop-item')); }
+
+    function setActive(idx) {
+        const els = getItemEls();
+        els.forEach(el => el.classList.remove('active'));
+        activeIdx = Math.max(0, Math.min(idx, els.length - 1));
+        if (els[activeIdx]) {
+            els[activeIdx].classList.add('active');
+            els[activeIdx].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function renderList(filter) {
+        const f = (filter || '').toLowerCase();
+        const filtered = items.filter(i => getLabel(i).toLowerCase().includes(f));
+        activeIdx = -1;
+        if (filtered.length === 0) {
+            itemsEl.innerHTML = `<div class="sdrop-empty">결과 없음</div>`;
+            return;
+        }
+        itemsEl.innerHTML = filtered.map(i => `
+            <div class="sdrop-item" data-value="${getValue(i)}">${getLabel(i)}</div>
+        `).join('');
+        itemsEl.querySelectorAll('.sdrop-item').forEach((el, idx) => {
+            el.addEventListener('click', () => {
+                selected = filtered[idx];
+                inputEl.textContent = getLabel(selected);
+                inputEl.classList.remove('placeholder');
+                listEl.classList.remove('open');
+                onSelect(selected);
+            });
+        });
+    }
+
+    inputEl.addEventListener('click', () => {
+        document.querySelectorAll('.sdrop-list.open').forEach(el => { if (el !== listEl) el.classList.remove('open'); });
+        listEl.classList.toggle('open');
+        if (listEl.classList.contains('open')) {
+            searchEl.value = '';
+            renderList('');
+            setTimeout(() => searchEl.focus(), 0);
+        }
+    });
+    searchEl.addEventListener('input', () => { renderList(searchEl.value); activeIdx = -1; });
+    searchEl.addEventListener('click', (e) => e.stopPropagation());
+    searchEl.addEventListener('keydown', (e) => {
+        const els = getItemEls();
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActive(activeIdx < 0 ? 0 : activeIdx + 1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActive(activeIdx <= 0 ? 0 : activeIdx - 1);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIdx >= 0 && els[activeIdx]) els[activeIdx].click();
+        } else if (e.key === 'Escape') {
+            listEl.classList.remove('open');
+        }
+    });
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) listEl.classList.remove('open');
+    });
+
+    return {
+        setItems(newItems) { items = newItems; },
+        setSelected(item) {
+            selected = item;
+            inputEl.textContent = item ? getLabel(item) : (placeholder || '선택하세요');
+            inputEl.classList.toggle('placeholder', !item);
+        },
+        getSelected() { return selected; }
+    };
+}
+
+// ════════════════════════════════════════════════════════════
+// Searchable multi-select dropdown (for security groups)
+// ════════════════════════════════════════════════════════════
+function buildMultiSearchDropdown(container, items, getLabel, getValue, placeholder, onChange) {
+    container.innerHTML = `
+        <div class="sdrop-input placeholder">${placeholder || '선택하세요'}</div>
+        <div class="sdrop-list">
+            <input type="text" class="sdrop-search" placeholder="검색...">
+            <div class="sdrop-items"></div>
+        </div>
+        <div class="sdrop-tags"></div>
+    `;
+    const inputEl  = container.querySelector('.sdrop-input');
+    const listEl   = container.querySelector('.sdrop-list');
+    const searchEl = container.querySelector('.sdrop-search');
+    const itemsEl  = container.querySelector('.sdrop-items');
+    const tagsEl   = container.querySelector('.sdrop-tags');
+    let selectedSet = new Set();
+    let activeIdx = -1;
+
+    function getItemEls() { return Array.from(itemsEl.querySelectorAll('.sdrop-item')); }
+
+    function setActive(idx) {
+        const els = getItemEls();
+        els.forEach(el => el.classList.remove('active'));
+        activeIdx = Math.max(0, Math.min(idx, els.length - 1));
+        if (els[activeIdx]) {
+            els[activeIdx].classList.add('active');
+            els[activeIdx].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function renderTags() {
+        tagsEl.innerHTML = '';
+        items.filter(i => selectedSet.has(getValue(i))).forEach(i => {
+            const tag = document.createElement('div');
+            tag.className = 'sdrop-tag';
+            tag.innerHTML = `${getLabel(i)} <span data-value="${getValue(i)}">×</span>`;
+            tag.querySelector('span').addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedSet.delete(getValue(i));
+                renderTags();
+                if (typeof updateSidebar === 'function') updateSidebar();
+                if (onChange) onChange();
+            });
+            tagsEl.appendChild(tag);
+        });
+        inputEl.textContent = selectedSet.size > 0 ? `${selectedSet.size}개 선택됨` : (placeholder || '선택하세요');
+        inputEl.classList.toggle('placeholder', selectedSet.size === 0);
+    }
+
+    function renderList(filter) {
+        const f = (filter || '').toLowerCase();
+        const filtered = items.filter(i => getLabel(i).toLowerCase().includes(f));
+        activeIdx = -1;
+        if (filtered.length === 0) {
+            itemsEl.innerHTML = `<div class="sdrop-empty">결과 없음</div>`;
+            return;
+        }
+        itemsEl.innerHTML = filtered.map(i => {
+            const val = getValue(i);
+            const checked = selectedSet.has(val) ? 'checked' : '';
+            return `<div class="sdrop-item ${checked}" data-value="${val}">${getLabel(i)}</div>`;
+        }).join('');
+        itemsEl.querySelectorAll('.sdrop-item').forEach((el, idx) => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const val = getValue(filtered[idx]);
+                if (selectedSet.has(val)) selectedSet.delete(val);
+                else selectedSet.add(val);
+                renderTags();
+                renderList(searchEl.value);
+                if (typeof updateSidebar === 'function') updateSidebar();
+                if (onChange) onChange();
+            });
+        });
+    }
+
+    inputEl.addEventListener('click', () => {
+        document.querySelectorAll('.sdrop-list.open').forEach(el => { if (el !== listEl) el.classList.remove('open'); });
+        listEl.classList.toggle('open');
+        if (listEl.classList.contains('open')) {
+            searchEl.value = '';
+            renderList('');
+            setTimeout(() => searchEl.focus(), 0);
+        }
+    });
+    searchEl.addEventListener('input', () => { renderList(searchEl.value); activeIdx = -1; });
+    searchEl.addEventListener('click', (e) => e.stopPropagation());
+    searchEl.addEventListener('keydown', (e) => {
+        const els = getItemEls();
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActive(activeIdx < 0 ? 0 : activeIdx + 1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActive(activeIdx <= 0 ? 0 : activeIdx - 1);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            // Toggle selection for multi-select
+            if (activeIdx >= 0 && els[activeIdx]) els[activeIdx].click();
+        } else if (e.key === 'Escape') {
+            listEl.classList.remove('open');
+        }
+    });
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) listEl.classList.remove('open');
+    });
+
+    return {
+        setItems(newItems) { items = newItems; },
+        setSelectedValues(values) {
+            selectedSet = new Set(values);
+            renderTags();
+        },
+        getSelectedLabels() {
+            return items.filter(i => selectedSet.has(getValue(i))).map(getLabel);
+        },
+        getSelectedValues() { return Array.from(selectedSet); }
+    };
+}
+
+// ════════════════════════════════════════════════════════════
+// VM Block — one card representing one VM's full config
+// ════════════════════════════════════════════════════════════
+function addVmBlock(prefill) {
+    vmBlockSeq++;
+    const id = `vmblock-${vmBlockSeq}`;
+    const div = document.createElement('div');
+    div.className = 'vm-block';
+    div.id = id;
+    div.dataset.extraVolSeq = '0';
+
+    div.innerHTML = `
+        <div class="vm-block-header">
+            <div class="vm-block-header-left">
+                <div class="vm-block-num">${vmBlockSeq}</div>
+                <div class="vm-block-name-wrap">
+                    <div class="vm-block-title">
+                        <input type="text" class="vm-name-input" placeholder="VM 이름 (예: web-01)"
+                               value="${prefill?.name || ''}" oninput="updateVmSummary('${id}'); syncVolNames('${id}')">
+                    </div>
+                    <div class="vm-block-summary" id="${id}-summary">미완료 — 모든 항목을 선택해주세요</div>
+                </div>
+            </div>
+            <span class="vm-block-status" id="${id}-status">미완료</span>
+            <div class="vm-block-actions">
+                <button class="vm-block-duplicate" onclick="duplicateVmBlock('${id}')">⧉ 복제</button>
+                <button class="vm-block-remove" onclick="removeVmBlock('${id}')">✕ 제거</button>
+            </div>
+        </div>
+        <div class="vm-block-body">
+            <!-- Left: 인스턴스 -->
+            <div class="vm-col">
+                <div class="vm-col-title">인스턴스</div>
+                <div class="vm-field-grid">
+                    <div class="vm-field" style="grid-column:1/-1">
+                        <label>프로젝트</label>
+                        <div class="sdrop project-drop"></div>
+                    </div>
+                    <div class="vm-field" style="grid-column:1/-1">
+                        <label>이미지</label>
+                        <div class="sdrop image-drop"></div>
+                    </div>
+                    <div class="vm-field" style="grid-column:1/-1">
+                        <label>플레이버</label>
+                        <div class="sdrop flavor-drop"></div>
+                    </div>
+                    <div class="vm-field" style="grid-column:1/-1">
+                        <label>키페어</label>
+                        <div class="sdrop keypair-drop"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Right: 네트워크 & 스토리지 -->
+            <div class="vm-col">
+                <div class="vm-col-title">네트워크 &amp; 스토리지</div>
+                <div class="vm-field-grid">
+                    <div class="vm-field" style="grid-column:1/-1">
+                        <label>서브넷</label>
+                        <div class="sdrop subnet-drop"></div>
+                    </div>
+                    <div class="vm-field" style="grid-column:1/-1">
+                        <label>보안 그룹</label>
+                        <div class="sdrop sg-drop"></div>
+                    </div>
+                    <div class="vm-field">
+                        <label>루트 볼륨 (GB)</label>
+                        <input type="number" class="root-vol-input"
+                               value="${prefill?.root_volume_size || 50}" min="1"
+                               oninput="updateVmSummary('${id}')">
+                    </div>
+                    <div class="vm-field" style="grid-column:1/-1">
+                        <label>추가 볼륨</label>
+                        <div class="vol-section">
+                            <div class="extra-vols"></div>
+                            <button class="vol-add-btn" onclick="addVolRow('${id}')">+ 볼륨 추가</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('vmBlocks').appendChild(div);
+
+    // Project dropdown
+    const projDrop = buildSearchDropdown(
+        div.querySelector('.project-drop'),
+        PROJECTS,
+        i => i.alias ? `${i.key} (${i.alias})` : i.key,
+        i => i.key,
+        async (item) => { await onProjectSelected(id, item.key); updateVmSummary(id); },
+        '프로젝트 선택'
+    );
+    div._dropdowns = { project: projDrop };
+
+    // If prefill includes a project, auto-select + load resources, then
+    // fuzzy-match the rest of the prefill fields once resources arrive.
+    if (prefill?.project) {
+        const match = PROJECTS.find(p => p.key === prefill.project);
+        if (match) {
+            projDrop.setSelected(match);
+            onProjectSelected(id, match.key, prefill);
+        }
+    }
+
+    if (prefill?.root_volume_size) {
+        div.querySelector('.root-vol-input').value = prefill.root_volume_size;
+    }
+    if (prefill?.extra_volumes && prefill.extra_volumes.length) {
+        prefill.extra_volumes.forEach(ev => addVolRow(id, ev.name, ev.size));
+    }
+
+    updateVmCountLabel();
+    renumberBlocks();
+    return div;
+}
+
+function renumberBlocks() {
+    document.querySelectorAll('.vm-block').forEach((bl, i) => {
+        const numEl = bl.querySelector('.vm-block-num');
+        if (numEl) numEl.textContent = i + 1;
+    });
+}
+
+function removeVmBlock(id) {
+    document.getElementById(id)?.remove();
+    renumberBlocks();
+    updateVmCountLabel();
+}
+
+function updateVmSummary(id) {
+    const div = document.getElementById(id);
+    if (!div) return;
+    const dd = div._dropdowns || {};
+    const name    = div.querySelector('.vm-name-input').value.trim();
+    const flavor  = dd.flavor?.getSelected();
+    const image   = dd.image?.getSelected();
+    const subnet  = dd.subnet?.getSelected();
+    const keypair = dd.keypair?.getSelected();
+    const project = dd.project?.getSelected();
+
+    const summaryEl = document.getElementById(`${id}-summary`);
+    const statusEl  = document.getElementById(`${id}-status`);
+    if (!summaryEl || !statusEl) return;
+
+    const sgLabels  = dd.sg?.getSelectedLabels() || [];
+    const isComplete = name && project && image && flavor && keypair && subnet && sgLabels.length > 0 &&
+        // Every extra volume row must have both name and size
+        Array.from(div.querySelectorAll('.vol-row')).every(row => {
+            const vName = row.querySelector('.vol-name-input')?.value.trim();
+            const vSize = parseInt(row.querySelector('.vol-size-input')?.value, 10);
+            // A row is valid if both are filled, or if it's completely empty (will be skipped)
+            return (vName && vSize > 0) || (!vName && !vSize);
+        });
+
+    if (isComplete) {
+        const flavorName = flavor.name || '';
+        const imageName  = image.name || '';
+        const subnetName = subnet.name || '';
+        summaryEl.textContent = `${flavorName} · ${imageName} · ${subnetName}`;
+        statusEl.textContent  = '완료';
+        div.classList.add('configured');
+        div.classList.remove('incomplete');
+    } else {
+        const missing = [];
+        if (!name)           missing.push('이름');
+        if (!project)        missing.push('프로젝트');
+        if (!image)          missing.push('이미지');
+        if (!flavor)         missing.push('플레이버');
+        if (!keypair)        missing.push('키페어');
+        if (!subnet)         missing.push('서브넷');
+        if (!sgLabels.length) missing.push('보안 그룹');
+        summaryEl.textContent = `미완료 — ${missing.join(', ')} 필요`;
+        statusEl.textContent  = '미완료';
+        div.classList.remove('configured');
+    }
+    updateSidebar();
+}
+
+function duplicateVmBlock(id) {
+    const div = document.getElementById(id);
+    if (!div) return;
+    const dd = div._dropdowns || {};
+
+    // Collect extra volumes from current block
+    const extraVolumes = [];
+    div.querySelectorAll('.vol-row').forEach(row => {
+        const name = row.querySelector('.vol-name-input').value.trim();
+        const size = parseInt(row.querySelector('.vol-size-input').value, 10);
+        if (name && size > 0) extraVolumes.push({ name, size });
+    });
+
+    const prefill = {
+        name:             div.querySelector('.vm-name-input').value.trim(),
+        project:          dd.project?.getSelected()?.key || '',
+        subnet:           dd.subnet?.getSelected()?.name || '',
+        image:            dd.image?.getSelected()?.name || '',
+        flavor:           dd.flavor?.getSelected()?.name || '',
+        keypair:          dd.keypair?.getSelected()?.name || dd.keypair?.getSelected()?.key_name || '',
+        security_groups:  dd.sg?.getSelectedLabels() || [],
+        root_volume_size: parseInt(div.querySelector('.root-vol-input').value, 10) || 50,
+        extra_volumes:    extraVolumes,
+    };
+
+    // addVmBlock appends to end of #vmBlocks — move it right after the source block
+    const newDiv = addVmBlock(prefill);
+    div.insertAdjacentElement('afterend', newDiv);
+}
+
+async function onProjectSelected(blockId, projectKey, prefill) {
+    const div = document.getElementById(blockId);
+    if (!div) return;
+    // Disable dependent dropdowns while loading
+    ['subnet-drop', 'image-drop', 'flavor-drop', 'keypair-drop', 'sg-drop'].forEach(cls => {
+        const el = div.querySelector(`.${cls}`);
+        if (el) el.innerHTML = `<div class="sdrop-input placeholder">불러오는 중...</div>`;
+    });
+
+    let resources;
+    try {
+        resources = await fetchProjectResources(projectKey);
+    } catch (e) {
+        alert(`리소스 조회 실패 (${projectKey}): ${e.message}`);
+        return;
+    }
+
+    // Subnet: sort by CIDR numerically (e.g. 10.0.1.0/24 < 10.0.2.0/24)
+    function cidrSortKey(cidr) {
+        const ip = (cidr || '').split('/')[0];
+        return ip.split('.').map(n => String(parseInt(n) || 0).padStart(3,'0')).join('.');
+    }
+    const sortedSubnets = [...resources.subnets].sort((a, b) =>
+        cidrSortKey(a.cidr_block).localeCompare(cidrSortKey(b.cidr_block))
+    );
+    const subnetDrop = buildSearchDropdown(
+        div.querySelector('.subnet-drop'), sortedSubnets,
+        s => `${s.name} (${s.cidr_block || ''}) [${s.vpc_name || ''}]`,
+        s => s.id,
+        (s) => { div._selectedSubnetAz = s.availability_zone; updateVmSummary(blockId); },
+        '서브넷 선택'
+    );
+
+    // Image: same family+size sort as flavors (e.g. Ubuntu 22.04 < Ubuntu 24.04)
+    const sortedImages = [...resources.images].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+    const imageDrop = buildSearchDropdown(
+        div.querySelector('.image-drop'), sortedImages,
+        i => i.name, i => i.id, () => updateVmSummary(blockId), '이미지 선택'
+    );
+
+    // Sort flavors: alphabetically by family prefix, then by size within family
+    const SIZE_ORDER = ['nano','micro','small','medium','large',
+                        'xlarge','2xlarge','4xlarge','8xlarge','10xlarge',
+                        '12xlarge','16xlarge','24xlarge','32xlarge','48xlarge'];
+    function flavorSortKey(name) {
+        const dot = name.lastIndexOf('.');
+        const family = dot >= 0 ? name.substring(0, dot) : name;
+        const size   = dot >= 0 ? name.substring(dot + 1) : '';
+        const sizeIdx = SIZE_ORDER.indexOf(size);
+        return family + '~' + String(sizeIdx >= 0 ? sizeIdx : 99).padStart(3, '0');
+    }
+    const sortedFlavors = [...resources.flavors].sort((a, b) =>
+        flavorSortKey(a.name).localeCompare(flavorSortKey(b.name))
+    );
+
+    const flavorDrop = buildSearchDropdown(
+        div.querySelector('.flavor-drop'), sortedFlavors,
+        f => `${f.name}${f.vcpus ? ` (${f.vcpus}vCPU/${f.memory_mb ? Math.round(f.memory_mb/1024)+'GB' : ''})` : ''}`,
+        f => f.id, () => updateVmSummary(blockId), '플레이버 선택'
+    );
+
+    // Keypair: alphabetical by name
+    const sortedKeypairs = [...resources.keypairs].sort((a, b) =>
+        (a.name || a.key_name || '').localeCompare(b.name || b.key_name || '')
+    );
+    const keypairDrop = buildSearchDropdown(
+        div.querySelector('.keypair-drop'), sortedKeypairs,
+        k => k.name || k.key_name, k => k.name || k.key_name, () => updateVmSummary(blockId), '키페어 선택'
+    );
+
+    // Security groups: alphabetical by name
+    const sortedSGs = [...resources.security_groups].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '')
+    );
+    const sgDrop = buildMultiSearchDropdown(
+        div.querySelector('.sg-drop'), sortedSGs,
+        g => g.name, g => g.name, '보안 그룹 선택',
+        () => updateVmSummary(blockId)
+    );
+
+    div._dropdowns = {
+        ...div._dropdowns,
+        subnet: subnetDrop, image: imageDrop, flavor: flavorDrop,
+        keypair: keypairDrop, sg: sgDrop,
+    };
+    div._resources = resources;
+
+    // Apply fuzzy-matched prefill values now that resources are loaded
+    if (prefill) {
+        if (prefill.subnet) {
+            const m = fuzzyFind(prefill.subnet, resources.subnets, s => s.name);
+            if (m) { subnetDrop.setSelected(m); div._selectedSubnetAz = m.availability_zone; }
+        }
+        if (prefill.image) {
+            const m = fuzzyFind(prefill.image, resources.images, i => i.name);
+            if (m) imageDrop.setSelected(m);
+        }
+        if (prefill.flavor) {
+            const m = fuzzyFind(prefill.flavor, resources.flavors, f => f.name);
+            if (m) flavorDrop.setSelected(m);
+        }
+        if (prefill.keypair) {
+            const m = fuzzyFind(prefill.keypair, resources.keypairs, k => k.name || k.key_name);
+            if (m) keypairDrop.setSelected(m);
+        }
+        if (prefill.security_groups && prefill.security_groups.length) {
+            const matchedValues = [];
+            prefill.security_groups.forEach(sgName => {
+                const m = fuzzyFind(sgName, resources.security_groups, g => g.name);
+                if (m) matchedValues.push(m.name);
+            });
+            sgDrop.setSelectedValues(matchedValues);
+        }
+    }
+    // Update summary/status after all prefill values are applied
+    if (prefill) updateVmSummary(blockId);
+}
+
+const VOL_SUFFIXES = ['-data', '-logs', '-backup'];
+
+function addVolRow(blockId, name, size) {
+    const div = document.getElementById(blockId);
+    if (!div) return;
+    const seq = parseInt(div.dataset.extraVolSeq || '0') + 1;
+    div.dataset.extraVolSeq = String(seq);
+    const rowId = `${blockId}-vol-${seq}`;
+
+    // Auto-suggest name based on order and current VM name
+    const vmName    = div.querySelector('.vm-name-input')?.value.trim() || '';
+    const volCount  = div.querySelectorAll('.vol-row').length; // before adding
+    const suffix    = VOL_SUFFIXES[volCount] || `-vol${volCount + 1}`;
+    const autoName  = name !== undefined ? name : (vmName ? vmName + suffix : '');
+
+    const row = document.createElement('div');
+    row.className = 'vol-row';
+    row.id = rowId;
+    row.innerHTML = `
+        <input type="text" class="vol-name-input" placeholder="볼륨 이름"
+               value="${autoName}"
+               data-auto="${autoName}"
+               data-suffix="${suffix}"
+               oninput="this.dataset.modified='1'; this.classList.remove('field-missing'); updateVmSummary('${blockId}'); updateSidebar();">
+        <input type="number" class="vol-size-input" placeholder="크기 (GB)" min="1" value="${size || ''}"
+               oninput="this.classList.remove('field-missing'); updateVmSummary('${blockId}'); updateSidebar();">
+        <button class="vol-row-remove" onclick="document.getElementById('${rowId}').remove(); updateVmSummary('${blockId}'); updateSidebar();">✕</button>
+    `;
+    div.querySelector('.extra-vols').appendChild(row);
+}
+
+function syncVolNames(blockId) {
+    // When VM name changes, update any auto-suggested vol names that haven't been manually edited
+    const div = document.getElementById(blockId);
+    if (!div) return;
+    const vmName = div.querySelector('.vm-name-input')?.value.trim() || '';
+    div.querySelectorAll('.vol-row').forEach(row => {
+        const input = row.querySelector('.vol-name-input');
+        if (!input || input.dataset.modified === '1') return;
+        const suffix = input.dataset.suffix || '';
+        input.value = vmName ? vmName + suffix : '';
+        input.dataset.auto = input.value;
+    });
+}
+
+// ════════════════════════════════════════════════════════════
+// Paste-from-spreadsheet parser
+// ════════════════════════════════════════════════════════════
+function parsePastedData() {
+    const raw = document.getElementById('pasteArea').value;
+    const resultEl = document.getElementById('pasteResult');
+    if (!raw.trim()) {
+        resultEl.textContent = '붙여넣은 데이터가 없습니다.';
+        return;
+    }
+
+    const lines = raw.split(/\r?\n/).filter(l => l.trim() !== '');
+    if (lines.length < 2) {
+        resultEl.textContent = '헤더와 최소 1개의 데이터 행이 필요합니다.';
+        return;
+    }
+
+    const headers = lines[0].split('\t').map(h => h.trim());
+    const colIndex = {};
+    headers.forEach((h, i) => { colIndex[h] = i; });
+
+    // Required column names (must match the sheet's header text exactly)
+    const REQUIRED = ['리소스 타입', 'Hostname', 'Spec', '클라우드 프로젝트',
+                       'OS', 'Version', 'PEM', 'SG', 'Subnet'];
+    const missing = REQUIRED.filter(col => !(col in colIndex));
+    if (missing.length) {
+        resultEl.textContent = `시트에서 다음 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`;
+        return;
+    }
+
+    // DISK columns have multi-line headers in the actual sheet — match loosely
+    function findDiskCol(label) {
+        const found = headers.find(h => h.replace(/\s+/g, '') === label.replace(/\s+/g, ''));
+        return found !== undefined ? colIndex[found] : -1;
+    }
+    const diskOsIdx   = findDiskCol('DISK(OS)');
+    const disk1Idx     = findDiskCol('DISK(추가)');
+    const disk2Idx     = findDiskCol('DISK(추가2)');
+    const disk3Idx     = findDiskCol('DISK(추가3)');
+
+    let imported = 0, skipped = 0;
+    const skippedReasons = [];
+
+    for (let li = 1; li < lines.length; li++) {
+        const cols = lines[li].split('\t');
+        const get = (col) => (cols[colIndex[col]] || '').trim();
+
+        const resourceType = get('리소스 타입');
+        if (resourceType !== 'VM') {
+            skipped++;
+            continue;
+        }
+
+        const hostname = get('Hostname');
+        if (!hostname) {
+            skipped++;
+            skippedReasons.push(`${li + 1}행: Hostname 없음`);
+            continue;
+        }
+
+        const prefill = {
+            name:    hostname,
+            project: get('클라우드 프로젝트'),
+            subnet:  get('Subnet'),
+            image:   `${get('OS')} ${get('Version')}`.trim(),
+            flavor:  get('Spec'),
+            keypair: get('PEM'),
+            security_groups: get('SG').split(',').map(s => s.trim()).filter(Boolean),
+            root_volume_size: parseInt(diskOsIdx >= 0 ? cols[diskOsIdx] : '', 10) || 50,
+            extra_volumes: [],
+        };
+
+        const diskVal = (idx) => {
+            if (idx < 0) return null;
+            const v = (cols[idx] || '').trim();
+            const n = parseInt(v, 10);
+            return (v && !isNaN(n) && n > 0) ? n : null;
+        };
+        const d1 = diskVal(disk1Idx);
+        const d2 = diskVal(disk2Idx);
+        const d3 = diskVal(disk3Idx);
+        if (d1) prefill.extra_volumes.push({ name: `${hostname}-data`,   size: d1 });
+        if (d2) prefill.extra_volumes.push({ name: `${hostname}-logs`,   size: d2 });
+        if (d3) prefill.extra_volumes.push({ name: `${hostname}-backup`, size: d3 });
+
+        addVmBlock(prefill);
+        imported++;
+    }
+
+    let msg = `${imported}개 VM 가져옴`;
+    if (skipped > 0) msg += `, ${skipped}개 행 제외 (VM이 아니거나 Hostname 없음)`;
+    resultEl.textContent = msg;
+}
+
+// ════════════════════════════════════════════════════════════
+// Validation + Submission (SSE)
+// ════════════════════════════════════════════════════════════
+function clearFieldErrors(div) {
+    div.querySelectorAll('.field-missing').forEach(el => el.classList.remove('field-missing'));
+}
+
+function validateAndCollectVmBlocks() {
+    const blocks = Array.from(document.querySelectorAll('.vm-block'))
+        .filter(bl => !bl.classList.contains('created'));  // skip already created VMs
+    if (blocks.length === 0) {
+        alert('최소 1개의 VM을 구성해주세요.');
+        return null;
+    }
+
+    const configs = [];
+    let firstError = null;
+
+    for (const div of blocks) {
+        clearFieldErrors(div);
+        const name = div.querySelector('.vm-name-input').value.trim();
+        const dd = div._dropdowns || {};
+        const project = dd.project?.getSelected();
+        const subnet  = dd.subnet?.getSelected();
+        const image   = dd.image?.getSelected();
+        const flavor  = dd.flavor?.getSelected();
+        const keypair = dd.keypair?.getSelected();
+        const sgNames = dd.sg?.getSelectedLabels() || [];
+        const rootVolSize = parseInt(div.querySelector('.root-vol-input').value, 10) || 50;
+
+        const missing = [];
+        if (!name)     { missing.push('VM 이름'); div.querySelector('.vm-name-input').classList.add('field-missing'); }
+        if (!project)  { missing.push('프로젝트'); div.querySelector('.project-drop .sdrop-input')?.classList.add('field-missing'); }
+        if (!subnet)   { missing.push('서브넷'); div.querySelector('.subnet-drop .sdrop-input')?.classList.add('field-missing'); }
+        if (!image)    { missing.push('이미지'); div.querySelector('.image-drop .sdrop-input')?.classList.add('field-missing'); }
+        if (!flavor)   { missing.push('플레이버'); div.querySelector('.flavor-drop .sdrop-input')?.classList.add('field-missing'); }
+        if (!keypair)  { missing.push('키페어'); div.querySelector('.keypair-drop .sdrop-input')?.classList.add('field-missing'); }
+
+        if (missing.length) {
+            if (!firstError) firstError = `'${name || '(이름 없음)'}' — 누락된 항목: ${missing.join(', ')}`;
+            continue;
+        }
+
+        const extraVolumes = [];
+        let volError = false;
+        div.querySelectorAll('.vol-row').forEach(row => {
+            const vName  = row.querySelector('.vol-name-input').value.trim();
+            const vSize  = parseInt(row.querySelector('.vol-size-input').value, 10);
+            const nameEl = row.querySelector('.vol-name-input');
+            const sizeEl = row.querySelector('.vol-size-input');
+            if (vName && vSize > 0) {
+                extraVolumes.push({ name: vName, size: vSize });
+            } else if (vName && !vSize) {
+                // Name filled but size missing
+                sizeEl.classList.add('field-missing');
+                if (!firstError) firstError = `'${name}' — 추가 볼륨 '${vName}'의 크기를 입력해주세요.`;
+                volError = true;
+            } else if (!vName && vSize > 0) {
+                // Size filled but name missing
+                nameEl.classList.add('field-missing');
+                if (!firstError) firstError = `'${name}' — 추가 볼륨의 이름을 입력해주세요.`;
+                volError = true;
+            }
+            // Both empty → row is skipped silently (user added but left blank)
+        });
+        if (volError) continue;
+
+        configs.push({
+            project:            project.key,
+            name:               name,
+            subnet_id:          subnet.id,
+            availability_zone:  subnet.availability_zone,
+            image_id:           image.id,
+            flavor_id:          flavor.id,
+            keypair:            keypair.name || keypair.key_name,
+            security_groups:    sgNames,
+            root_volume_size:   rootVolSize,
+            extra_volumes:      extraVolumes,
+        });
+    }
+
+    if (firstError) {
+        alert(`입력값을 확인해주세요.\n\n${firstError}`);
+        return null;
+    }
+    return configs;
+}
+
+function appendProgressLine(text, cls) {
+    const panel = document.getElementById('progressPanel');
+    panel.classList.add('open');
+    const body = document.getElementById('progressBody');
+    const line = document.createElement('div');
+    line.className = 'progress-line' + (cls ? ` ${cls}` : '');
+    line.textContent = text;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+}
+
+async function startVmCreation() {
+    const configs = validateAndCollectVmBlocks();
+    if (!configs) return;
+    if (configs.length === 0) {
+        alert('생성할 VM이 없습니다. 이미 모든 VM이 생성되었거나 새 VM을 추가해주세요.');
+        return;
+    }
+
+    const total = configs.length;
+    const createBtn = document.getElementById('createBtn');
+    createBtn.disabled = true;
+    createBtn.textContent = '생성 중...';
+    document.getElementById('progressBody').innerHTML = '';
+    document.getElementById('progressPanel').classList.add('open');
+    appendProgressLine(`${total}개 VM 생성을 시작합니다 (순차 처리)...`);
+
+    try {
+        const regRes = await fetch('/api/vm_create/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+            body: JSON.stringify({ vms: configs })
+        });
+        const regData = await regRes.json();
+        if (regData.error) throw new Error(regData.error);
+
+        const evtSource = new EventSource(`/api/vm_create/stream?token=${encodeURIComponent(regData.token)}`);
+        let doneCount = 0, failCount = 0;
+
+        evtSource.onmessage = (e) => {
+            const msg = e.data;
+            if (msg.includes('__VM_DONE__')) {
+                const name = msg.split('__VM_DONE__')[1];
+                appendProgressLine(`✓ ${name} 생성 완료`, 'done');
+                document.querySelectorAll('.vm-block').forEach(bl => {
+                    const inp = bl.querySelector('.vm-name-input');
+                    if (inp && inp.value.trim() === name) {
+                        bl.classList.add('created'); bl.classList.remove('configured');
+                        const st = bl.querySelector('[id$="-status"]');
+                        if (st) st.textContent = '생성 완료';
+                        const su = bl.querySelector('[id$="-summary"]');
+                        if (su) su.textContent = '✓ VM 생성 완료';
+                    }
+                });
+                updateSidebar();
+                doneCount++;
+            } else if (msg.includes('__VM_FAIL__')) {
+                const name = msg.split('__VM_FAIL__')[1];
+                appendProgressLine(`✗ ${name} 생성 실패`, 'fail');
+                failCount++;
+            } else if (msg.includes('__ALL_DONE__')) {
+                appendProgressLine(`\n전체 완료 — 성공 ${doneCount}개 / 실패 ${failCount}개`,
+                                    failCount > 0 ? 'fail' : 'done');
+                document.getElementById('progressTitle').textContent = failCount > 0 ? '⚠️ 완료 (일부 실패)' : '✅ 생성 완료';
+                evtSource.close();
+                createBtn.disabled = false;
+                createBtn.textContent = 'VM 생성 시작';
+            } else {
+                appendProgressLine(msg);
+            }
+        };
+        evtSource.onerror = () => {
+            appendProgressLine('연결이 종료되었습니다. (오류 또는 완료)', 'fail');
+            evtSource.close();
+            createBtn.disabled = false;
+            createBtn.textContent = 'VM 생성 시작';
+        };
+    } catch (e) {
+        appendProgressLine(`오류: ${e.message}`, 'fail');
+        createBtn.disabled = false;
+        createBtn.textContent = 'VM 생성 시작';
+    }
+}
+</script>
+</body>
+</html>

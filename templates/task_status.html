@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>작업 상태</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    :root {
+      --primary:       #4caf50;
+      --accent:        #2196f3;
+      --bg:            #0f1117;
+      --card-bg:       rgba(27,32,46,0.96);
+      --input-bg:      #23263a;
+      --input-border:  #2b3142;
+      --text-main:     #f3f6fa;
+      --text-label:    #bfc7d1;
+      --error-bg:      #2b1c1c;
+      --error-border:  #c0392b;
+      --error-text:    #ffb3b3;
+      --surface:       #23263a;
+      --border:        #2b3142;
+    }
+    body.light-mode {
+      --bg:            #f0ebe3;
+      --card-bg:       rgba(250,246,240,0.98);
+      --input-bg:      #faf6f0;
+      --input-border:  #d0c9c0;
+      --text-main:     #1a1612;
+      --text-label:    #6b6258;
+      --error-bg:      #fee2e2;
+      --error-border:  #fca5a5;
+      --error-text:    #991b1b;
+      --surface:       #e8e3db;
+      --border:        #d0c9c0;
+    }
+
+    body {
+      font-family: "Segoe UI", "Apple SD Gothic Neo", Arial, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text-main);
+      padding-top: 48px;
+    }
+
+    .container {
+      background: var(--card-bg);
+      margin: 40px auto;
+      max-width: 600px;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(33,150,243,0.19);
+      padding: 36px 32px 28px 32px;
+      position: relative;
+      animation: fadeIn 0.7s;
+      transition: box-shadow 0.3s;
+    }
+    body.light-mode .container {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--accent);
+      margin-bottom: 28px;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+    body.light-mode h1 { color: #1976d2; }
+
+    .task-id {
+      font-family: monospace;
+      background: var(--surface);
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 16px;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .status-box {
+      margin: 24px 0;
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--surface);
+      border-left: 4px solid var(--accent);
+    }
+
+    .progress-container {
+      width: 100%;
+      background: var(--border);
+      border-radius: 8px;
+      margin: 16px 0;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 8px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 8px;
+    }
+    .progress-label {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--text-label);
+    }
+
+    .status-text {
+      font-weight: 600;
+      margin-left: 8px;
+      vertical-align: middle;
+      color: var(--accent);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 24px; height: 24px;
+      border: 3px solid rgba(33,150,243,0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .pulse {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    .summary {
+      margin: 16px 0 24px 0;
+      padding: 12px;
+      background: var(--surface);
+      border-radius: 8px;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+    .summary-success { color: var(--primary); font-weight: 600; }
+    .summary-failure { color: var(--error-text); font-weight: 600; }
+
+    .vm-row {
+      margin: 4px 0;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+    }
+    .vm-row.success { background: rgba(76,175,80,0.10); }
+    .vm-row.failure { background: var(--error-bg); color: var(--error-text); }
+
+    .success-icon { color: #4caf50; margin-right: 8px; }
+    .failure-icon { color: #c0392b; margin-right: 8px; }
+
+    .loading-message {
+      color: var(--accent);
+      text-align: center;
+      padding: 12px;
+      background: rgba(33,150,243,0.1);
+      border-radius: 8px;
+      margin-top: 16px;
+      font-style: italic;
+    }
+
+    .error-line {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      background: var(--error-bg);
+      color: var(--error-text);
+      border-radius: 8px;
+      padding: 10px 16px;
+      flex-wrap: wrap;
+      border: 1px solid var(--error-border);
+    }
+    .error-icon { font-size: 1.3em; margin-right: 10px; color: var(--error-text); }
+    .error-summary-text { flex: 1; font-weight: 500; font-size: 1em; color: var(--error-text); }
+    .badge-danger {
+      background: #c0392b; color: white;
+      border-radius: 4px; padding: 2px 8px;
+      margin-right: 8px; font-size: 0.9em;
+    }
+    .details-btn-container { margin-left: auto; display: flex; align-items: center; }
+    .details-btn {
+      background: none; border: none;
+      color: var(--accent); cursor: pointer;
+      font-size: 0.9em; display: flex; align-items: center;
+    }
+    .details-btn i.fas { font-size: 1em; margin-right: 5px; transition: transform 0.2s; }
+    .details-btn.open i.fas { transform: rotate(90deg); }
+
+    .error-details-panel {
+      display: none;
+      width: 100%;
+      margin-top: 6px;
+      background: var(--surface);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.96em;
+      color: var(--error-text);
+      font-family: monospace;
+      white-space: pre-wrap;
+      border: 1px solid var(--border);
+    }
+    .error-details-panel.open { display: block; }
+
+    ul.result-list { list-style: none; padding: 0; margin: 30px 0 0 0; }
+    li.result-item { margin-bottom: 18px; display: flex; align-items: center; }
+    .result-item.success span.icon { font-size: 2.4rem; margin-right: 12px; color: #b2f5d6; }
+    .result-item.failure span.icon { font-size: 2.4rem; margin-right: 12px; color: var(--error-text); }
+    .result-item strong { display: inline-block; margin-right: 6px; }
+    .result-item .detail {
+      display: block; margin-top: 6px;
+      font-size: 0.97em; color: var(--primary); white-space: pre-wrap;
+    }
+
+    .scrollable { max-height: 20vh; overflow-y: auto; margin: 0 -12px; padding: 0 12px; }
+    .spinner.hide, .pulse.hide { display: none; }
+
+    .back-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: #1976d2; }
+
+    .error-line, .error-details-panel, .error-summary-text,
+    .error-line pre, pre {
+      word-break: break-all; overflow-wrap: anywhere;
+      white-space: pre-wrap; max-width: 100%; box-sizing: border-box;
+    }
+    .error-details-panel { overflow-x: auto; max-width: 100%; }
+  </style>
+</head>
+<body>
+  {% include 'top_menu.html' %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  <div style="max-width:600px;margin:16px auto 0;padding:12px 16px;border-radius:8px;
+              background:{{ 'rgba(76,175,80,0.12)' if category=='success' else 'rgba(33,150,243,0.12)' if category=='info' else 'rgba(231,76,60,0.12)' }};
+              border:1px solid {{ '#4caf50' if category=='success' else '#2196f3' if category=='info' else '#e74c3c' }};
+              color:var(--text-main);font-size:0.95em">{{ message }}</div>
+  {% endfor %}
+  {% endwith %}
+
+  <div class="container">
+    <h1>작업 상태</h1>
+    <div class="task-id">Task ID: {{ task_id }}</div>
+    <div class="status-box">
+      <div>
+        <span class="spinner"></span>
+        <span class="pulse"></span>
+        <span class="status-text" id="statusText">작업 준비 중...</span>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-label" id="progressLabel"></div>
+    </div>
+    <div class="summary" id="taskSummary"></div>
+    <div id="errorSummary" class="scrollable"></div>
+    <ul class="result-list" id="resultList"></ul>
+
+    <div style="text-align:center;margin-top:24px">
+      <a href="{{ url_for('attach_volumes') }}" class="back-btn">볼륨 마운트 화면으로 돌아가기</a>
+    </div>
+  </div>
+
+  <script>
+    function analyzeResult(result) {
+      if (!Array.isArray(result)) return null;
+      const successes = result.filter(r => r.success).length;
+      const failures  = result.filter(r => !r.success).length;
+      return { successes, failures, total: result.length };
+    }
+    function getProgressBarColor(successes, failures, total) {
+      if (failures === total)          return '#c0392b';
+      if (failures > 0 && successes > 0) return '#f5a623';
+      if (successes === total)         return '#4caf50';
+      return '#2196f3';
+    }
+    function getErrorMessage(response) {
+      if (typeof response === 'string') return response;
+      if (response?.error)   return response.error;
+      if (response?.message) return response.message;
+      return JSON.stringify(response);
+    }
+    function getStatusInfo(results) {
+      let analysis = Array.isArray(results) ? analyzeResult(results) : null;
+      let barColor = '#4caf50', message = '작업이 성공적으로 완료되었습니다!', label = '100% — 완료';
+      if (analysis) {
+        barColor = getProgressBarColor(analysis.successes, analysis.failures, analysis.total);
+        if (analysis.failures === analysis.total)         { message = '작업이 실패했습니다. 로그 확인 부탁드립니다'; label = '실패'; }
+        else if (analysis.failures > 0 && analysis.successes > 0) { message = '작업이 일부 완료되었습니다!'; label = '100% — 완료 (일부 에러)'; }
+      }
+      return { barColor, message, label };
+    }
+    function renderResultItem(item) {
+      if (!item || item.success) return '';
+      return `<li class="result-item failure"><strong>실패</strong> : ${item.vm}의 볼륨 <b>${item.volume}</b> 마운트 실패</li>`;
+    }
+    function showSummary(result) {
+      const taskSummary = document.getElementById('taskSummary');
+      const resultList  = document.getElementById('resultList');
+      if (!result) { taskSummary.innerHTML = ''; resultList.innerHTML = ''; return; }
+      const successes = result.filter(r => r.success);
+      const failures  = result.filter(r => !r.success);
+      taskSummary.innerHTML = `<p class="summary"><span class="summary-success">🟢 ${successes.length}건 성공</span> <span class="summary-failure">🔴 ${failures.length}건 실패</span></p>`;
+      resultList.innerHTML = failures.map(renderResultItem).join('');
+    }
+    function renderErrorSummary(result) {
+      const errorSummary = document.getElementById('errorSummary');
+      errorSummary.innerHTML = '';
+      const errors = result && !Array.isArray(result) ? [result] : result.filter(r => !r.success);
+      if (!errors || errors.length === 0) { errorSummary.innerHTML = '<div class="loading-message">오류 없음</div>'; return; }
+      errorSummary.innerHTML = `<h3 style="color:var(--error-text);margin-bottom:14px;">⚠️ 마운트 실패: <span class="summary-failure">${errors.length}건</span></h3>`;
+      errors.forEach((item, idx) => {
+        const el = document.createElement('div');
+        el.className = 'error-line';
+        el.innerHTML = `
+          <span class="badge-danger">실패</span>
+          <span class="error-icon">⚠️</span>
+          <span class="error-summary-text">${item.vm}의 볼륨 <b>${item.volume}</b> 마운트 실패</span>
+          <span class="details-btn-container">
+            <button class="details-btn" id="details-btn-${idx}" aria-expanded="false">
+              <i class="fas fa-chevron-right"></i><span>상세보기</span>
+            </button>
+          </span>
+          <div class="error-details-panel" id="details-panel-${idx}">
+            <pre>${JSON.stringify(item.response, null, 2)}</pre>
+          </div>`;
+        errorSummary.appendChild(el);
+        const btn   = document.getElementById(`details-btn-${idx}`);
+        const panel = document.getElementById(`details-panel-${idx}`);
+        btn.addEventListener('click', () => {
+          panel.classList.toggle('open');
+          btn.classList.toggle('open');
+          btn.querySelector('i').classList.toggle('fa-chevron-right');
+          btn.querySelector('i').classList.toggle('fa-chevron-down');
+          btn.setAttribute('aria-expanded', panel.classList.contains('open'));
+        });
+      });
+    }
+
+    let isPolling = true;
+    function pollTask() {
+      if (!isPolling) return;
+      fetch(`/task_result/{{ task_id }}`)
+        .then(r => r.json())
+        .then(data => {
+          const statusText  = document.getElementById('statusText');
+          const progressBar = document.getElementById('progressBar');
+          const progressLabel = document.getElementById('progressLabel');
+          const spinner = document.querySelector('.spinner');
+          const pulse   = document.querySelector('.pulse');
+          if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
+            const { barColor, message, label } = getStatusInfo(data.result);
+            progressBar.style.width      = '100%';
+            progressBar.style.background = barColor;
+            statusText.textContent       = message;
+            progressLabel.textContent    = label;
+            spinner.classList.add('hide');
+            pulse.classList.add('hide');
+            isPolling = false;
+            renderErrorSummary(data.result);
+          } else if (data.state === 'PROGRESS') {
+            statusText.textContent    = data.result?.status || '처리 중...';
+            progressBar.style.width   = (data.result?.percent || 0) + '%';
+            progressLabel.textContent = data.result?.step_text || `${data.result?.current||0} / ${data.result?.total||0}`;
+            progressBar.style.background = Array.isArray(data.result) ? getStatusInfo(data.result).barColor : '#2196f3';
+            if (Array.isArray(data.result)) renderErrorSummary(data.result);
+            setTimeout(pollTask, 1000);
+          } else {
+            statusText.textContent       = '작업 준비 중...';
+            progressBar.style.width      = '0%';
+            progressBar.style.background = '#2196f3';
+            progressLabel.textContent    = '대기 중...';
+            setTimeout(pollTask, 2000);
+          }
+        })
+        .catch(err => { console.error('Polling error:', err); setTimeout(pollTask, 2000); });
+    }
+    pollTask();
+  </script>
+</body>
+</html>

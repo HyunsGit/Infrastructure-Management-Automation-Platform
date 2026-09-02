@@ -1,0 +1,285 @@
+/* ===== 메뉴바(navbar) 관련 CSS ===== */
+
+/* 네비게이션 바 전체 */
+nav {
+    position: sticky;
+    top: 0;
+    background: rgba(27,32,46,0.96);
+    border-bottom: 1px solid rgba(33,150,243,0.19);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    font-weight: 600;
+    font-size: 15px;
+    user-select: none;
+    box-shadow: 0 8px 32px rgba(33, 150, 243, 0.19);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+h2.dashboard-title {
+    margin-top: 40px; /* or adjust value as desired */
+    color: #e3fcec;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-align: center;
+    font-size: 2.5rem;
+}
+
+/* 로고 */
+.logo {
+    font-size: 1.4rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    cursor: pointer;
+    color: #FF9800;
+    flex-shrink: 0;
+}
+
+/* 메뉴 영역 */
+.menu {
+    display: flex;
+    gap: 18px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    justify-content: center;   /* Center align menu items */
+}
+.menu a {
+    color: #c2f7e3;
+    text-decoration: none;
+    padding: 8px 10px;
+    border-radius: 100px;
+    transition: background-color 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.menu a:hover, .menu a:focus {
+    background-color: #2196F3;
+    color: white;
+    outline: none;
+}
+
+/* 드롭다운 */
+.menu .dropdown {
+    position: relative;
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 100px;
+    color: #c2f7e3;
+    font-weight: 600;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.menu .dropdown:focus {
+    outline: none;
+    background-color: #2196F3;
+    color: white;
+}
+.menu .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 48px;
+    left: 0;
+    background: rgba(27,32,46,0.96);
+    border: 1.5px solid #2196F3;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(33,150,243,0.3);
+    min-width: 160px;
+    z-index: 1200;
+    flex-direction: column;
+    padding: 8px 0;
+}
+.menu .dropdown-content a {
+    padding: 10px 20px;
+    color: #c2f7e3;
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+}
+.menu .dropdown-content a:hover,
+.menu .dropdown-content a:focus {
+    background-color: #2196F3;
+    color: white;
+    outline: none;
+}
+
+/* Show dropdown on hover or focus-within */
+.menu .dropdown.open .dropdown-content,
+.menu .dropdown:hover .dropdown-content,
+.menu .dropdown:focus-within .dropdown-content,
+.menu .dropdown-content:hover {
+    display: flex !important;
+    flex-direction: column;
+}
+
+.menu .dropdown-content:hover {
+    display: flex !important;
+}
+
+/* 오른쪽 메뉴(계정/로그아웃) */
+.right-menu {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    height: 40px;
+    flex-shrink: 0;
+    width: auto;
+}
+
+.right-menu a:hover, .right-menu a:focus {
+    background-color: #2196F3;
+    color: white;
+    outline: none;
+}
+.right-menu a, .logout-form button[type="submit"] {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  line-height: 40px;
+  margin-top: 0 !important;
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 100px;
+}
+
+.right-menu a.account-btn {
+  background: none;
+  border: none;
+  color: #95c4e8;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 100px;
+  font-size: 15px;
+  line-height: 40px;
+  height: 40px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.15s, color 0.15s;
+  text-decoration: none;
+}
+
+.right-menu a.account-btn:hover,
+.right-menu a.account-btn:focus {
+  background-color: #2196F3;
+  color: white;
+  outline: none;
+}
+
+
+/* 로그아웃 버튼 */
+.logout-form {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    height: 40px;
+}
+.logout-form button[type="submit"]:hover,
+.logout-form button[type="submit"]:focus {
+    background-color: #2196F3;
+    color: white;
+    outline: none;
+}
+
+/* 햄버거 버튼 (모바일) */
+.burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    cursor: pointer;
+    width: 24px;
+    height: 18px;
+    gap: 4px;
+    background: none;
+    border: none;
+}
+.burger div {
+    height: 2px;
+    background: #c2f7e3;
+    border-radius: 1px;
+}
+.burger:hover div {
+    background: #2196F3;
+}
+
+/* 모바일 사이드바 */
+.sidebar {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    width: 280px;
+    height: 100vh;
+    background: rgba(27,32,46,0.96);
+    box-shadow: -3px 0 9px rgb(33 150 243 / 0.2);
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: right 0.3s ease;
+    z-index: 1100;
+    overflow-y: auto;
+    color: #c2f7e3;
+}
+.sidebar.open {
+    right: 0;
+}
+.sidebar a {
+    font-weight: 600;
+    font-size: 18px;
+    color: #c2f7e3;
+    text-decoration: none;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(33,150,243,0.14);
+    border-radius: 4px;
+    transition: background-color 0.15s;
+    display: block;
+}
+.sidebar a:hover,
+.sidebar a:focus {
+    background-color: #2196F3;
+    color: white;
+    outline: none;
+}
+
+/* 오버레이 */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 1050;
+}
+.overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 반응형 (모바일) */
+@media (max-width: 900px) {
+    .menu,
+    .right-menu {
+        display: none;
+    }
+    .burger {
+        display: flex;
+    }
+}
+@media (max-width: 700px) {
+    .burger {
+        display: flex;
+    }
+}

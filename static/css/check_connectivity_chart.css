@@ -1,0 +1,116 @@
+@keyframes gradientBG {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
+/* Unique Spinner for loading cells */
+.cell-spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 3px solid #283874;
+    border-top: 3px solid #48cae4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
+}
+
+/* Unique Table Styles */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(36, 46, 68, 0.97);
+    color: #d6fff2;
+    font-size: 1rem;
+    box-shadow: 0 8px 24px rgba(33, 150, 243, 0.18);
+}
+thead {
+    background: linear-gradient(90deg, #2196F3 0%, #237ece 100%);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+th, td {
+    padding: 12px 16px;
+    text-align: center;
+    border-bottom: 1.5px solid rgba(44,56,77, 0.5);
+}
+tbody tr {
+    background: rgba(30,37,51, 0.8);
+    transition: background 0.2s;
+}
+tbody tr:nth-child(even) {
+    background: rgba(44,56,77, 0.55);
+}
+tbody tr:hover {
+    background: rgba(52, 152, 219, 0.14);
+}
+
+/* Status indicators */
+.status-dot {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: auto;
+}
+.status-ok-dot {
+    background-color: #34ff8a;
+    box-shadow: 0 0 6px #34ff8aaa;
+}
+.status-fail-dot {
+    background-color: #ff5f96;
+    box-shadow: 0 0 6px #ff5f96aa;
+}
+.cell-error {
+    color: #ffd65a;
+    font-size: 0.92em;
+    font-weight: 700;
+    text-align: center;
+}
+#connectivity-table p {
+    margin: 20px 0;
+    font-weight: 700;
+    color: #ffb3b3;
+    font-size: 1.1em;
+    text-align: center;
+}
+
+/* Refresh button */
+#refreshBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2980b9;
+    transition: color 0.3s;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+}
+#refreshBtn:hover, #refreshBtn:focus {
+    color: #1c5d90;
+    outline: none;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 24px 20px 36px;
+    }
+    h1 {
+        font-size: 1.6rem;
+        margin-bottom: 20px;
+    }
+}

@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Billing Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="static/css/menu.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Variables and base styles */
+    :root {
+      --primary: #4CAF50;
+      --accent: #2196F3;
+      --bg-gradient: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+      --card-bg: rgba(27,32,46,0.96);
+      --input-bg: #23263a;
+      --input-border: #2b3142;
+      --input-focus: #2196F3;
+      --text-main: #f3f6fa;
+      --text-label: #bfc7d1;
+      --error-bg: #2b1c1c;
+      --error-border: #c0392b;
+      --error-text: #ffb3b3;
+      --zone-bg: #232946;
+    }
+    /* Body and container */
+    body {
+      font-family: 'Inter', 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+      background: var(--bg-gradient);
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text-main);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+    }
+    @keyframes gradientBG {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+    .container {
+      background: var(--card-bg);
+      margin: 60px auto 40px auto;
+      max-width: 1200px;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(33, 150, 243, 0.19);
+      padding: 36px 32px 28px 32px;
+      position: relative;
+      animation: fadeIn 0.7s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px);}
+      to { opacity: 1; transform: none;}
+    }
+    .container:hover { box-shadow: 0 16px 40px rgba(33,150,243,0.23); }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--accent), var(--primary));
+      color: white;
+      padding: 2.5rem;
+      text-align: center;
+      border-radius: 12px;
+      margin: -36px -32px 28px -32px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    .header p {
+      margin: 0.5rem 0 0 0;
+      opacity: 0.9;
+      font-weight: 400;
+    }
+
+    /* Controls */
+    .controls {
+      padding: 2rem;
+      background: var(--zone-bg);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      border: 1px solid var(--input-border);
+      position: relative;
+    }
+    .controls label {
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+    select, button {
+      padding: 12px 20px;
+      font-size: 1rem;
+      border: 1.3px solid var(--input-border);
+      border-radius: 6px;
+      background: var(--input-bg);
+      color: var(--text-main);
+      font-weight: 500;
+      transition: all 0.2s ease;
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+    select {
+      flex: 1;
+      min-width: 200px;
+    }
+    select:focus, button:focus {
+      border: 1.5px solid var(--input-focus);
+      outline: none;
+      background: #20263a;
+      box-shadow: 0 0 0 2px #1976d2;
+    }
+    button {
+      background: linear-gradient(90deg,var(--accent),var(--primary) 80%);
+      background-size: 400% 400%;
+      animation: gradientMove 5s ease infinite;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(33,150,243,0.10);
+    }
+    @keyframes gradientMove {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+    button:hover:not(:disabled) {
+      background: linear-gradient(90deg,var(--primary),var(--accent) 80%);
+      box-shadow: 0 4px 16px rgba(76,175,80,0.19);
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: scale(0.97);
+    }
+    button:disabled {
+      background: var(--input-border);
+      cursor: not-allowed;
+      transform: none;
+    }
+    #status {
+      margin-left: auto;
+      font-weight: 500;
+      padding: 10px 16px;
+      background: var(--input-bg);
+      border-radius: 6px;
+      border: 1px solid var(--input-border);
+      font-size: 0.95em;
+    }
+    #total-price {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--text-main);
+      background: rgba(33, 150, 243, 0.15);
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 2px solid rgba(33, 150, 243, 0.3);
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+      margin-left: 12px;
+      transition: box-shadow 0.3s ease;
+    }
+    #total-price:hover {
+      box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+    #total-price.hidden {
+      display: none;
+    }
+
+    /* Loading & Error */
+    .loading {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-label);
+      font-style: italic;
+    }
+    .error {
+      background: var(--error-bg);
+      color: var(--error-text);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+      border: 1px solid var(--error-border);
+      transition: box-shadow 0.2s;
+    }
+    .error:hover {
+      box-shadow: 0 2px 12px rgba(33,150,243,0.11);
+    }
+
+    /* Billing Menu */
+    .billing-menu {
+      margin: 0;
+      background: transparent;
+      border: none;
+      overflow: hidden;
+    }
+    .menu-item {
+      border-bottom: 1px solid var(--input-border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .menu-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .menu-header-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 20px 24px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .menu-header-row:hover {
+      background: rgba(33, 150, 243, 0.08);
+    }
+    .menu-header-row.active {
+      background: rgba(33, 150, 243, 0.12);
+    }
+    .menu-trigger {
+      flex: 1;
+      padding: 0;
+      background: none;
+      border: none;
+      text-align: left;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .menu-trigger.active {
+      color: var(--input-focus);
+    }
+    .menu-icon {
+      font-size: 1.25rem;
+      margin-right: 1rem;
+    }
+    .menu-arrow {
+      font-size: 1rem;
+      transition: transform 0.2s ease;
+      margin-left: 0.75rem;
+      color: var(--text-label);
+    }
+    .menu-arrow.open {
+      transform: rotate(-90deg);
+    }
+    .service-total {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #4CAF50;
+      margin-left: auto;
+      padding-left: 1rem;
+    }
+    .menu-content {
+      display: none;
+      background: transparent;
+      overflow: hidden;
+    }
+    .menu-content.open {
+      display: block;
+      animation: slideDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    @keyframes slideDown {
+      from { opacity: 0; max-height: 0; }
+      to { opacity: 1; max-height: 2000px; }
+    }
+    .bcs-subsection {
+      padding: 16px 36px;
+      font-weight: 600;
+      color: var(--input-focus);
+      border-bottom: 1px solid var(--input-border);
+      background: var(--zone-bg);
+      font-size: 0.95rem;
+    }
+    .table-container {
+      padding: 0 36px 20px 36px;
+    }
+    .submenu-item {
+      padding: 20px 36px;
+      border-bottom: 1px solid var(--input-border);
+      background: var(--input-bg);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+      color: var(--text-label);
+    }
+    .submenu-item:hover {
+      background: var(--zone-bg);
+      color: var(--text-main);
+    }
+    .submenu-item.active {
+      background: rgba(33, 150, 243, 0.15);
+      color: var(--input-focus);
+      font-weight: 500;
+    }
+    .cluster-list {
+      padding: 0;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .cluster-item {
+      padding: 20px 36px;
+      border-bottom: 1px solid var(--input-border);
+      background: var(--input-bg);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-label);
+    }
+    .cluster-item:hover {
+      background: var(--zone-bg);
+      color: var(--text-main);
+    }
+    .cluster-item.active {
+      background: rgba(33, 150, 243, 0.15);
+      color: var(--input-focus);
+      font-weight: 500;
+    }
+    .cluster-price {
+      font-size: 0.9rem;
+      color: #4CAF50;
+      font-weight: 500;
+    }
+    .detail-content {
+      padding: 32px;
+      background: var(--input-bg);
+      border-radius: 12px;
+      border: 1px solid var(--input-border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      background: var(--input-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--input-border);
+    }
+    th {
+      background: var(--zone-bg);
+      padding: 16px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-label);
+      border-bottom: 2px solid var(--input-border);
+      font-size: 0.85rem;
+    }
+    td {
+      padding: 16px 12px;
+      border-bottom: 1px solid var(--input-border);
+      color: var(--text-main);
+    }
+    tr:hover {
+      background: var(--zone-bg);
+    }
+    .no-data {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-label);
+      font-style: italic;
+    }
+    .back-btn {
+      background: var(--input-border);
+      color: var(--text-label);
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .back-btn:hover {
+      background: var(--text-label);
+      color: var(--text-main);
+    }
+    h3 {
+      margin: 0 0 24px 0;
+      color: var(--input-focus);
+      font-weight: 600;
+      font-size: 1.25rem;
+    }
+    strong {
+      color: var(--text-main);
+    }
+    .os-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.125rem 0.375rem;
+      background: rgba(33, 150, 243, 0.2);
+      color: var(--input-focus);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    /* Tooltip styles */
+    .os-type-cell {
+      position: relative;
+      cursor: help;
+    }
+    .os-tooltip {
+      visibility: hidden;
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100%);
+      background: var(--accent);
+      color: white;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      max-width: 320px;
+      width: max-content;
+      min-width: 160px;
+      z-index: 1000;
+      box-shadow: 0 8px 32px rgba(33,150,243,0.25);
+      text-align: left;
+      white-space: normal;
+      line-height: 1.4;
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      backdrop-filter: blur(10px);
+    }
+    .os-type-cell:hover .os-tooltip {
+      visibility: visible;
+      opacity: 1;
+      transform: translateX(-50%) translateY(-100%);
+    }
+    .os-tooltip::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent;
+      border-top-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  {% include 'top_menu.html' %}
+  <div class="container">
+    <div class="header">
+      <h1>💰 Billing Dashboard</h1>
+      <p>View detailed billing information by project</p>
+    </div>
+    <div class="controls">
+      <label for="sCodeSelect">Select Project:</label>
+      <select id="sCodeSelect">
+        <option value="" disabled selected>Loading projects...</option>
+      </select>
+      <button id="loadBtn" onclick="loadBilling()">비용 조회</button>
+      <div id="status">Ready</div>
+      <div id="total-price" class="hidden">Total: ₩0</div>
+    </div>
+    <div id="billingContainer">
+      <div class="loading">Select a project and click "Load Billing Data" to begin</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/top_menu.js') }}"></script>
+  <script>
+    let isLoading = false;
+    let billingData = null;
+    let grandTotal = 0;
+
+    async function fetchSCodes() {
+      const select = document.getElementById("sCodeSelect");
+      const status = document.getElementById("status");
+      try {
+        status.textContent = "Loading projects...";
+        status.style.color = "#94a3b8";
+        const resp = await fetch("/api/s_codes", { credentials: "include" });
+        if (!resp.ok) {
+          const error = await resp.json();
+          throw new Error(error.error || `HTTP ${resp.status}`);
+        }
+        const sCodes = await resp.json();
+        select.innerHTML = '<option value="" disabled selected>Select project</option>';
+        sCodes.forEach((code) => {
+          const option = document.createElement("option");
+          option.value = code;
+          option.textContent = code;
+          select.appendChild(option);
+        });
+        status.textContent = `${sCodes.length} projects loaded`;
+        status.style.color = "#10b981";
+      } catch (e) {
+        select.innerHTML = '<option value="" disabled selected>Error loading projects</option>';
+        status.textContent = `Error: ${e.message}`;
+        status.style.color = "#ef4444";
+        console.error("Failed to load s_codes:", e);
+      }
+    }
+
+    async function loadBilling() {
+      window.grandTotal = 0;
+      grandTotal = 0;
+      const s_code = document.getElementById("sCodeSelect").value;
+      const container = document.getElementById("billingContainer");
+      const loadBtn = document.getElementById("loadBtn");
+      const status = document.getElementById("status");
+
+      if (!s_code) {
+        container.innerHTML = '<div class="error">Please select a project first.</div>';
+        return;
+      }
+
+      if (isLoading) return;
+
+      isLoading = true;
+      loadBtn.disabled = true;
+      loadBtn.textContent = "Loading...";
+      status.textContent = "Loading billing data...";
+      status.style.color = "#94a3b8";
+      document.getElementById("total-price").classList.add("hidden");
+      container.innerHTML = '<div class="loading">Loading billing data...</div>';
+
+      try {
+        const resp = await fetch(`/api/billing/${encodeURIComponent(s_code)}`, { credentials: "include" });
+        if (!resp.ok) {
+          const error = await resp.json().catch(() => ({}));
+          throw new Error(error.error || `HTTP ${resp.status}`);
+        }
+
+        billingData = await resp.json();
+        renderBillingData(billingData);
+        status.textContent = "Data loaded successfully";
+        status.style.color = "#10b981";
+      } catch (e) {
+        container.innerHTML = `<div class="error">Error: ${e.message}</div>`;
+        status.textContent = `Error: ${e.message}`;
+        status.style.color = "#ef4444";
+        console.error("Billing load error:", e);
+      } finally {
+        isLoading = false;
+        loadBtn.disabled = false;
+        loadBtn.textContent = "비용 조회";
+      }
+    }
+
+    function renderBillingData(data) {
+      grandTotal = 0;
+      const container = document.getElementById("billingContainer");
+
+      if (!data.billing || Object.keys(data.billing).length === 0) {
+        container.innerHTML = '<div class="no-data">No billing data available for this project.</div>';
+        return;
+      }
+
+      let html = '<div class="billing-menu">';
+
+      let k8sNodepoolVMEntries = [];
+      let clusterEntries = [];
+      
+      if (data.billing['Container Pack(CP)']) {
+        const cpData = data.billing['Container Pack(CP)'];
+        const cpEntries = cpData.entries || [];
+        
+        cpEntries.forEach(entry => {
+          if (entry.cluster_name && entry.nodepools && typeof entry.nodepools === 'object') {
+            Object.values(entry.nodepools).forEach(np => {
+              if (np.nodepool && np.instance_type) {
+                k8sNodepoolVMEntries.push({
+                  type: np.instance_type,
+                  usage_hours: np.usage,
+                  hourly_price: np.hourly_price,
+                  price: np.price,
+                  cluster_name: entry.cluster_name,
+                  nodepool_name: np.nodepool,
+                  image_name: np.image_name || entry.image_name || '',
+                  os_type: np.os_type || entry.os_type || ''
+                });
+              }
+            });
+            clusterEntries.push(entry);
+          }
+        });
+      }
+
+      let vmEntries = [];
+      let volumeEntries = [];
+      let bcsTotal = 0;
+
+      const bcsData = data.billing['Beyond Compute Service(BCS)'];
+      if (bcsData && bcsData.entries) {
+        vmEntries = bcsData.entries.map(entry => ({
+          ...entry,
+          image_name: entry.image_name || entry.image_name_raw || ''
+        }));
+        bcsTotal += bcsData.total_price || 0;
+      }
+
+      const volumesData = data.billing['Volumes'];
+      if (volumesData && volumesData.entries) {
+        volumeEntries = volumesData.entries;
+        bcsTotal += volumesData.total_price || 0;
+      }
+
+      vmEntries = vmEntries.concat(k8sNodepoolVMEntries);
+
+      html += renderBCSDropdown(vmEntries, volumeEntries, bcsTotal);
+
+      if (data.billing['Beyond Network Service(BNS)']) {
+        const bnsData = data.billing['Beyond Network Service(BNS)'];
+        const bnsEntries = bnsData.entries || [];
+        const bnsTotal = bnsData.total_price || bnsEntries.reduce((sum, e) => sum + (parseFloat(e.price) || 0), 0);
+        html += renderBNSMenu(bnsEntries, bnsTotal);
+        grandTotal += bnsTotal;
+      }
+
+      if (clusterEntries.length > 0) {
+        const cpTotal = clusterEntries.reduce((sum, e) => sum + (parseFloat(e.cluster_price || e.price) || 0), 0);
+        html += renderContainerPackMenu(clusterEntries, cpTotal);
+        grandTotal += cpTotal;
+      }
+
+      grandTotal += bcsTotal;
+      html += '</div>';
+      container.innerHTML = html;
+
+      // Update total price display
+      const totalPriceEl = document.getElementById("total-price");
+      totalPriceEl.textContent = `Total: ${formatCurrency(grandTotal)}`;
+      totalPriceEl.classList.remove("hidden");
+    }
+
+    // ... rest of the functions remain exactly the same (renderBCSDropdown, renderVMTable, etc.)
+    function renderBCSDropdown(vmEntries, volumeEntries, total) {
+      return `
+        <div class="menu-item">
+          <div class="menu-header-row">
+            <button class="menu-trigger">
+              <span class="menu-icon">💻</span>
+              <span>Beyond Compute Service(BCS)</span>
+              <span class="menu-arrow">▶</span>
+            </button>
+            <div class="service-total">Total: ${formatCurrency(total)}</div>
+          </div>
+          <div class="menu-content">
+            <div class="bcs-subsection">Virtual Machine(VM)</div>
+            <div class="table-container">${renderVMTable(vmEntries)}</div>
+            <div class="bcs-subsection">Block Storage</div>
+            <div class="table-container">${renderCompactTable(volumeEntries)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderVMTable(entries) {
+      if (entries.length === 0) {
+        return '<div class="no-data" style="padding: 2rem;">No usage data available</div>';
+      }
+      let html = `<table>
+                      <thead>
+                          <tr>
+                              <th>Description</th>
+                              <th>Usage Hours</th>
+                              <th>Price</th>
+                          </tr>
+                      </thead>
+                      <tbody>`;
+      entries.forEach(entry => {
+        const type = entry.type || 'N/A';
+        const usage = entry.usage_hours || '-';
+        const hourlyPrice = parseFloat(entry.hourly_price) || 0;
+        const price = parseFloat(entry.price) || 0;
+        const imageName = entry.image_name || entry.image_name_raw || '';
+        const osTypeField = entry.os_type || 'N/A';
+
+        let osPrefix = 'Linux';
+        let osType = 'Linux VM';
+
+        const lowerImageName = imageName.toLowerCase();
+        if (lowerImageName.includes('bare')) {
+          osPrefix = 'Bare Linux';
+          osType = 'Bare Metal';
+        } else if (lowerImageName.includes('ubuntu') || lowerImageName.includes('rocky')) {
+          osPrefix = 'Linux';
+          osType = 'Linux VM';
+        } else if (lowerImageName.includes('windows')) {
+          osPrefix = 'Windows';
+          osType = 'Windows VM';
+        } else if (lowerImageName.includes('k8s') || entry.cluster_name) {
+          osPrefix = 'K8s Node';
+          osType = 'K8s Node';
+        } else {
+          osType = osTypeField !== 'N/A' && osTypeField ? osTypeField : 'Community';
+          osPrefix = osType === 'Community' ? 'Community' : osType.split(' ')[0];
+        }
+
+        const description = `₩${hourlyPrice.toLocaleString('ko-KR', {minimumFractionDigits: 0, maximumFractionDigits: 2})} per <span class="os-badge">${osType}</span> ${type} instance-hour`;
+        
+        html += `
+          <tr>
+              <td class="os-type-cell" style="color: var(--text-main);" data-tooltip="${imageName || 'No image info'}">
+                ${description}
+                <div class="os-tooltip">${imageName || 'No image info'}</div>
+              </td>
+              <td>${usage}</td>
+              <td>${formatCurrency(price)}</td>
+          </tr>`;
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function renderBNSMenu(entries, total) {
+      return `
+        <div class="menu-item">
+          <div class="menu-header-row">
+            <button class="menu-trigger">
+              <span class="menu-icon">🌐</span>
+              <span>Beyond Network Service(BNS)</span>
+              <span class="menu-arrow">▶</span>
+            </button>
+            <div class="service-total">Total: ${formatCurrency(total)}</div>
+          </div>
+          <div class="menu-content">
+            <div class="table-container">${renderCompactTable(entries)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderContainerPackMenu(entries, total) {
+      const clusterEntries = entries.filter(entry => entry.cluster_name && entry.nodepools);
+      
+      let html = `
+        <div class="menu-item">
+          <div class="menu-header-row">
+            <button class="menu-trigger">
+              <span class="menu-icon">📦</span>
+              <span>Container Pack(CP)</span>
+              <span class="menu-arrow">▶</span>
+            </button>
+            <div class="service-total">Total: ${formatCurrency(total)}</div>
+          </div>
+          <div class="menu-content">
+            <div class="submenu-item" data-path="cp-ke">
+              🔧 Kubernetes Engine(KE)
+            </div>
+            <div class="cluster-list" data-path="cp-ke-clusters" style="display: none;">
+      `;
+      
+      if (clusterEntries.length === 0) {
+        html += '<div class="no-data" style="padding: 2rem;">No clusters found</div>';
+      } else {
+        clusterEntries.forEach((entry, index) => {
+          html += `
+            <div class="cluster-item" data-cluster-index="${index}" data-cluster='${JSON.stringify(entry).replace(/'/g, "\\'")}'>
+              <span>${entry.cluster_name}</span>
+              <span class="cluster-price">${formatCurrency(entry.cluster_price || 0)}</span>
+            </div>
+          `;
+        });
+      }
+      
+      html += `
+            </div>
+            <div class="detail-content" style="display: none;" data-path="cp-ke-cluster-detail">
+              <button class="back-btn" onclick="navigateBack('cp-ke-clusters')">← Back to Clusters</button>
+              <div class="detail-table" id="cluster-detail-table"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      return html;
+    }
+
+    function renderCompactTable(entries) {
+      if (entries.length === 0) {
+        return '<div class="no-data" style="padding: 2rem;">No usage data available</div>';
+      }
+      let html = `<table>
+                      <thead>
+                          <tr>
+                              <th>Description</th>
+                              <th>Quantity</th>
+                              <th>Usage Hours</th>
+                              <th>Hourly Price</th>
+                              <th>Price</th>
+                          </tr>
+                      </thead>
+                      <tbody>`;
+      entries.forEach(entry => {
+        const type = entry.type || entry.cluster_name || 'N/A';
+        const quantity = entry.quantity || '-';
+        const usage = entry.usage_hours || entry.usage || entry.cluster_usage || '-';
+        const hourlyPrice = entry.hourly_price !== undefined && entry.hourly_price !== 0 
+          ? `<strong style="color:#4CAF50;">${formatCurrency(entry.hourly_price)}</strong>` 
+          : '-';
+        const price = entry.price !== undefined ? formatCurrency(entry.price) : '-';
+        html += `
+          <tr>
+              <td>${type}</td>
+              <td>${quantity}</td>
+              <td>${usage}</td>
+              <td>${hourlyPrice}</td>
+              <td>${price}</td>
+          </tr>`;
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    document.addEventListener('click', function(e) {
+      const menuHeader = e.target.closest ? e.target.closest('.menu-header-row') : null;
+      if (menuHeader) {
+        toggleMenuItem({ currentTarget: menuHeader });
+        return;
+      }
+      
+      const submenuItem = e.target.closest ? e.target.closest('.submenu-item') : null;
+      if (submenuItem) {
+        handleSubmenuClick({ currentTarget: submenuItem });
+        return;
+      }
+      
+      const clusterItem = e.target.closest ? e.target.closest('.cluster-item') : null;
+      if (clusterItem) {
+        handleClusterClick({ currentTarget: clusterItem });
+        return;
+      }
+      
+      const backBtn = e.target.closest ? e.target.closest('.back-btn') : null;
+      if (backBtn) {
+        navigateBack('cp-ke-clusters');
+        return;
+      }
+    });
+
+    function toggleMenuItem(e) {
+      const headerRow = e.currentTarget;
+      const trigger = headerRow.querySelector('.menu-trigger');
+      const content = headerRow.nextElementSibling;
+      const isOpen = headerRow.classList.contains('active');
+
+      if (isOpen) {
+        headerRow.classList.remove('active');
+        trigger.classList.remove('active');
+        content.classList.remove('open');
+        const arrow = headerRow.querySelector('.menu-arrow');
+        if (arrow) arrow.classList.remove('open');
+      } else {
+        headerRow.classList.add('active');
+        trigger.classList.add('active');
+        content.classList.add('open');
+        const arrow = headerRow.querySelector('.menu-arrow');
+        if (arrow) arrow.classList.add('open');
+        
+        const cpMenuItem = headerRow.closest('.menu-item');
+        const keSubmenu = cpMenuItem?.querySelector('.submenu-item[data-path="cp-ke"]');
+        const clusterList = cpMenuItem?.querySelector('.cluster-list[data-path="cp-ke-clusters"]');
+        if (keSubmenu && clusterList) {
+          keSubmenu.style.display = 'block';
+          clusterList.style.display = 'block';
+        }
+      }
+    }
+
+    function handleSubmenuClick(e) {
+      const item = e.currentTarget;
+      const path = item.dataset.path;
+      const content = item.closest('.menu-content');
+
+      content.querySelectorAll('.submenu-item').forEach(i => {
+        i.classList.remove('active');
+        i.style.display = 'none';
+      });
+
+      item.classList.add('active');
+      item.style.display = 'block';
+
+      if (path === 'cp-ke') {
+        const clusterList = content.querySelector('.cluster-list[data-path="cp-ke-clusters"]');
+        if (clusterList) {
+          clusterList.style.display = 'block';
+        }
+      }
+    }
+
+    function handleClusterClick(e) {
+      const clusterItem = e.currentTarget;
+      const clusterData = clusterItem.dataset.cluster;
+      
+      try {
+        const clusterEntry = JSON.parse(clusterData.replace(/\\'/g, "'"));
+        renderClusterDetail(clusterEntry);
+        
+        clusterItem.parentNode.querySelectorAll('.cluster-item').forEach(c => c.classList.remove('active'));
+        clusterItem.classList.add('active');
+      } catch (err) {
+        console.error('Failed to parse cluster data:', err);
+      }
+    }
+
+    function navigateBack(path) {
+      document.querySelectorAll('.submenu-item, .cluster-list, .detail-content').forEach(el => {
+        el.classList.remove('active');
+        el.style.display = 'none';
+      });
+
+      const target = document.querySelector(`[data-path="${path}"]`);
+      if (target) {
+        if (target.classList.contains('submenu-item')) {
+          target.classList.add('active');
+          target.style.display = 'block';
+        } else if (target.classList.contains('cluster-list')) {
+          target.style.display = 'block';
+        }
+      }
+    }
+
+    function renderClusterDetail(clusterEntry) {
+      const tableContainer = document.getElementById('cluster-detail-table');
+      
+      let html = `
+        <h3>${clusterEntry.cluster_name}</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Cluster Info</th>
+              <th>Quantity</th>
+              <th>Usage Hours</th>
+              <th>Hourly Price</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: var(--zone-bg);">
+              <td><strong>Cluster Fee</strong></td>
+              <td>${clusterEntry.cluster_quantity || '-'}</td>
+              <td>${clusterEntry.cluster_usage || '-'}</td>
+              <td>${clusterEntry.hourly_price ? `<strong style="color:#4CAF50;">${formatCurrency(clusterEntry.hourly_price)}</strong>` : '-'}</td>
+              <td>${formatCurrency(clusterEntry.cluster_price || 0)}</td>
+            </tr>
+      `;
+
+      if (clusterEntry.nodepools && typeof clusterEntry.nodepools === 'object') {
+        Object.values(clusterEntry.nodepools).forEach(np => {
+          html += `
+            <tr>
+              <td style="padding-left: 2rem;">└ ${np.nodepool} (${np.instance_type})</td>
+              <td>${np.quantity || '-'}</td>
+              <td>${np.usage || '-'}</td>
+              <td>${np.hourly_price ? `<strong style="color:#4CAF50;">${formatCurrency(np.hourly_price)}</strong>` : '-'}</td>
+              <td>${formatCurrency(np.price || 0)}</td>
+            </tr>
+          `;
+        });
+      }
+
+      html += '</tbody></table>';
+      tableContainer.innerHTML = html;
+      
+      document.querySelector('.detail-content[data-path="cp-ke-cluster-detail"]').style.display = 'block';
+    }
+
+    function formatCurrency(value) {
+      if (!value || value === "-") return "-";
+      const num = parseFloat(value);
+      return num.toLocaleString("ko-KR", {
+        style: "currency",
+        currency: "KRW",
+        minimumFractionDigits: 0,
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      fetchSCodes();
+    });
+  </script>
+</body>
+</html>
+

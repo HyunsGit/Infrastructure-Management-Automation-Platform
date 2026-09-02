@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>볼륨 마운트</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="static/css/menu.css">
+
+  <style>
+    /* Variables and base styles */
+    :root {
+      --primary: #4CAF50;
+      --accent: #2196F3;
+      --bg-gradient: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+      --card-bg: rgba(27,32,46,0.96);
+      --input-bg: #23263a;
+      --input-border: #2b3142;
+      --input-focus: #2196F3;
+      --text-main: #f3f6fa;
+      --text-label: #bfc7d1;
+      --error-bg: #2b1c1c;
+      --error-border: #c0392b;
+      --error-text: #ffb3b3;
+      --zone-bg: #232946;
+    }
+
+        body.light-mode {
+            --card-bg:     rgba(250,246,240,0.98);
+            --input-bg:    #faf6f0;
+            --input-border:#d0c9c0;
+            --text-main:   #1a1612;
+            --text-label:  #6b6258;
+            --error-bg:    #fee2e2;
+            --bg-gradient: #f0ebe3;
+        }
+        body.light-mode .custom-searchable-dropdown,
+        body.light-mode .project-search,
+        body.light-mode .dropdown-list {
+            background: #faf6f0 !important;
+            color: #1a1612 !important;
+            border-color: #d0c9c0 !important;
+        }
+        body.light-mode .project-search:focus {
+            background: #faf6f0 !important;
+            border-color: #2196F3 !important;
+            box-shadow: 0 0 0 2px rgba(33,150,243,.25) !important;
+        }
+        body.light-mode .dropdown-list {
+            border-color: #2196F3 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,.08) !important;
+        }
+        body.light-mode .dropdown-item {
+            background: #faf6f0 !important;
+            color: #1a1612 !important;
+        }
+        body.light-mode .dropdown-item:hover {
+            background: #2196F3 !important;
+            color: #fff !important;
+        }
+        body.light-mode .selected-display {
+            background: #faf6f0 !important;
+            color: #1a1612 !important;
+        }
+        body.light-mode body {
+            background: #f0ebe3 !important;
+            animation: none !important;
+        }
+        body.light-mode input, body.light-mode textarea {
+            background: #faf6f0 !important;
+            color: #1a1612 !important;
+            border-color: #d0c9c0 !important;
+        }
+    /* Body and container */
+    body {
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+      background: var(--bg-gradient);
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text-main);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+    }
+    @keyframes gradientBG {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+    .container {
+      background: var(--card-bg);
+      margin: 60px auto 40px auto;
+      max-width: 600px;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(33, 150, 243, 0.19);
+      padding: 36px 32px 28px 32px;
+      position: relative;
+      animation: fadeIn 0.7s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px);}
+      to { opacity: 1; transform: none;}
+    }
+    .container:hover { box-shadow: 0 16px 40px rgba(33,150,243,0.23); }
+
+
+    /* Form elements */
+    .form-group {
+      margin-bottom: 22px;
+      position: relative;
+    }
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--text-label);
+      font-weight: 500;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.3px solid var(--input-border);
+      border-radius: 6px;
+      background: var(--input-bg);
+      color: var(--text-main);
+      font-size: 1rem;
+      transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+      box-sizing: border-box;
+    }
+    input[type="text"]:focus, textarea:focus {
+      border: 1.5px solid var(--input-focus);
+      outline: none;
+      background: #20263a;
+      box-shadow: 0 0 0 2px #1976d2;
+    }
+    button[type="submit"] {
+      background: linear-gradient(90deg,var(--accent),var(--primary) 80%);
+      background-size: 400% 400%;
+      animation: gradientMove 5s ease infinite;
+      color: white;
+      padding: 12px 28px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.07s;
+      box-shadow: 0 2px 8px rgba(33,150,243,0.10);
+    }
+    button[type="submit"]:hover {
+      background: linear-gradient(90deg,var(--primary),var(--accent) 80%);
+      box-shadow: 0 4px 16px rgba(76,175,80,0.19);
+    }
+    button[type="submit"]:active {
+      transform: scale(0.97);
+    }
+    .result, .error {
+      margin-top: 22px;
+      padding: 14px;
+      border-radius: 6px;
+      font-size: 1.04em;
+      transition: box-shadow 0.2s;
+    }
+    .result {
+      background: #26353e;
+      border: 1.5px solid #3c5e6e;
+      color: #c2f7e3;
+    }
+    .error {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+    }
+    .result:hover, .error:hover {
+      box-shadow: 0 2px 12px rgba(33,150,243,0.11);
+    }
+
+    /* 🎉 Flashy success box */
+    .success-flash {
+      background: #1e3d2f;
+      border: 2px solid #4CAF50;
+      color: #b2f5d6;
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
+      animation: pulseSuccess 1.5s ease-in-out infinite alternate;
+      padding: 24px;
+      border-radius: 12px;
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    @keyframes pulseSuccess {
+      0% { box-shadow: 0 0 10px rgba(76, 175, 80, 0.2); }
+      100% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.6); }
+    }
+    /* ✅ Checkmark animation */
+    .checkmark-circle {
+      width: 80px;
+      height: 80px;
+      position: relative;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .checkmark-circle .background {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #4CAF50;
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    .checkmark-circle .checkmark {
+      position: absolute;
+      top: 10px;
+      left: 30px;
+      width: 22px;
+      height: 44px;
+      border-right: 5px solid white;
+      border-bottom: 5px solid white;
+      transform: rotate(45deg);
+      animation: drawCheck 0.5s ease-out forwards;
+      opacity: 0;
+    }
+    @keyframes drawCheck {
+      0% {
+        height: 0;
+        width: 0;
+        opacity: 1;
+      }
+      100% {
+        height: 44px;
+        width: 22px;
+        opacity: 1;
+      }
+    }
+
+    /* Custom searchable dropdown styling */
+    .custom-searchable-dropdown {
+      position: relative;
+      margin: 0 0 12px 0;
+    }
+    .project-search {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.3px solid var(--input-border);
+      border-radius: 6px 6px 0 0;
+      background: var(--input-bg);
+      color: var(--text-main);
+      font-size: 1rem;
+      transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+      box-sizing: border-box;
+      border-bottom: none;
+    }
+    .project-search:focus {
+      border: 1.5px solid var(--input-focus);
+      outline: none;
+      background: var(--input-bg);
+      box-shadow: 0 0 0 2px #1976d2;
+      border-radius: 6px 6px 0 0;
+      border-bottom: 1.5px solid var(--input-focus);
+    }
+    .dropdown-list {
+      display: none;
+      position: absolute;
+      width: 100%;
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--input-bg);
+      border: 1.5px solid var(--input-focus);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .dropdown-list.open {
+      display: block;
+      opacity: 1;
+      transform: none;
+    }
+    .dropdown-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .dropdown-item:hover {
+      background: var(--accent);
+      color: white;
+    }
+    .selected-display {
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      bottom: 1px;
+      left: 1px;
+      pointer-events: none;
+      padding: 10px 12px;
+      opacity: 0.3;
+      background: inherit;
+      border-radius: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: opacity 0.1s;
+    }
+    .searchable-dropdown-value {
+      display: none;
+    }
+    .dropdown-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-label);
+    }
+    .search-hint {
+      color: #a3b0c0; 
+      font-size: 0.9em; 
+      margin-top: 4px;
+    }
+    .search-hint b {
+      color: #95c4e8;
+    }
+  </style>
+</head>
+<body>
+  {% include 'top_menu.html' %}
+  <div class="container">
+    <h2 class="dashboard-title">볼륨 마운트</h2>
+    <form method="POST" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label for="token">프로젝트명:</label>
+        <div class="custom-searchable-dropdown">
+          <input type="text" id="project-search" class="project-search" placeholder="" autocomplete="off">
+          <input type="hidden" id="token" name="token" class="searchable-dropdown-value" required value="{{ token|default('') }}">
+          <div class="selected-display">프로젝트명을 선택하세요</div>
+          <div class="dropdown-list" role="listbox" aria-label="프로젝트 목록">
+            {% for proj in projects %}
+            <div class="dropdown-item" data-value="{{ proj }}" role="option" tabindex="-1">{{ proj }}</div>
+            {% endfor %}
+          </div>
+          <span class="dropdown-icon" aria-hidden="true">▼</span>
+        </div>
+        <div class="search-hint"><b>직접 검색하거나 목록에서 선택하세요.</b></div>
+      </div>
+      <div class="form-group">
+        <label for="vm_list">VM 이름 리스트 (쉼표/줄바꿈):</label>
+        <textarea id="vm_list" name="vm_list" rows="3" placeholder="예: test-1,test-2" required>{{ vm_list|default('') }}</textarea>
+      </div>
+      <div class="form-group">
+        <label for="vm_id">VM ID 리스트 (쉼표/줄바꿈, 순서 일치):</label>
+        <textarea id="vm_id" name="vm_id" rows="3" placeholder="예: 1234...,abcd..." required>{{ vm_id|default('') }}</textarea>
+      </div>
+      <div class="form-group">
+        <label for="vol_type">볼륨 타입 리스트 (기본: data,logs,backup):</label>
+        <input type="text" id="vol_type" name="vol_type" placeholder="예: data,logs,backup" value="{{ vol_type|default('data,logs,backup') }}">
+      </div>
+      <button type="submit">마운트 실행</button>
+    </form>
+
+    <div id="loading-spinner" style="display:none; text-align:center; margin-top:20px;">
+      <svg width="60" height="60" viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#2196F3" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">
+          <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+      <div style="color:#2196F3; margin-top:10px;">마운트 작업 진행 중...</div>
+    </div>
+
+    {% if summary == 'mount successful' %}
+    <div class="success-flash" role="alert" aria-live="polite">
+      <div class="checkmark-circle">
+        <div class="background"></div>
+        <div class="checkmark draw"></div>
+      </div>
+      <h3>🎉 마운트가 성공적으로 완료되었습니다!</h3>
+    </div>
+    {% elif summary %}
+    <div class="result" role="region" aria-live="polite">
+      <h3>마운트 결과:</h3>
+      <p>{{ summary }}</p>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="error" role="alert">
+      <h3>Error:</h3>
+      <p>{{ error }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/top_menu.js') }}"></script>
+  <script>
+    // Setup searchable dropdown
+    function setupSearchableDropdown() {
+      const dropdown = document.querySelector('.custom-searchable-dropdown');
+      const searchInput = dropdown.querySelector('.project-search');
+      const dropdownList = dropdown.querySelector('.dropdown-list');
+      const dropdownItems = dropdown.querySelectorAll('.dropdown-item');
+      const hiddenInput = dropdown.querySelector('.searchable-dropdown-value');
+      const selectedDisplay = dropdown.querySelector('.selected-display');
+      const dropdownIcon = dropdown.querySelector('.dropdown-icon');
+      const placeholderText = '프로젝트명을 선택하세요';
+      let focusedItem = null;
+      let focusedIndex = -1;
+
+      function openDropdown() {
+        dropdownList.style.display = 'block';
+        setTimeout(() => {
+          dropdownList.classList.add('open');
+        }, 10);
+      }
+      function closeDropdown() {
+        dropdownList.classList.remove('open');
+        setTimeout(() => {
+          dropdownList.style.display = 'none';
+        }, 200);
+      }
+      function resetItems() {
+        dropdownItems.forEach(item => {
+          item.classList.remove('highlighted');
+          item.style.display = 'block';
+          item.style.backgroundColor = '';
+        });
+        focusedItem = null;
+        focusedIndex = -1;
+      }
+      function filterItems() {
+        const value = searchInput.value.toLowerCase();
+        let anyVisible = false;
+        resetItems();
+        dropdownItems.forEach(item => {
+          const txt = item.textContent.toLowerCase();
+          if (txt.includes(value)) {
+            item.style.display = 'block';
+            anyVisible = true;
+          } else {
+            item.style.display = 'none';
+          }
+        });
+        if (anyVisible) openDropdown();
+        else closeDropdown();
+      }
+      function updatePlaceholder() {
+        if (searchInput.value) {
+          selectedDisplay.textContent = '';
+          selectedDisplay.style.opacity = '0';
+        } else if (hiddenInput.value) {
+          selectedDisplay.textContent = hiddenInput.value;
+          selectedDisplay.style.opacity = '1';
+        } else {
+          selectedDisplay.textContent = placeholderText;
+          selectedDisplay.style.opacity = '0.3';
+        }
+      }
+      function selectItem(item) {
+        hiddenInput.value = item.dataset.value;
+        searchInput.value = '';
+        selectedDisplay.textContent = item.dataset.value;
+        selectedDisplay.style.opacity = '1';
+        updatePlaceholder();
+        resetItems();
+        closeDropdown();
+      }
+
+      dropdownIcon.addEventListener('click', () => {
+        if (dropdownList.classList.contains('open')) closeDropdown();
+        else {
+          openDropdown();
+          searchInput.focus();
+          filterItems();
+        }
+      });
+      searchInput.addEventListener('focus', () => {
+        openDropdown();
+        filterItems();
+      });
+      searchInput.addEventListener('input', () => {
+        if (!searchInput.value) hiddenInput.value = '';
+        updatePlaceholder();
+        filterItems();
+      });
+      searchInput.addEventListener('keydown', function(e) {
+        const visibleItems = Array.from(dropdownItems).filter(item => item.style.display === 'block');
+        let idx = focusedIndex;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (focusedItem) focusedItem.style.backgroundColor = '';
+          idx = Math.min(idx + 1, visibleItems.length - 1);
+          focusedIndex = idx;
+          focusedItem = visibleItems[idx];
+          if (focusedItem) {
+            focusedItem.style.backgroundColor = 'var(--accent)';
+            focusedItem.scrollIntoView({ block: 'nearest' });
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (focusedItem) focusedItem.style.backgroundColor = '';
+          idx = Math.max(idx - 1, 0);
+          focusedIndex = idx;
+          focusedItem = visibleItems[idx];
+          if (focusedItem) {
+            focusedItem.style.backgroundColor = 'var(--accent)';
+            focusedItem.scrollIntoView({ block: 'nearest' });
+          }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (visibleItems.length > 0 && idx >= 0) {
+            selectItem(visibleItems[idx]);
+          } else if (searchInput.value) {
+            hiddenInput.value = searchInput.value;
+            selectedDisplay.textContent = searchInput.value;
+            selectedDisplay.style.opacity = '1';
+            searchInput.value = '';
+            closeDropdown();
+            updatePlaceholder();
+          }
+          return;
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          searchInput.value = '';
+          hiddenInput.value = '';
+          closeDropdown();
+          updatePlaceholder();
+          return;
+        } else if (
+          e.key === 'Backspace' &&
+          !searchInput.value &&
+          hiddenInput.value
+        ) {
+          e.preventDefault();
+          hiddenInput.value = '';
+          selectedDisplay.textContent = placeholderText;
+          selectedDisplay.style.opacity = '0.3';
+          searchInput.value = '';
+          setTimeout(() => { searchInput.focus(); }, 10);
+          updatePlaceholder();
+          openDropdown();
+          filterItems();
+          return;
+        } else {
+          return;
+        }
+      });
+      dropdown.addEventListener('mouseenter', () => dropdown.isMouseInside = true);
+      dropdown.addEventListener('mouseleave', () => dropdown.isMouseInside = false);
+      searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (!dropdown.isMouseInside) closeDropdown();
+        }, 150);
+      });
+      dropdownItems.forEach(item => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          selectItem(item);
+        });
+      });
+      document.querySelector('form').addEventListener('submit', () => {
+        closeDropdown();
+      });
+      updatePlaceholder();
+      if (hiddenInput.value) {
+        selectedDisplay.textContent = hiddenInput.value;
+        selectedDisplay.style.opacity = '1';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupSearchableDropdown();
+
+      document.querySelector('form').addEventListener('submit', function() {
+        document.getElementById('loading-spinner').style.display = 'block';
+      });
+    });
+  </script>
+</body>
+</html>

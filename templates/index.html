@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Infrastructure Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/css/light-mode.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0f1a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding-top: 48px;
+        }
+
+        /* ── Full-width layout ── */
+        .dash-wrap {
+            width: 100%;
+            height: calc(100vh - 48px);
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dash-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+            opacity: 0;
+            transform: translateY(-10px);
+            animation: fadeDown 0.4s ease forwards;
+        }
+        .dash-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+            letter-spacing: -0.01em;
+        }
+        .dash-subtitle {
+            font-size: 12px;
+            color: #5a7a99;
+            margin-top: 2px;
+        }
+
+        /* ── Animations ── */
+        @keyframes tmFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tmCellIn {
+            from { opacity: 0; transform: scale(0.88); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeDown {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes countUp {
+            from { opacity: 0; transform: scale(0.8); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes barGrow {
+            from { opacity: 0; transform: scaleX(0); }
+            to   { opacity: 1; transform: scaleX(1); }
+        }
+
+        .animate-in {
+            opacity: 0;
+            animation: fadeUp 0.5s ease forwards;
+        }
+
+        /* ── Stat row ── */
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+        .stat-card {
+            background: #111a28;
+            border: 1px solid #1e2d42;
+            border-radius: 8px;
+            padding: 10px 14px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeUp 0.5s ease forwards;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 2px;
+        }
+        .stat-card.blue::before  { background: #1e40af; }
+        .stat-card.green::before { background: #0f766e; }
+        .stat-card.amber::before { background: #92400e; }
+        .stat-card.purple::before{ background: #5b21b6; }
+        .stat-card.coral::before { background: #9f1239; }
+        .stat-card .label {
+            font-size: 11px;
+            color: #6a8aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 4px;
+        }
+        .stat-card .value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #e2e8f0;
+            line-height: 1;
+            animation: countUp 0.6s ease forwards;
+        }
+        .stat-card .sub {
+            font-size: 11px;
+            color: #5a7a99;
+            margin-top: 3px;
+        }
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.10s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.20s; }
+        .stat-card:nth-child(5) { animation-delay: 0.25s; }
+
+        /* ── Main layout: left charts + right donuts ── */
+        .dash-body {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 10px;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* ── Left column: bar charts stacked ── */
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* ── Right column: donut grid ── */
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        /* ── Chart card ── */
+        .chart-card {
+            background: #111a28;
+            border: 1px solid #1e2d42;
+            border-radius: 10px;
+            padding: 12px 14px;
+            opacity: 0;
+            animation: fadeUp 0.5s ease forwards;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .chart-card:nth-child(1) { animation-delay: 0.3s; flex: 1.4; }
+        .chart-card:nth-child(2) { animation-delay: 0.4s; flex: 1; }
+        .left-col .chart-card { overflow: hidden; }
+        .left-col .chart-card .bar-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .card-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #7a9bbf;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .sort-select {
+            background: #0a0f1a;
+            border: 1px solid #1e2d42;
+            color: #5a7a99;
+            border-radius: 5px;
+            padding: 3px 24px 3px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath fill='%235a7a99' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 7px center;
+        }
+        .sort-select:hover { border-color: #2196F3; color: #94b4d4; }
+
+        /* ── Donut card ── */
+        .donut-card {
+            background: #111a28;
+            border: 1px solid #1e2d42;
+            border-radius: 10px;
+            padding: 10px 14px;
+            opacity: 0;
+            animation: fadeUp 0.5s ease forwards;
+            flex-shrink: 0;
+        }
+        .donut-card:nth-child(1) { animation-delay: 0.35s; }
+        .donut-card:nth-child(2) { animation-delay: 0.45s; }
+        .donut-card:nth-child(3) { animation-delay: 0.55s; }
+        .donut-card:nth-child(4) { animation-delay: 0.65s; }
+        .donut-card .card-title { margin-bottom: 6px; }
+
+        /* ── Legend ── */
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            margin-top: 8px;
+        }
+        .chart-legend span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: #5a7a99;
+        }
+        .chart-legend .dot {
+            width: 8px; height: 8px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+
+        /* ── Stacked bar chart ── */
+        .stack-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+        .stack-row { display: flex; flex-direction: column; gap: 3px; }
+        .stack-label-row {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .stack-label {
+            font-size: 11px; color: #7a9bbf; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; max-width: 70%;
+        }
+        .stack-count { font-size: 11px; font-weight: 600; color: #b0cce8; }
+        .stack-track {
+            width: 100%; height: 8px; background: var(--bg-hover, #1e2d42);
+            border-radius: 4px; overflow: hidden;
+        }
+        .stack-fill {
+            height: 100%; border-radius: 4px;
+            transform-origin: left;
+            transform: scaleX(0);
+            transition: transform 0.7s cubic-bezier(0.4,0,0.2,1);
+        }
+        .stack-fill.ready { transform: scaleX(1); }
+        body.light-mode .stack-label { color: #374151 !important; }
+        body.light-mode .stack-count  { color: #111827 !important; font-weight: 700 !important; }
+        body.light-mode .stack-track  { background: #dde3ea !important; }
+        body.light-mode .stack-count span { color: #6b7280 !important; }
+
+        /* ── Light mode ── */
+        body.light-mode { background: #f0f4f8 !important; color: #1e293b !important; }
+        body.light-mode .dash-title { color: #111827 !important; }
+        body.light-mode .dash-subtitle { color: #6b7280 !important; }
+        body.light-mode #refreshDataBtn {
+            background: #dbeafe !important; border-color: #93c5fd !important;
+            color: #1d4ed8 !important;
+        }
+        body.light-mode #refreshDataBtn:hover { background: #bfdbfe !important; }
+        body.light-mode .stat-card,
+        body.light-mode .chart-card,
+        body.light-mode .donut-card {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+        }
+        body.light-mode .stat-card .label { color: #4b5563 !important; }
+        body.light-mode .donut-card .card-title,
+        body.light-mode .chart-card .card-title { color: #374151 !important; }
+        body.light-mode .stat-card .value { color: #111827 !important; }
+        body.light-mode .stat-card .sub { color: #6b7280 !important; }
+        body.light-mode .chart-legend span { color: #374151 !important; }
+        body.light-mode .stack-fill[style*="0f766e"] { background: #0d9488 !important; }
+        body.light-mode .stack-fill[style*="92400e"] { background: #d97706 !important; }
+        body.light-mode .stack-fill[style*="9f1239"] { background: #e11d48 !important; }
+        body.light-mode .stack-fill[style*="4338ca"] { background: #4f46e5 !important; }
+        body.light-mode .stack-fill[style*="0e7490"] { background: #0891b2 !important; }
+        body.light-mode .stack-fill[style*="1e40af"] { background: #2563eb !important; }
+        body.light-mode .stack-fill[style*="5b21b6"] { background: #7c3aed !important; }
+        body.light-mode .stack-fill[style*="c2410c"] { background: #ea580c !important; }
+        body.light-mode .sort-select {
+            background-color: #f8fafc !important;
+            border-color: #cbd5e0 !important;
+            color: #475569 !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath fill='%23475569' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 7px center !important;
+        }
+
+        /* ── Sidebar layout ── */
+        .summary-wrap {
+            display: flex;
+            height: calc(100vh - 48px);
+            overflow: hidden;
+        }
+        .summary-sidebar {
+            width: 180px;
+            flex-shrink: 0;
+            background: #0d1424;
+            border-right: 1px solid #1e2d42;
+            display: flex;
+            flex-direction: column;
+            padding: 12px 0;
+            overflow-y: auto;
+            position: relative;
+            z-index: 10;
+        }
+        .summary-sidebar-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #3d5a7a;
+            padding: 8px 16px 4px;
+        }
+        .summary-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: #7a9bbf;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            transition: all .15s;
+            user-select: none;
+        }
+        .summary-nav-item:hover { background: rgba(33,150,243,0.06); color: #b0cce8; }
+        .summary-nav-item.active { color: #e2e8f0; border-left-color: #2196F3; background: rgba(33,150,243,0.08); }
+        .summary-nav-item .dot { width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.6; }
+        .summary-nav-item.active .dot { opacity:1; }
+        .summary-content {
+            flex:1; overflow:hidden; display:flex; flex-direction:column; min-height:0;
+            position:relative;
+        }
+        .summary-tab {
+            position:absolute; inset:0;
+            display:flex; flex-direction:column;
+            opacity:0; pointer-events:none;
+            transform:translateX(30px);
+            transition:opacity .3s ease, transform .3s ease;
+            overflow:hidden;
+            z-index:0;
+        }
+        .summary-tab.active {
+            opacity:1; pointer-events:auto;
+            transform:translateX(0);
+            z-index:1;
+        }
+        .summary-tab.slide-out {
+            opacity:0; transform:translateX(-30px);
+            z-index:0;
+        }
+        body.light-mode .summary-sidebar {
+            background: #f8fafc !important; border-right-color: #e2e8f0 !important;
+        }
+        body.light-mode .summary-sidebar-title { color: #94a3b8 !important; }
+        body.light-mode .cl-divider { background: #c8bfb5 !important; }
+
+        /* Changelog — light mode handled via CSS variables in light-mode.css */
+        body.light-mode .cl-divider { background: var(--border) !important; }
+        body.light-mode .summary-nav-item { color: #64748b !important; }
+        body.light-mode .summary-nav-item:hover { background: #f1f5f9 !important; color: #374151 !important; }
+        body.light-mode .summary-nav-item.active { color: #111827 !important; background: #e8f0fe !important; border-left-color: #2196F3 !important; }
+        /* Treemap container - must not inherit body text color */
+        /* Treemap always renders dark - immune to light mode */
+        #summaryTreemapContainer > div {
+            color-scheme: dark;
+        }
+        #summaryTreemapContainer div[data-tip],
+        #summaryTreemapContainer div[data-tip] *,
+        body.light-mode #summaryTreemapContainer div[data-tip],
+        body.light-mode #summaryTreemapContainer div[data-tip] * {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+        /* Prevent light-mode broad background override on treemap cells */
+        body.light-mode #summaryTreemapContainer div[data-tip] {
+            background: var(--tm-bg) !important;
+        }
+        body.light-mode #summaryTreemapContainer * { box-sizing: border-box; }
+        body.light-mode #tab-treemap .dash-title { color: #111827 !important; }
+        body.light-mode #tab-treemap .dash-subtitle { color: #6b7280 !important; }
+        body.light-mode #tab-treemap span[style*="color:var(--text"] { color: #111827 !important; }
+        /* Legend icon borders visible in light mode */
+        body.light-mode #tab-treemap span[style*="border-radius:2px"] {
+            border: 1.5px solid rgba(0,0,0,0.25) !important;
+        }
+        .cl-filter-btn {
+            flex: 1; font-size: 11px; font-weight: 600; padding: 5px 4px;
+            border-radius: 6px; border: 1px solid var(--border);
+            background: var(--bg-input); color: var(--text-muted);
+            cursor: pointer; transition: all .15s; white-space: nowrap;
+        }
+        .cl-filter-btn:hover { background: var(--bg-hover); color: var(--text); border-color: var(--border); }
+        .cl-filter-active  { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+    </style>
+</head>
+<body>
+    {% include 'top_menu.html' %}
+
+    <div class="summary-wrap">
+        <!-- Sidebar -->
+        <div class="summary-sidebar">
+            <div class="summary-sidebar-title">대시보드</div>
+            <div class="summary-nav-item active" data-tab="treemap" onclick="switchSummaryTab('treemap',this)">
+                <span class="dot"></span> 인프라 코드 트리맵
+            </div>
+            <div class="summary-nav-item" data-tab="dashboard" onclick="switchSummaryTab('dashboard',this)">
+                <span class="dot"></span> 인프라 현황
+            </div>
+            <div class="summary-nav-item" data-tab="changelog" onclick="switchSummaryTab('changelog',this)">
+                <span class="dot"></span> 업데이트 로그
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="summary-content">
+
+        <!-- ── Treemap Tab ── -->
+        <div class="summary-tab active" id="tab-treemap" style="padding:14px 16px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0;flex-wrap:wrap;gap:8px">
+                <div>
+                    <div class="dash-title">인프라 코드 트리맵</div>
+                    <div class="dash-subtitle" id="treemapDesc">VM 수량 기준 인프라 코드 분포도. 매일 오전 7시 KST 스냅샷 기준 전일 대비 변화를 표시합니다.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <div id="treemapLegend" style="display:flex;align-items:center;gap:10px;font-size:12px"></div>
+                    <button onclick="loadSummaryTreemap(true)" id="treemapRefreshBtn"
+                        style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                        border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;
+                        font-weight:600">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        새로고침
+                    </button>
+                </div>
+            </div>
+            <div id="summaryTreemapContainer" style="width:100%;flex:1;position:relative;min-height:0;box-sizing:border-box">
+                <div style="padding:60px;text-align:center;color:#5a7a99">로딩 중...</div>
+            </div>
+        </div>
+
+        <!-- ── Dashboard Tab ── -->
+        <div class="summary-tab" id="tab-dashboard" style="overflow:hidden">
+        <div class="dash-wrap" style="height:100%;padding:14px 16px">
+        <div class="dash-header">
+            <div>
+                <div class="dash-title">Infrastructure Status Visual Dashboard</div>
+                <div class="dash-subtitle" id="dashTs">Loading...</div>
+            </div>
+            {% set db_me_idx = get_db_user(current_user.get_id()) %}
+            {% if db_me_idx and db_me_idx.role in ('admin', 'operator') %}
+            <button id="refreshDataBtn" onclick="triggerDataRefresh()" style="
+                background: #1e40af; border: 1px solid #2563eb; color: #bfdbfe;
+                border-radius: 6px; padding: 7px 16px; font-size: 13px; font-weight: 600;
+                cursor: pointer; display: flex; align-items: center; gap: 6px;
+                transition: background .15s; white-space: nowrap;
+            ">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M23 4v6h-6M1 20v-6h6"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                <span id="refreshDataBtnText">데이터 갱신</span>
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Stat cards -->
+        <div class="stat-row">
+            <div class="stat-card blue">
+                <div class="label">Total VMs</div>
+                <div class="value" id="stat-total">—</div>
+                <div class="sub">across all projects</div>
+            </div>
+            <div class="stat-card green">
+                <div class="label">Active</div>
+                <div class="value" id="stat-active">—</div>
+                <div class="sub" id="stat-active-pct">—</div>
+            </div>
+            <div class="stat-card amber">
+                <div class="label">Shelved</div>
+                <div class="value" id="stat-shelved">—</div>
+                <div class="sub" id="stat-shelved-pct">—</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="label">Projects</div>
+                <div class="value" id="stat-projects">—</div>
+                <div class="sub">KakaoCloud</div>
+            </div>
+            <div class="stat-card coral">
+                <div class="label">Top Flavor</div>
+                <div class="value" id="stat-flavor" style="font-size:15px;margin-top:4px">—</div>
+                <div class="sub" id="stat-flavor-count">—</div>
+            </div>
+        </div>
+
+        <!-- Main body -->
+        <div class="dash-body">
+            <!-- Left: bar charts -->
+            <div class="left-col">
+                <div class="chart-card">
+                    <div class="card-header">
+                        <span class="card-title">VM Quantity per Project</span>
+                        <select id="sortSelector" class="sort-select">
+                            <option value="quantity">Sort: Quantity</option>
+                            <option value="alphabetical">Sort: A–Z</option>
+                        </select>
+                    </div>
+                    <div class="bar-scroll" id="projectBarWrap">
+                        <div id="projectBarInner" style="position:relative;width:100%">
+                            <canvas id="projectBarChart" role="img" aria-label="VM count per project"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-header">
+                        <span class="card-title">Top 10 Flavors</span>
+                        <select id="flavorSortSelector" class="sort-select">
+                            <option value="quantity">Sort: Quantity</option>
+                            <option value="alphabetical">Sort: A–Z</option>
+                        </select>
+                    </div>
+                    <div style="position:relative;width:100%;height:100%">
+                        <canvas id="flavorPieChart" role="img" aria-label="Top 10 VM flavors"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: donut charts -->
+            <div class="right-col">
+                <div class="donut-card">
+                    <div class="card-title">VM Status</div>
+                    <div class="stack-bars" id="stackStatus"></div>
+                </div>
+                <div class="donut-card">
+                    <div class="card-title">Availability Zones</div>
+                    <div class="stack-bars" id="stackAz"></div>
+                </div>
+                <div class="donut-card">
+                    <div class="card-title">LB Health</div>
+                    <div class="stack-bars" id="stackLbHealth"></div>
+                </div>
+                <div class="donut-card">
+                    <div class="card-title">LB Origin</div>
+                    <div class="stack-bars" id="stackLbOrigin"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script>
+        const isLight  = () => document.body.classList.contains('light-mode');
+        const tc       = () => isLight() ? '#1e293b' : '#e2e8f0';
+        const tcs      = () => isLight() ? '#64748b' : '#5a7a99';
+        const gridClr  = () => isLight() ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+        const cardClr  = () => isLight() ? '#f8fafc' : '#0a0f1a';
+
+        const barColors = [
+            '#3b82f6','#0f766e','#b45309','#6d28d9','#b91c1c',
+            '#0e7490','#9d174d','#4d7c0f','#c2410c','#4338ca',
+            '#0f766e','#9f1239','#3f6212','#c2410c','#5b21b6',
+            '#0f766e','#92400e','#6b21a8','#9f1239','#1e40af'
+        ];
+
+        const chartData = {{ chart_data|tojson }};
+
+        // ── Timestamp ────────────────────────────────────────
+        document.getElementById('dashTs').textContent =
+            'Last updated: {{ csv_mtime }} KST';
+
+        // ── Stat cards with count-up animation ───────────────
+        function animateCount(el, target, suffix='') {
+            const dur = 800, start = performance.now();
+            const step = ts => {
+                const p = Math.min((ts - start) / dur, 1);
+                const ease = 1 - Math.pow(1 - p, 3);
+                el.textContent = Math.round(ease * target).toLocaleString() + suffix;
+                if (p < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        }
+
+        const total    = (chartData.status_values||[]).reduce((a,b)=>a+b,0);
+        const activeIdx= (chartData.status_labels||[]).findIndex(l=>l.toLowerCase()==='active');
+        const shelIdx  = (chartData.status_labels||[]).findIndex(l=>l.toLowerCase().includes('shelved'));
+        const active   = activeIdx>=0 ? chartData.status_values[activeIdx] : 0;
+        const shelved  = shelIdx>=0   ? chartData.status_values[shelIdx]   : 0;
+
+        setTimeout(() => {
+            animateCount(document.getElementById('stat-total'), total);
+            animateCount(document.getElementById('stat-active'), active);
+            animateCount(document.getElementById('stat-shelved'), shelved);
+            animateCount(document.getElementById('stat-projects'), (chartData.project_labels||[]).length);
+        }, 300);
+
+        document.getElementById('stat-active-pct').textContent  = total ? Math.round(active/total*100)+'% of total' : '';
+        document.getElementById('stat-shelved-pct').textContent = total ? Math.round(shelved/total*100)+'% of total' : '';
+        if (chartData.flavor_labels?.length) {
+            const maxIdx = chartData.flavor_values.indexOf(Math.max(...chartData.flavor_values));
+            document.getElementById('stat-flavor').textContent       = chartData.flavor_labels[maxIdx];
+            document.getElementById('stat-flavor-count').textContent = chartData.flavor_values[maxIdx]+' VMs';
+        }
+
+        // ── Stacked bar renderer ─────────────────────────────
+        function drawStackBars(containerId, labels, values, colors, delay=0) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const tot = values.reduce((a,b)=>a+b,0);
+            if (!tot) return;
+            const max = Math.max(...values);
+            container.innerHTML = labels.map((label, i) => {
+                const pct = Math.round(values[i]/tot*100);
+                const barW = Math.max(values[i]/max*100, values[i]>0 ? 4 : 0);
+                return `<div class="stack-row">
+                    <div class="stack-label-row">
+                        <span class="stack-label" title="${label}">${label}</span>
+                        <span class="stack-count">${values[i].toLocaleString()} <span style="color:#5a7a99;font-weight:400">(${pct}%)</span></span>
+                    </div>
+                    <div class="stack-track">
+                        <div class="stack-fill" style="width:${barW}%;background:${colors[i]};transition-delay:${delay + i*80}ms"></div>
+                    </div>
+                </div>`;
+            }).join('');
+            // Trigger animation
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                container.querySelectorAll('.stack-fill').forEach(el => el.classList.add('ready'));
+            }));
+        }
+
+        // ── Sort ─────────────────────────────────────────────
+        function sortData(labels, values, method) {
+            const p = labels.map((l,i)=>[l,values[i]]);
+            method==='quantity' ? p.sort((a,b)=>b[1]-a[1]) : p.sort((a,b)=>a[0].localeCompare(b[0]));
+            return [p.map(x=>x[0]), p.map(x=>x[1])];
+        }
+
+        // ── Bar chart ─────────────────────────────────────────
+        let barChart;
+        function drawBar(labels, values) {
+            const inner = document.getElementById('projectBarInner');
+            if (inner) inner.style.height = Math.max(labels.length*32+60, 200)+'px';
+            const canvas = document.getElementById('projectBarChart');
+            if (barChart) barChart.destroy();
+            barChart = new Chart(canvas, {
+                type: 'bar',
+                data: { labels, datasets: [{ data: values, backgroundColor: barColors.slice(0,labels.length), borderRadius: 5, borderSkipped: false }] },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { right: 42 } },
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: { color: tc(), font: { weight: '600', size: 11 }, anchor: 'end', align: 'end', clamp: true, clip: false }
+                    },
+                    scales: {
+                        x: { grid: { color: gridClr() }, ticks: { color: tcs(), font: { size: 11 } }, beginAtZero: true },
+                        y: { grid: { color: 'transparent' }, ticks: { color: tc(), font: { size: 11 }, autoSkip: false } }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        // ── Flavor bar ────────────────────────────────────────
+        let flavorChart;
+        function drawFlavor(labels, values) {
+            const canvas = document.getElementById('flavorPieChart');
+            if (flavorChart) flavorChart.destroy();
+            flavorChart = new Chart(canvas, {
+                type: 'bar',
+                data: { labels, datasets: [{ data: values, backgroundColor: barColors.slice(0,labels.length), borderRadius: 5, borderSkipped: false }] },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { right: 42 } },
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: { color: tc(), font: { weight: '600', size: 11 }, anchor: 'end', align: 'end', clamp: true, clip: false }
+                    },
+                    scales: {
+                        x: { grid: { color: gridClr() }, ticks: { color: tcs(), font: { size: 11 } }, beginAtZero: true },
+                        y: { grid: { color: 'transparent' }, ticks: { color: tc(), font: { size: 11 }, autoSkip: false } }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+
+
+        // ── Initial draw ──────────────────────────────────────
+        const [pl,pv] = sortData(chartData.project_labels, chartData.project_values, 'quantity');
+        drawBar(pl, pv);
+        const [fl,fv] = sortData(chartData.flavor_labels.slice(0,10), chartData.flavor_values.slice(0,10), 'quantity');
+        drawFlavor(fl, fv);
+        drawStackBars('stackStatus',   chartData.status_labels,     chartData.status_values,     ['#0f766e','#92400e','#9f1239','#4338ca','#0e7490'], 400);
+        drawStackBars('stackAz',       chartData.az_labels,         chartData.az_values,         ['#1e40af','#0f766e','#92400e','#5b21b6','#9f1239'],   500);
+        drawStackBars('stackLbHealth', chartData.lb_status_labels,  chartData.lb_status_values,  ['#0f766e','#92400e','#9f1239'],                        600);
+        drawStackBars('stackLbOrigin', chartData.lb_type_labels,    chartData.lb_type_values,    ['#c2410c','#92400e','#1e40af'],                        700);
+
+        // ── Sort listeners ────────────────────────────────────
+        document.getElementById('sortSelector').addEventListener('change', function() {
+            const [l,v] = sortData(chartData.project_labels, chartData.project_values, this.value);
+            drawBar(l, v);
+        });
+        document.getElementById('flavorSortSelector').addEventListener('change', function() {
+            const [l,v] = sortData(chartData.flavor_labels.slice(0,10), chartData.flavor_values.slice(0,10), this.value);
+            drawFlavor(l, v);
+        });
+
+        // ── Theme observer ────────────────────────────────────
+        new MutationObserver(() => requestAnimationFrame(() => {
+            // Re-trigger card animations
+            const cards = document.querySelectorAll('.chart-card, .donut-card, .stat-card');
+            cards.forEach(c => {
+                c.style.animation = 'none';
+                c.offsetHeight; // force reflow
+                c.style.animation = '';
+            });
+
+            const [l,v]   = sortData(chartData.project_labels, chartData.project_values, document.getElementById('sortSelector').value);
+            drawBar(l, v);
+            const [fl2,fv2] = sortData(chartData.flavor_labels.slice(0,10), chartData.flavor_values.slice(0,10), document.getElementById('flavorSortSelector').value);
+            drawFlavor(fl2, fv2);
+            drawStackBars('stackStatus',   chartData.status_labels,    chartData.status_values,    ['#0f766e','#92400e','#9f1239','#4338ca','#0e7490']);
+            drawStackBars('stackAz',       chartData.az_labels,        chartData.az_values,        ['#1e40af','#0f766e','#92400e','#5b21b6','#9f1239']);
+            drawStackBars('stackLbHealth', chartData.lb_status_labels, chartData.lb_status_values, ['#0f766e','#92400e','#9f1239']);
+            drawStackBars('stackLbOrigin', chartData.lb_type_labels,   chartData.lb_type_values,   ['#c2410c','#92400e','#1e40af']);
+        })).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        function updateTreemapTheme() {
+            const light = document.body.classList.contains('light-mode');
+            const textClr = light ? '#374151' : '#94a3b8';
+            const btnBg   = light ? '#f1f5f9' : '#111928';
+            const btnBdr  = light ? '#cbd5e0' : '#2a3550';
+            const btnTxt  = light ? '#374151' : '#b0cce8';
+            const legend  = document.getElementById('treemapLegend');
+            const btn     = document.getElementById('treemapRefreshBtn');
+            if (legend) legend.innerHTML = [
+                ['큰폭 증가', '#14532d'],
+                ['증가',     '#16a34a'],
+                ['동일',     '#374151'],
+                ['감소',     '#dc2626'],
+                ['큰폭 감소', '#7f1d1d'],
+            ].map(([label, color]) => `
+                <span style="display:flex;align-items:center;gap:4px">
+                    <span style="width:12px;height:12px;border-radius:2px;display:inline-block;
+                                 outline:2px solid ${light?'rgba(0,0,0,0.3)':'rgba(255,255,255,0.15)'};
+                                 outline-offset:-1px;
+                                 background-color:${color}"></span>
+                    <span style="color:${textClr}">${label}</span>
+                </span>`).join('');
+            if (btn) {
+                btn.style.background = btnBg;
+                btn.style.border = `1px solid ${btnBdr}`;
+                btn.style.color = btnTxt;
+            }
+        }
+
+        function replayDashboardAnimation() {
+            const els = document.querySelectorAll('#tab-dashboard .stat-card, #tab-dashboard .chart-card, #tab-dashboard .donut-card');
+            els.forEach((el, i) => {
+                el.style.animationDelay = ''; // clear first
+                el.style.animation = 'none';
+                el.style.opacity   = '0';
+                el.offsetHeight;   // force reflow
+                el.style.animation      = 'fadeUp 0.5s ease forwards';
+                el.style.animationDelay = `${i * 0.06}s`;
+            });
+        }
+
+        // ── Summary tab switching ─────────────────────────────
+        function switchSummaryTab(tab, el) {
+            const prev = document.querySelector('.summary-tab.active');
+            const next = document.getElementById('tab-' + tab);
+            if (prev && prev !== next) {
+                prev.classList.add('slide-out');
+                setTimeout(() => prev.classList.remove('active','slide-out'), 300);
+            }
+            document.querySelectorAll('.summary-nav-item').forEach(i => i.classList.remove('active'));
+            if (next) next.classList.add('active');
+            if (el) el.classList.add('active');
+            else document.querySelector(`.summary-nav-item[data-tab="${tab}"]`)?.classList.add('active');
+            history.pushState(null, '', '/summary#' + tab);
+            if (tab === 'treemap')    loadSummaryTreemap();
+            if (tab === 'dashboard') replayDashboardAnimation();
+            if (tab === 'changelog') loadChangelog();
+        }
+
+        // Restore tab from URL hash
+        document.addEventListener('DOMContentLoaded', () => {
+            const _sumHash = window.location.hash.replace('#','');
+            if (_sumHash === 'dashboard') switchSummaryTab('dashboard');
+            else if (_sumHash === 'changelog') switchSummaryTab('changelog');
+            else { switchSummaryTab('treemap'); }
+        });
+
+        window.addEventListener('popstate', () => {
+            const h = window.location.hash.replace('#','');
+            if (h === 'dashboard') switchSummaryTab('dashboard');
+            else if (h === 'changelog') switchSummaryTab('changelog');
+            else switchSummaryTab('treemap');
+        });
+
+        // ── Summary tab switching ─────────────────────────────
+        function switchSummaryTab(tab, el) {
+            const prev = document.querySelector('.summary-tab.active');
+            const next = document.getElementById('tab-' + tab);
+            if (prev && prev !== next) {
+                prev.classList.add('slide-out');
+                setTimeout(() => prev.classList.remove('active','slide-out'), 300);
+            }
+            document.querySelectorAll('.summary-nav-item').forEach(i => i.classList.remove('active'));
+            if (next) next.classList.add('active');
+            if (el) el.classList.add('active');
+            else document.querySelector(`.summary-nav-item[data-tab="${tab}"]`)?.classList.add('active');
+            history.pushState(null, '', '/summary#' + tab);
+            if (tab === 'treemap')    loadSummaryTreemap();
+            if (tab === 'dashboard') replayDashboardAnimation();
+            if (tab === 'changelog') loadChangelog();
+        }
+
+        // Restore tab from URL hash
+        document.addEventListener('DOMContentLoaded', () => {
+            const _sumHash = window.location.hash.replace('#','');
+            if (_sumHash === 'dashboard') switchSummaryTab('dashboard');
+            else if (_sumHash === 'changelog') switchSummaryTab('changelog');
+            else { switchSummaryTab('treemap'); }
+        });
+
+        window.addEventListener('popstate', () => {
+            const h = window.location.hash.replace('#','');
+            if (h === 'dashboard') switchSummaryTab('dashboard');
+            else if (h === 'changelog') switchSummaryTab('changelog');
+            else switchSummaryTab('treemap');
+        });
+
+        // ── Changelog ────────────────────────────────────────
+        let _clData = [];
+        let _clSelectedVer = null;
+        let _clSelectedItem = null;
+        let _clEditId = null;  // null = add mode, number = editing this entry id
+        let _clSearchQuery = '';
+        let _clTypeFilter  = 'ALL';  // 'ALL' | 'NEW' | 'IMPROVED' | 'FIXED'
+        const _clIsAdmin = {{ 'true' if has_role('admin') else 'false' }};
+        const _clTypeCfg = {
+            'NEW':      { label: 'NEW',      color: '#34d399', bg: 'rgba(52,211,153,.12)'  },
+            'IMPROVED': { label: 'IMPROVED', color: '#60a5fa', bg: 'rgba(96,165,250,.12)'  },
+            'FIXED':    { label: 'FIXED',    color: '#fbbf24', bg: 'rgba(251,191,36,.12)'  },
+        };
+
+        async function loadChangelog() {
+            const left   = document.getElementById('clLeft');
+            const right  = document.getElementById('clRight');
+            if (!left || !right) return;
+            left.innerHTML = '<div style="padding:24px 16px;color:#4a6480;font-size:13px">로딩 중...</div>';
+            try {
+                const res = await fetch('/api/changelog');
+                _clData = await res.json();
+                renderClLeft();
+                if (_clData.length > 0) {
+                    _clSelectedVer = _clData[0].version;
+                    _clSelectedItem = _clData[0].items[0] || null;
+                    renderClLeft();
+                    renderClRight();
+                } else {
+                    right.innerHTML = '<div style="padding:40px;color:#4a6480;font-size:13px">업데이트 항목이 없습니다.</div>';
+                }
+            } catch(e) {
+                left.innerHTML = '<div style="padding:24px;color:#f87171;font-size:13px">로드 실패</div>';
+            }
+        }
+
+        function setClFilter(type) {
+            _clTypeFilter = type;
+            ['ALL','NEW','IMPROVED','FIXED'].forEach(t => {
+                const btn = document.getElementById('clf-' + t);
+                if (btn) btn.classList.toggle('cl-filter-active', t === type);
+            });
+            renderClLeft();
+        }
+
+        function renderClLeft() {
+            const left = document.getElementById('clLeft');
+            let html = '';
+
+            if (_clData.length === 0) {
+                html += '<div style="padding:20px 16px;color:var(--text-dim);font-size:13px">항목이 없습니다.</div>';
+                left.innerHTML = html;
+                return;
+            }
+
+            html += `<div style="padding-bottom:16px">`;
+            let totalVisible = 0;
+            _clData.forEach((v, vi) => {
+                // Filter items by type and search query
+                const visibleItems = v.items.filter(item => {
+                    const typeOk = _clTypeFilter === 'ALL' || item.change_type === _clTypeFilter;
+                    const searchOk = !_clSearchQuery ||
+                        item.title.toLowerCase().includes(_clSearchQuery) ||
+                        (item.description || '').toLowerCase().includes(_clSearchQuery);
+                    return typeOk && searchOk;
+                });
+                if (visibleItems.length === 0) return;
+                totalVisible += visibleItems.length;
+                html += `<div style="padding:14px 16px 6px${vi > 0 ? ';border-top:1px solid var(--border-subtle);margin-top:6px' : ''}">
+                    <div style="font-size:15px;font-weight:700;color:var(--text)">${v.version}</div>
+                    <div style="font-size:11px;color:var(--text-dim);margin-top:1px">${v.date} · ${visibleItems.length}개 표시</div>
+                </div>`;
+                visibleItems.forEach(item => {
+                    const cfg = _clTypeCfg[item.change_type] || {label:item.change_type, color:'#888'};
+                    const active = _clSelectedItem && _clSelectedItem.id === item.id;
+                    const isImgIcon = item.icon && (item.icon.startsWith('data:') || item.icon.startsWith('/') || item.icon.startsWith('http'));
+                    const icon = item.icon
+                        ? (isImgIcon
+                            ? `<img src="${item.icon}" style="width:30px;height:30px;object-fit:contain;border-radius:6px;margin-right:10px;flex-shrink:0;background:var(--bg-hover)">`
+                            : `<span style="font-size:20px;width:30px;text-align:center;margin-right:10px;flex-shrink:0;line-height:1">${item.icon}</span>`)
+                        : `<span style="width:30px;height:30px;border-radius:6px;background:var(--bg-hover);display:inline-flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0;font-size:13px">⚡</span>`;
+                    html += `<div onclick="clSelectItem(${item.id})"
+                        style="display:flex;align-items:center;padding:9px 16px;cursor:pointer;
+                        border-left:3px solid ${active ? '#2196F3' : 'transparent'};
+                        background:${active ? 'rgba(33,150,243,.1)' : 'transparent'};transition:all .1s">
+                        ${icon}
+                        <div style="min-width:0">
+                            <div style="font-size:13px;font-weight:${active?'600':'400'};color:${active?'var(--text)':'var(--text-secondary)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.title}</div>
+                            <div style="font-size:10px;color:${cfg.color};margin-top:1px;font-weight:600;letter-spacing:.03em">${cfg.label}</div>
+                        </div>
+                    </div>`;
+                });
+            });
+            if (totalVisible === 0) {
+                html += `<div style="padding:24px 16px;text-align:center;color:var(--text-dim);font-size:13px">검색 결과가 없습니다.</div>`;
+            }
+            html += `</div>`;
+            left.innerHTML = html;
+        }
+
+        function renderClRight() {
+            const right = document.getElementById('clRight');
+            const item = _clSelectedItem;
+            if (!item) { right.innerHTML = '<div style="padding:40px;color:var(--text-dim);font-size:13px">항목을 선택해주세요.</div>'; return; }
+            const cfg = _clTypeCfg[item.change_type] || {label:item.change_type, color:'#888', bg:'rgba(128,128,128,.1)'};
+            const isImgIcon = item.icon && (item.icon.startsWith('data:') || item.icon.startsWith('/') || item.icon.startsWith('http'));
+            const iconHtml = item.icon
+                ? (isImgIcon
+                    ? `<img src="${item.icon}" style="width:44px;height:44px;object-fit:contain;border-radius:10px;background:var(--bg-hover)">`
+                    : `<span style="font-size:36px;line-height:1">${item.icon}</span>`)
+                : `<span style="font-size:36px;line-height:1">⚡</span>`;
+            let html = '';
+            // Optional image
+            if (item.image_url) {
+                html += `<div style="width:100%;max-height:260px;overflow:hidden;border-radius:10px;margin-bottom:20px">
+                    <img src="${item.image_url}" alt="" style="width:100%;height:260px;object-fit:contain;background:var(--bg-elevated);display:block">
+                </div>`;
+            }
+            // Title row
+            html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <div style="font-size:22px;font-weight:700;color:var(--text);line-height:1.2;flex:1">${item.title}</div>
+                ${_clIsAdmin ? `
+                <button onclick="clOpenEdit(${item.id})" style="flex-shrink:0;padding:4px 12px;border-radius:5px;border:1px solid #1e3a5f;background:rgba(33,150,243,.15);color:#93c5fd;cursor:pointer;font-size:12px">수정</button>
+                <button onclick="clDelete(${item.id})" style="flex-shrink:0;padding:4px 12px;border-radius:5px;border:1px solid #3a1010;background:rgba(127,29,29,.2);color:#f87171;cursor:pointer;font-size:12px">삭제</button>` : ''}
+            </div>`;
+            // Description (HTML rendered)
+            html += `<div class="cl-desc-body" style="font-size:14px;color:var(--text-secondary);line-height:1.75;border-top:1px solid var(--border-subtle);padding-top:14px">${item.description}</div>`;
+            right.innerHTML = html;
+        }
+
+        function clSelectItem(id) {
+            for (const v of _clData) {
+                const found = v.items.find(i => i.id === id);
+                if (found) { _clSelectedVer = v.version; _clSelectedItem = found; break; }
+            }
+            renderClLeft();
+            renderClRight();
+        }
+
+        function clOpenModal() {
+            _clEditId = null;
+            document.getElementById('clModalTitle').textContent = '업데이트 항목 추가';
+            document.getElementById('clSubmitBtn').textContent  = '추가';
+            document.getElementById('clVer').value   = _clSelectedVer || '';
+            document.getElementById('clIcon').value  = '';
+            document.getElementById('clIconFile').value = '';
+            document.getElementById('clIconPreviewWrap').style.display = 'none';
+            document.getElementById('clTitle').value = '';
+            document.getElementById('clImg').value   = '';
+            document.getElementById('clImgFile').value  = '';
+            document.getElementById('clImgLabel').textContent = '이미지 업로드';
+            document.getElementById('clImgPreview').style.display = 'none';
+            document.getElementById('clDescEditor').innerHTML = '';
+            document.getElementById('clModal').style.display = 'flex';
+        }
+
+        function clOpenEdit(id) {
+            let item = null;
+            for (const v of _clData) {
+                const found = v.items.find(i => i.id === id);
+                if (found) { item = found; break; }
+            }
+            if (!item) return;
+            _clEditId = id;
+            document.getElementById('clModalTitle').textContent = '업데이트 항목 수정';
+            document.getElementById('clSubmitBtn').textContent  = '저장';
+            document.getElementById('clVer').value   = _clSelectedVer || '';
+            document.getElementById('clTitle').value = item.title || '';
+            document.getElementById('clType').value  = item.change_type || 'NEW';
+            document.getElementById('clDescEditor').innerHTML = item.description || '';
+
+            // Icon — only show image preview if it's an image (not a plain emoji)
+            const isImgIcon = item.icon && (item.icon.startsWith('data:') || item.icon.startsWith('/') || item.icon.startsWith('http'));
+            document.getElementById('clIcon').value = item.icon || '';
+            document.getElementById('clIconFile').value = '';
+            if (isImgIcon) {
+                document.getElementById('clIconPreviewImg').src = item.icon;
+                document.getElementById('clIconPreviewWrap').style.display = 'block';
+            } else {
+                document.getElementById('clIconPreviewWrap').style.display = 'none';
+            }
+
+            // Image
+            if (item.image_url) {
+                document.getElementById('clImg').value = item.image_url;
+                document.getElementById('clImgPreviewImg').src = item.image_url;
+                document.getElementById('clImgPreview').style.display = 'block';
+                document.getElementById('clImgLabel').textContent = item.image_url.split('/').pop();
+            } else {
+                document.getElementById('clImg').value = '';
+                document.getElementById('clImgFile').value = '';
+                document.getElementById('clImgLabel').textContent = '이미지 업로드';
+                document.getElementById('clImgPreview').style.display = 'none';
+            }
+
+            document.getElementById('clModal').style.display = 'flex';
+        }
+
+        function clExecCmd(cmd, val) {
+            document.getElementById('clDescEditor').focus();
+            document.execCommand(cmd, false, val || null);
+        }
+
+        let _clLibTarget = null;  // 'icon' or 'image'
+
+        async function clOpenLibrary(target) {
+            _clLibTarget = target;
+            const picker = document.getElementById('clLibPicker');
+            const grid   = document.getElementById('clLibGrid');
+            grid.innerHTML = '<div style="color:#4a6480;font-size:12px;padding:8px">로딩 중...</div>';
+            picker.style.display = 'flex';
+            try {
+                const res = await fetch('/api/changelog/images');
+                const files = await res.json();
+                if (files.length === 0) {
+                    grid.innerHTML = '<div style="color:#4a6480;font-size:12px;padding:8px">/static/update_log_images/ 폴더가 비어있습니다.</div>';
+                } else {
+                    grid.innerHTML = files.map(f => `
+                        <div onclick="clPickLibImage('${f.url}')" title="${f.name}"
+                            style="cursor:pointer;border-radius:6px;border:1px solid #1a3050;overflow:hidden;background:#0f1e30;
+                            width:72px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .1s"
+                            onmouseover="this.style.borderColor='#2196F3'" onmouseout="this.style.borderColor='#1a3050'">
+                            <img src="${f.url}" style="max-width:100%;max-height:100%;object-fit:contain">
+                        </div>`).join('');
+                }
+            } catch(e) {
+                grid.innerHTML = '<div style="color:#f87171;font-size:12px;padding:8px">로드 실패</div>';
+            }
+        }
+
+        function clPickLibImage(url) {
+            if (_clLibTarget === 'icon') {
+                document.getElementById('clIcon').value = url;
+                document.getElementById('clIconPreviewImg').src = url;
+                document.getElementById('clIconPreviewWrap').style.display = 'block';
+                document.getElementById('clIconUploadHint').style.display = 'none';
+            } else {
+                document.getElementById('clImg').value = url;
+                document.getElementById('clImgPreviewImg').src = url;
+                document.getElementById('clImgPreview').style.display = 'block';
+                document.getElementById('clImgLabel').textContent = url.split('/').pop();
+            }
+            document.getElementById('clLibPicker').style.display = 'none';
+        }
+
+        function clHandleIcon(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 1 * 1024 * 1024) { alert('아이콘 이미지는 1MB 이하만 가능합니다.'); input.value=''; return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('clIcon').value = e.target.result;
+                document.getElementById('clIconPreviewImg').src = e.target.result;
+                document.getElementById('clIconPreviewWrap').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clClearIcon() {
+            document.getElementById('clIcon').value = '';
+            document.getElementById('clIconFile').value = '';
+            document.getElementById('clIconPreviewWrap').style.display = 'none';
+        }
+
+        function clHandleImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { alert('이미지는 2MB 이하만 업로드 가능합니다.'); input.value=''; return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('clImg').value = e.target.result;
+                document.getElementById('clImgPreviewImg').src = e.target.result;
+                document.getElementById('clImgPreview').style.display = 'block';
+                document.getElementById('clImgLabel').textContent = file.name;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clClearImage() {
+            document.getElementById('clImg').value = '';
+            document.getElementById('clImgFile').value = '';
+            document.getElementById('clImgLabel').textContent = '이미지 업로드 (선택)';
+            document.getElementById('clImgPreview').style.display = 'none';
+        }
+
+        async function clSubmit() {
+            const version     = document.getElementById('clVer').value.trim();
+            const icon        = document.getElementById('clIcon').value.trim();
+            const title       = document.getElementById('clTitle').value.trim();
+            const change_type = document.getElementById('clType').value;
+            const image_url   = document.getElementById('clImg').value || '';
+            const description = document.getElementById('clDescEditor').innerHTML.trim();
+            if (!version || !title || !description) { alert('버전, 제목, 설명을 입력해주세요.'); return; }
+
+            const isEdit = _clEditId !== null;
+            const url     = isEdit ? `/api/changelog/edit/${_clEditId}` : '/api/changelog/add';
+            const method  = isEdit ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: {'Content-Type':'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''},
+                body: JSON.stringify({version, icon, title, change_type, image_url, description})
+            });
+            const data = await res.json();
+            if (data.ok) {
+                document.getElementById('clModal').style.display = 'none';
+                _clEditId = null;
+                await loadChangelog();
+                if (isEdit) {
+                    // Re-select the edited item so the detail view refreshes with new content
+                    for (const v of _clData) {
+                        const found = v.items.find(i => i.id === data.id);
+                        if (found) { _clSelectedVer = v.version; _clSelectedItem = found; break; }
+                    }
+                    renderClLeft();
+                    renderClRight();
+                }
+            } else { alert(data.error || '오류가 발생했습니다.'); }
+        }
+
+        async function clDelete(id) {
+            if (!confirm('이 항목을 삭제하시겠습니까?')) return;
+            const res = await fetch(`/api/changelog/delete/${id}`, {
+                method: 'DELETE',
+                headers: {'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''}
+            });
+            const data = await res.json();
+            if (data.ok) loadChangelog();
+            else alert(data.error || '삭제 실패');
+        }
+
+        // ── Treemap (reused from IAM) ─────────────────────────
+        let _treemapLoading = false;
+        let _treemapLoaded  = false;
+        async function loadSummaryTreemap(force = false) {
+            if (_treemapLoading) return;  // already in-flight
+            const container = document.getElementById('summaryTreemapContainer');
+            if (!force && _treemapLoaded && container.children.length > 0
+                && !container.innerHTML.includes('로딩 중')) return;  // already rendered
+            _treemapLoading = true;
+            container.innerHTML = '<div style="padding:60px;text-align:center;color:#5a7a99">로딩 중...</div>';
+            try {
+                const res  = await fetch('/api/scode_treemap');
+                const data = await res.json();
+                if (!data.data || !data.data.length) {
+                    container.innerHTML = '<div style="padding:60px;text-align:center;color:#5a7a99">데이터 없음</div>';
+                    return;
+                }
+                if (data.snapshot_date) {
+                    document.getElementById('treemapDesc').textContent =
+                        `VM 수량 기준 인프라 코드 분포도 — ${data.today} 기준, ${data.snapshot_date} 대비 변화 표시`;
+                }
+                renderSummaryTreemap(container, data.data);
+                _treemapLoaded  = true;
+                // Animate VM counts after cells appear
+                container.querySelectorAll('.tm-count').forEach(el => {
+                    const target = parseInt(el.dataset.target, 10);
+                    const delay  = parseFloat(el.dataset.delay || 0) * 1000 + 100;
+                    setTimeout(() => {
+                        const duration = Math.min(600, 200 + target * 2);
+                        const start    = performance.now();
+                        function tick(now) {
+                            const p = Math.min((now - start) / duration, 1);
+                            const ease = 1 - Math.pow(1 - p, 3); // ease-out-cubic
+                            el.textContent = Math.round(ease * target);
+                            if (p < 1) requestAnimationFrame(tick);
+                        }
+                        requestAnimationFrame(tick);
+                    }, delay);
+                });
+            } catch(e) {
+                container.innerHTML = `<div style="padding:60px;text-align:center;color:#f87171">로드 실패: ${e.message}</div>`;
+            } finally {
+                _treemapLoading = false;
+            }
+        }
+
+        // ── Treemap cell click popup ──────────────────────────
+        window.treemapCellClick = function(e, scode, count, diff, addedCount, removedCount) {
+            e.stopPropagation();
+            if (diff === 0) {
+                window.open('/vm_search?servicecode=' + encodeURIComponent(scode), '_blank');
+                return;
+            }
+            // Show popup for changed cells
+            let existing = document.getElementById('tmPopup');
+            if (existing) existing.remove();
+
+            const addedC   = addedCount   || 0;
+            const removedC = removedCount || 0;
+            const hasChange = addedC > 0 || removedC > 0;
+            const popup      = document.createElement('div');
+            popup.id         = 'tmPopup';
+            popup.style.cssText = `
+                position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+                background:#1a2030;border:1px solid #2a3550;border-radius:12px;
+                padding:20px 24px;z-index:9999;min-width:300px;max-width:400px;
+                box-shadow:0 20px 60px rgba(0,0,0,0.6);
+            `;
+            popup.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                    <div>
+                        <div style="font-size:16px;font-weight:700;color:#e2e8f0;font-family:monospace">${scode}</div>
+                        <div style="font-size:12px;color:#5a7a99;margin-top:2px">현재 ${count}개 VM
+                            ${hasChange ? `<span style="margin-left:6px">
+                                ${addedC>0?`<span style="color:#4ade80;font-weight:700">▲+${addedC}</span>`:''}
+                                ${addedC>0&&removedC>0?' / ':''}
+                                ${removedC>0?`<span style="color:#f87171;font-weight:700">▼-${removedC}</span>`:''}
+                            </span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('tmPopup').remove()"
+                        style="background:transparent;border:none;color:#5a7a99;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <button onclick="window.open('/vm_search?servicecode=${encodeURIComponent(scode)}','_blank');document.getElementById('tmPopup').remove()"
+                        style="width:100%;padding:10px;background:#1e3a5f;border:1px solid #2563eb;
+                               color:#93c5fd;border-radius:7px;font-size:13px;cursor:pointer;
+                               text-align:left;display:flex;align-items:center;gap:8px">
+                        <span style="font-size:16px">📋</span>
+                        <div>
+                            <div style="font-weight:600">전체 VM 보기</div>
+                            <div style="font-size:11px;opacity:.7">해당 인프라 코드의 모든 VM ${count}개</div>
+                        </div>
+                    </button>
+                    ${hasChange ? `
+                    <button onclick="showVmDiff('${scode}')"
+                        style="width:100%;padding:10px;background:#3730a322;border:1px solid #6366f166;
+                               color:#a5b4fc;border-radius:7px;font-size:13px;cursor:pointer;
+                               text-align:left;display:flex;align-items:center;gap:8px">
+                        <span style="font-size:16px">🔄</span>
+                        <div>
+                            <div style="font-weight:600">변경된 VM 보기</div>
+                            <div style="font-size:11px;opacity:.7">어제 스냅샷 대비 +${addedC} / -${removedC}</div>
+                        </div>
+                    </button>` : ''}
+                </div>
+            `;
+            document.body.appendChild(popup);
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('mousedown', function handler(ev) {
+                    if (!popup.contains(ev.target)) {
+                        popup.remove();
+                        document.removeEventListener('mousedown', handler);
+                    }
+                });
+            }, 200);
+        }
+
+        window.showVmDiff = async function(scode) {
+            document.getElementById('tmPopup')?.remove();
+
+            // Loading modal
+            const modal = document.createElement('div');
+            modal.id    = 'tmDiffModal';
+            modal.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+                background:#1a2030;border:1px solid #2a3550;border-radius:12px;
+                padding:20px 24px;z-index:9999;width:760px;max-width:95vw;max-height:80vh;
+                overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.7)`;
+            modal.innerHTML = `<div style="text-align:center;padding:20px;color:#5a7a99">불러오는 중...</div>`;
+            document.body.appendChild(modal);
+
+            try {
+                const res  = await fetch('/api/scode_vm_diff?scode=' + encodeURIComponent(scode));
+                const data = await res.json();
+                const added   = (data.added   || []).map(v => ({...v, _status: 'added'}));
+                const removed = (data.removed || []).map(v => ({...v, _status: 'removed'}));
+                const allVms  = [...added, ...removed];
+
+                const rows = allVms.map(v => `
+                    <tr style="border-bottom:1px solid #1e2d42">
+                        <td style="padding:8px 6px">
+                            ${v._status === 'added'
+                                ? `<span style="background:#14532d55;color:#4ade80;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;display:inline-block">✨ 추가됨</span>`
+                                : `<span style="background:#7f1d1d55;color:#f87171;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;display:inline-block">🗑 삭제됨</span>`}
+                        </td>
+                        <td style="padding:8px 6px;font-family:monospace;font-size:12px;color:#e2e8f0;white-space:nowrap">${v.vm_name}</td>
+                        <td style="padding:8px 6px;font-size:12px;color:#5a7a99;white-space:nowrap">${v.project}</td>
+                        <td style="padding:8px 6px;font-size:12px;color:#5a7a99;white-space:nowrap">${v.ip_address}</td>
+                        <td style="padding:8px 6px;font-size:11px;color:#7a8ba3;font-family:monospace;white-space:nowrap">${v.vm_id}</td>
+                    </tr>`).join('');
+
+                modal.innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:#e2e8f0">
+                                🔄 변경된 VM — <span style="font-family:monospace">${scode}</span>
+                            </div>
+                            <div style="font-size:12px;color:#5a7a99;margin-top:3px">
+                                비교 기준: ${data.snapshot_date || '없음'} vs ${data.today || '오늘'} ·
+                                <span style="color:#4ade80">+${data.added_count||0} 추가</span> /
+                                <span style="color:#f87171">-${data.removed_count||0} 삭제</span>
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('tmDiffModal').remove()"
+                            style="background:transparent;border:none;color:#5a7a99;font-size:20px;cursor:pointer">×</button>
+                    </div>
+                    ${!data.has_snapshot ? `
+                    <div style="padding:20px;text-align:center;color:#5a7a99;font-size:13px">
+                        스냅샷 데이터가 없습니다.<br>
+                        <span style="font-size:11px;opacity:.7">7AM KST 스냅샷 이후 조회 가능합니다</span>
+                    </div>` : allVms.length ? `
+                    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="border-bottom:1px solid #2a3550">
+                                <th style="padding:6px;text-align:left;font-size:11px;color:#5a7a99;font-weight:600;min-width:78px;white-space:nowrap">상태</th>
+                                <th style="padding:6px;text-align:left;font-size:11px;color:#5a7a99;font-weight:600;white-space:nowrap">VM 이름</th>
+                                <th style="padding:6px;text-align:left;font-size:11px;color:#5a7a99;font-weight:600;white-space:nowrap">프로젝트</th>
+                                <th style="padding:6px;text-align:left;font-size:11px;color:#5a7a99;font-weight:600;white-space:nowrap">IP</th>
+                                <th style="padding:6px;text-align:left;font-size:11px;color:#5a7a99;font-weight:600;white-space:nowrap">VM ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table></div>` : `
+                    <div style="padding:20px;text-align:center;color:#5a7a99;font-size:13px">
+                        변경된 VM이 없습니다
+                    </div>`}
+                `;
+            } catch(e) {
+                modal.innerHTML = `<div style="padding:20px;text-align:center;color:#f87171">조회 실패: ${e.message}</div>`;
+            }
+
+            setTimeout(() => {
+                document.addEventListener('mousedown', function handler(ev) {
+                    const m = document.getElementById('tmDiffModal');
+                    if (m && !m.contains(ev.target)) {
+                        m.remove();
+                        document.removeEventListener('mousedown', handler);
+                    }
+                });
+            }, 200);
+        }
+
+        function showTmTip(el, event) {
+            const t = document.getElementById('sum-tooltip');
+            if (!t) return;
+            t.style.display = 'block';
+            t.textContent = el.dataset.tip;
+            const container = t.parentElement;
+            const rect = container.getBoundingClientRect();
+            let x = (event?.clientX ?? 0) - rect.left + 12;
+            let y = (event?.clientY ?? 0) - rect.top - 36;
+            // Keep tooltip within container bounds horizontally
+            const tw = t.offsetWidth || 180;
+            if (x + tw > rect.width - 8) x = rect.width - tw - 8;
+            // If tooltip goes above container, flip below cursor instead
+            if (y < 4) y = (event?.clientY ?? 0) - rect.top + 16;
+            t.style.left = x + 'px';
+            t.style.top  = y + 'px';
+        }
+
+        function squarifyRectSum(items, x, y, w, h) {
+            if (!items.length) return [];
+            const results = [];
+            function layout(nodes, x, y, w, h) {
+                if (!nodes.length) return;
+                if (nodes.length === 1) { results.push({...nodes[0], x, y, w, h}); return; }
+                const total = nodes.reduce((s,n) => s + n.value, 0);
+                let best = Infinity, stripEnd = 1;
+                for (let i = 1; i <= nodes.length; i++) {
+                    const strip = nodes.slice(0, i);
+                    const stripSum = strip.reduce((s,n) => s + n.value, 0);
+                    const stripFrac = stripSum / total;
+                    const side = w >= h ? h : w;
+                    const stripLen = w >= h ? w * stripFrac : h * stripFrac;
+                    let worst = 0;
+                    strip.forEach(n => {
+                        const frac = n.value / stripSum;
+                        const a = side * frac, b = stripLen;
+                        const r = Math.max(a/b, b/a);
+                        if (r > worst) worst = r;
+                    });
+                    if (worst < best) { best = worst; stripEnd = i; }
+                    else break;
+                }
+                const strip = nodes.slice(0, stripEnd);
+                const rest  = nodes.slice(stripEnd);
+                const stripSum = strip.reduce((s,n) => s + n.value, 0);
+                const stripFrac = stripSum / total;
+                if (w >= h) {
+                    const sw = w * stripFrac; let cy = y;
+                    strip.forEach(n => { const sh = h*(n.value/stripSum); results.push({...n,x,y:cy,w:sw,h:sh}); cy+=sh; });
+                    layout(rest, x+sw, y, w-sw, h);
+                } else {
+                    const sh = h * stripFrac; let cx = x;
+                    strip.forEach(n => { const sw = w*(n.value/stripSum); results.push({...n,x:cx,y,w:sw,h:sh}); cx+=sw; });
+                    layout(rest, x, y+sh, w, h-sh);
+                }
+            }
+            layout(items.map(i => ({...i, value: i.count})), x, y, w, h);
+            return results;
+        }
+
+        function renderSummaryTreemap(container, data) {
+            const items = data.filter(d => d.count > 0);
+            const W = container.offsetWidth || 900;
+            const H = container.offsetHeight || Math.max(400, Math.round(W * 0.56));
+            container.style.height = H + 'px';
+            const isLight = document.body.classList.contains('light-mode');
+            const bgOuter   = isLight ? '#e2e8f0' : '#111111';
+            const bgGroup   = isLight ? '#f8fafc' : '#1a1a1a';
+            const bgHeader  = isLight ? '#f1f5f9' : '#1a1a1a';
+            const labelClr  = isLight ? '#475569' : '#888888';
+            const groupMap = {};
+            items.forEach(d => {
+                if (!groupMap[d.group]) groupMap[d.group] = [];
+                groupMap[d.group].push(d);
+            });
+            const groups = Object.entries(groupMap)
+                .map(([name, items]) => ({name, items, count: items.reduce((s,i)=>s+i.count,0)}))
+                .sort((a,b) => b.count - a.count);
+            const GAP = 3, HEADER = 18;
+            const groupRects = squarifyRectSum(groups.map(g=>({...g,value:g.count})), 0, 0, W, H);
+            // Always render treemap cells on dark background for visibility
+            // Only the outer frame adapts to theme
+            container.style.background = bgOuter;
+
+            let html = `<div style="position:relative;width:${W}px;height:${H}px;background:#1a1a1a;font-family:monospace;color-scheme:dark">`;
+            html += `<div id="sum-tooltip" style="position:absolute;display:none;
+                     background:${isLight?'rgba(0,0,0,0.85)':'rgba(0,0,0,0.92)'};
+                     color:#fff;padding:6px 10px;border-radius:4px;font-size:12px;pointer-events:none;z-index:100;
+                     white-space:nowrap;border:1px solid rgba(255,255,255,0.15)"></div>`;
+            groupRects.forEach((gr, gi) => {
+                const gx=gr.x+GAP, gy=gr.y+GAP, gw=gr.w-GAP*2, gh=gr.h-GAP*2;
+                if (gw<4||gh<4) return;
+                html += `<div style="position:absolute;left:${gx}px;top:${gy}px;width:${gw}px;height:${gh}px;background:${bgGroup};overflow:hidden;
+                          opacity:0;transform:translateY(20px);
+                          animation:tmFadeUp 0.5s ease forwards;animation-delay:${gi*0.06}s">`;
+                html += `<div style="position:absolute;top:0;left:0;right:0;height:${HEADER}px;background:${bgHeader};z-index:2;
+                             display:flex;align-items:center;padding:0 6px;border-bottom:1px solid ${isLight?'#e2e8f0':'#2a2a2a'}">
+                    <span style="font-size:11px;font-weight:700;color:${labelClr};text-transform:uppercase;letter-spacing:.06em;
+                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${gr.name}</span>
+                </div>`;
+                const iRects = squarifyRectSum(gr.items.map(i=>({...i,value:i.count})), 0, 0, gw, gh-HEADER);
+                let cellIdx = 0;
+                iRects.forEach(ir => {
+                    const item=ir, rx=Math.round(ir.x)+1, ry=Math.round(ir.y)+HEADER+1;
+                    const rw=Math.max(Math.round(ir.w)-1,0), rh=Math.max(Math.round(ir.h)-1,0);
+                    if (rw<2||rh<2) return;
+                    const isDown=item.diff<0;
+                    const pct=item.prev>0?Math.abs(item.diff)/item.prev:0;
+                    const intensity=Math.min(pct/0.15,1);
+                    let bg;
+                    if (item.diff===0) { bg='#374151'; }  // dark gray = no change
+                    else if (isDown) {
+                        const r=Math.round(239-intensity*(239-127)), g=Math.round(68-intensity*68), b=Math.round(68-intensity*39);
+                        bg=`rgb(${r},${g},${b})`;
+                    } else {
+                        const r=Math.round(22-intensity*8), g=Math.round(163-intensity*(163-83)), b=Math.round(74-intensity*(74-45));
+                        bg=`rgb(${r},${g},${b})`;
+                    }
+                    const fs=Math.min(Math.max(Math.sqrt(rw*rh)/7,10),20);
+                    const addedC = item.added_count   || 0;
+                    const removedC = item.removed_count || 0;
+                    let grossTxt = '';
+                    if (addedC > 0 && removedC > 0) grossTxt = `+${addedC} / -${removedC}`;
+                    else if (addedC > 0)            grossTxt = `+${addedC}`;
+                    else if (removedC > 0)          grossTxt = `-${removedC}`;
+                    const hasChange = addedC > 0 || removedC > 0;
+                    const cellDelay = (gi * 0.06 + cellIdx * 0.018).toFixed(3);
+                    cellIdx++;
+                    html+=`<div style="position:absolute;left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;
+                               background:${bg} !important;--tm-bg:${bg};overflow:hidden;cursor:pointer;
+                               border:1px solid rgba(0,0,0,0.25);
+                               opacity:0;animation:tmCellIn 0.35s ease forwards;animation-delay:${cellDelay}s;
+                               display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px"
+                        data-tip="${item.scode}: ${item.count} VM${hasChange?' ('+grossTxt+' vs yesterday)':''}"
+                        onmouseenter="showTmTip(this, event)"
+                        onmousemove="showTmTip(this, event)"
+                        onmouseleave="document.getElementById('sum-tooltip').style.display='none'"
+                        onclick="treemapCellClick(event, '${item.scode}', ${item.count}, ${item.diff}, ${addedC}, ${removedC})">
+                        ${rw>45?`<div style="font-size:${Math.round(Math.max(fs,7))}px;font-weight:700;color:#fff;
+                            text-align:center;line-height:1.1;padding:0 2px;width:100%;
+                            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box">${item.scode}</div>`:''}
+                        ${`<div class="tm-count" data-target="${item.count}" data-delay="${cellDelay}" style="font-size:${Math.round(Math.max(fs-3,7))}px;color:rgba(255,255,255,0.95) !important;font-weight:600;line-height:1;white-space:nowrap">0</div>`}
+                        ${hasChange&&rw>40&&rh>48?`<div style="font-size:${Math.round(Math.max(fs-4,9))}px;color:rgba(255,255,255,0.85);
+                            background:rgba(0,0,0,0.25);border-radius:2px;padding:1px 4px;font-weight:700">${grossTxt}</div>`:''}
+                    </div>`;
+                });
+                html += '</div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Re-render treemap on theme change — only update colors, don't re-fetch
+        new MutationObserver(() => {
+            updateTreemapTheme();
+        }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+        // Re-render treemap on window resize (debounced)
+        let _resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(_resizeTimer);
+            _resizeTimer = setTimeout(() => {
+                const tab = document.querySelector('.summary-nav-item.active')?.dataset.tab;
+                if (tab === 'treemap') {
+                    const container = document.getElementById('summaryTreemapContainer');
+                    if (container && container.innerHTML.trim() !== '' &&
+                        !container.innerHTML.includes('로딩 중')) {
+                        loadSummaryTreemap();
+                    }
+                }
+            }, 300);
+        });
+
+        updateTreemapTheme();
+
+        // ── Auto-detect CMDB CSV refresh and reload treemap ────
+        // Reuses the existing /api/data_mtime endpoint (same one the
+        // dashboard's own refresh button already polls).
+        let _csvLastMtime = null;
+        async function _checkCsvFreshness() {
+            try {
+                const res  = await fetch('/api/data_mtime');
+                const data = await res.json();
+                if (data.mtime == null) return;
+                if (_csvLastMtime === null) {
+                    _csvLastMtime = data.mtime;  // first check — just record baseline
+                    return;
+                }
+                if (data.mtime > _csvLastMtime) {
+                    _csvLastMtime = data.mtime;
+                    const tab = document.querySelector('.summary-nav-item.active')?.dataset.tab;
+                    if (tab === 'treemap') {
+                        loadSummaryTreemap(true);
+                        if (typeof showToast === 'function') {
+                            showToast('CMDB 데이터가 갱신되어 트리맵을 새로고침했습니다', 'info');
+                        }
+                    }
+                }
+            } catch (e) { /* silent — non-critical background check */ }
+        }
+        setInterval(_checkCsvFreshness, 20000);  // poll every 20s
+        _checkCsvFreshness();  // establish baseline immediately
+
+        async function triggerDataRefresh() {
+            const btn  = document.getElementById('refreshDataBtn');
+            const text = document.getElementById('refreshDataBtnText');
+            btn.disabled = true;
+            text.textContent = '갱신 중...';
+            btn.style.opacity = '0.6';
+            try {
+                const res = await fetch('/api/refresh_data', { method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                // Store current mtime FIRST, then start polling
+                try {
+                    const mt = await fetch('/api/data_mtime').then(r=>r.json());
+                    window._lastMtime = mt.mtime;
+                } catch(e) { window._lastMtime = null; }
+
+                text.textContent = '갱신 중... 0s';
+                const start = Date.now();
+                const poll = setInterval(async () => {
+                    const elapsed = Math.round((Date.now() - start) / 1000);
+                    text.textContent = `갱신 중... ${elapsed}s`;
+                    if (elapsed >= 300) {
+                        clearInterval(poll);
+                        text.textContent = '데이터 갱신';
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        location.reload();
+                        return;
+                    }
+                    try {
+                        const check = await fetch('/api/data_mtime');
+                        if (check.ok) {
+                            const mt = await check.json();
+                            if (window._lastMtime && mt.mtime !== window._lastMtime) {
+                                clearInterval(poll);
+                                text.textContent = '완료! 새로고침 중...';
+                                setTimeout(() => location.reload(), 500);
+                            }
+                        }
+                    } catch(e) {}
+                }, 5000);
+            } catch(e) {
+                text.textContent = `오류: ${e.message}`;
+                setTimeout(() => {
+                    text.textContent = '데이터 갱신';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }, 3000);
+            }
+        }
+    </script>
+        </div></div><!-- end dash-wrap, end tab-dashboard -->
+
+        <!-- ── Changelog Tab ── -->
+        <div class="summary-tab" id="tab-changelog" style="overflow:hidden;display:flex;flex-direction:column;background:var(--bg-page)">
+        <div style="position:absolute;top:48px;right:0;bottom:0;left:180px;display:flex;flex-direction:column;overflow:hidden">
+        <!-- Header -->
+        <div style="flex-shrink:0;padding:36px 24px 0;background:var(--bg-page)" class="cl-header">
+            <div style="text-align:center;font-size:30px;font-weight:600;color:var(--text);letter-spacing:.02em">Release Notes</div>
+            <div style="margin-top:36px;height:1px;background:var(--bg-hover)" class="cl-divider"></div>
+        </div>
+        <!-- Two-panel content -->
+        <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+
+            <!-- Left: version selector + feature list -->
+            <!-- Left: version selector + feature list -->
+            <div style="width:280px;min-width:280px;border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;background:var(--bg-panel)">
+                <!-- Search + filter controls (never overwritten) -->
+                <div style="padding:10px 12px;border-bottom:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+                    {% if has_role('admin') %}
+                    <button onclick="clOpenModal()" style="width:100%;padding:7px 10px;border-radius:6px;
+                        border:1px dashed var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;text-align:left">
+                        + 항목 추가</button>
+                    {% endif %}
+                    <input type="text" id="clSearchInput" placeholder="🔍 검색..."
+                        style="width:100%;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12.5px"
+                        oninput="_clSearchQuery=this.value.toLowerCase();renderClLeft()">
+                    <div style="display:flex;gap:4px">
+                        <button onclick="setClFilter('ALL')"      id="clf-ALL"      class="cl-filter-btn cl-filter-active">전체</button>
+                        <button onclick="setClFilter('NEW')"      id="clf-NEW"      class="cl-filter-btn">NEW</button>
+                        <button onclick="setClFilter('IMPROVED')" id="clf-IMPROVED" class="cl-filter-btn">IMPROVED</button>
+                        <button onclick="setClFilter('FIXED')"    id="clf-FIXED"    class="cl-filter-btn">FIXED</button>
+                    </div>
+                </div>
+                <!-- List container — renderClLeft() only writes here -->
+                <div id="clLeft" style="flex:1;overflow-y:auto;display:flex;flex-direction:column"></div>
+            </div>
+
+            <!-- Right: selected feature detail -->
+            <div id="clRight" style="flex:1;overflow-y:auto;padding:28px 32px;background:var(--bg-page)">
+                <div style="color:var(--text-dim);font-size:13px">항목을 선택해주세요.</div>
+            </div>
+        </div><!-- end two-panel -->
+        </div><!-- end outer flex column -->
+
+        <!-- Add Entry Modal -->
+        <div id="clModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;align-items:center;justify-content:center">
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:520px;max-width:95vw;max-height:88vh;overflow-y:auto">
+                <div id="clModalTitle" style="font-size:15px;font-weight:600;margin-bottom:16px;color:var(--text)">업데이트 항목 추가</div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;gap:8px">
+                        <input id="clVer" placeholder="버전 (예: v2026.06.11)" style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px">
+                        <div style="display:flex;flex-direction:column;gap:4px;width:110px">
+                            <div style="display:flex;gap:4px">
+                                <label for="clIconFile" title="파일 업로드" style="flex:1;display:flex;align-items:center;justify-content:center;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-muted);cursor:pointer;font-size:11px">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                </label>
+                                <button type="button" onclick="clOpenLibrary('icon')" title="라이브러리" style="flex:1;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-muted);cursor:pointer;font-size:11px">☰</button>
+                            </div>
+                            <input id="clIconFile" type="file" accept="image/*" onchange="clHandleIcon(this)" style="display:none">
+                            <input id="clIcon" type="hidden" value="">
+                            <div id="clIconPreviewWrap" style="display:none;position:relative">
+                                <img id="clIconPreviewImg" style="width:100%;height:44px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:var(--bg-hover)">
+                                <button type="button" onclick="clClearIcon()" style="position:absolute;top:2px;right:2px;padding:1px 5px;border-radius:3px;border:none;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:10px">✕</button>
+                            </div>
+                            <span id="clIconUploadHint" style="font-size:10px;color:var(--text-dim);text-align:center">아이콘</span>
+                        </div>
+                    </div>
+                    <input id="clTitle" placeholder="제목 (예: 세션 & 인증 개선)" style="background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px">
+                    <div style="display:flex;gap:8px">
+                        <select id="clType" style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px">
+                            <option value="NEW">🟢 NEW</option>
+                            <option value="IMPROVED">🔵 IMPROVED</option>
+                            <option value="FIXED">🟠 FIXED</option>
+                        </select>
+                        <div style="flex:2;display:flex;flex-direction:column;gap:4px">
+                            <div style="display:flex;gap:4px">
+                                <label for="clImgFile" style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-muted);cursor:pointer;font-size:12px">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    <span id="clImgLabel">이미지 업로드</span>
+                                </label>
+                                <button type="button" onclick="clOpenLibrary('image')" style="padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-muted);cursor:pointer;font-size:12px;white-space:nowrap">☰ 라이브러리</button>
+                            </div>
+                            <input id="clImgFile" type="file" accept="image/*" onchange="clHandleImage(this)" style="display:none">
+                            <input id="clImg" type="hidden" value="">
+                            <div id="clImgPreview" style="display:none;position:relative">
+                                <img id="clImgPreviewImg" style="width:100%;height:80px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:var(--bg-hover)">
+                                <button type="button" onclick="clClearImage()" style="position:absolute;top:4px;right:4px;padding:2px 6px;border-radius:4px;border:none;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:11px">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rich text toolbar -->
+                    <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden">
+                        <div style="display:flex;gap:2px;padding:6px 8px;background:var(--bg-card);border-bottom:1px solid #1a3050;flex-wrap:wrap">
+                            <button type="button" onclick="clExecCmd('bold')" title="굵게" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-weight:700;font-size:13px">B</button>
+                            <button type="button" onclick="clExecCmd('italic')" title="기울임" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-style:italic;font-size:13px">I</button>
+                            <button type="button" onclick="clExecCmd('underline')" title="밑줄" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;text-decoration:underline;font-size:13px">U</button>
+                            <div style="width:1px;background:#1a3050;margin:2px 4px"></div>
+                            <button type="button" onclick="clExecCmd('fontSize','5')" title="큰 글씨" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-size:13px">H1</button>
+                            <button type="button" onclick="clExecCmd('fontSize','3')" title="보통 글씨" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-size:13px">H2</button>
+                            <button type="button" onclick="clExecCmd('fontSize','2')" title="작은 글씨" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-size:13px">H3</button>
+                            <div style="width:1px;background:#1a3050;margin:2px 4px"></div>
+                            <button type="button" onclick="clExecCmd('insertUnorderedList')" title="불릿 리스트" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-size:13px">• 목록</button>
+                            <button type="button" onclick="clExecCmd('removeFormat')" title="서식 제거" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-size:13px">✕ 서식</button>
+                        </div>
+                        <div id="clDescEditor" contenteditable="true"
+                            style="min-height:120px;padding:10px 12px 10px 28px;color:var(--text-secondary);font-size:13px;line-height:1.7;outline:none;background:var(--bg-input);overflow:visible"
+                            placeholder="상세 설명을 입력하세요..."></div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+                    <button onclick="document.getElementById('clModal').style.display='none'" style="padding:7px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:13px">취소</button>
+                    <button id="clSubmitBtn" onclick="clSubmit()" style="padding:7px 16px;border-radius:6px;border:none;background:#1e40af;color:#bfdbfe;cursor:pointer;font-size:13px;font-weight:600">추가</button>
+                </div>
+            </div>
+        </div>
+        </div><!-- end tab-changelog -->
+
+        <!-- Image library picker -->
+        <div id="clLibPicker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9500;align-items:center;justify-content:center">
+            <div style="background:#0a1628;border:1px solid #1a3050;border-radius:10px;padding:20px;width:420px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div style="font-size:14px;font-weight:600;color:#e2e8f0">이미지 라이브러리</div>
+                    <button onclick="document.getElementById('clLibPicker').style.display='none'" style="padding:3px 8px;border-radius:4px;border:1px solid #1a3050;background:transparent;color:#7a9bbf;cursor:pointer;font-size:12px">✕ 닫기</button>
+                </div>
+                <div style="font-size:11px;color:#4a6480">/static/update_log_images/ 폴더의 이미지를 선택하세요.</div>
+                <div id="clLibGrid" style="display:flex;flex-wrap:wrap;gap:8px;overflow-y:auto;max-height:320px;padding:4px"></div>
+            </div>
+        </div>
+        </div><!-- end summary-content -->
+    </div><!-- end summary-wrap -->
+</body>
+</html>

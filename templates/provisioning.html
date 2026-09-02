@@ -1,0 +1,2899 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>VM 프로비저닝 — InfraPilot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+            background: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 12s ease infinite;
+            color: #f3f6fa;
+            min-height: 100vh;
+            font-size: 15px;
+        }
+        @keyframes gradientBG {
+            0%,100% { background-position: 0% 50%; }
+            50%      { background-position: 100% 50%; }
+        }
+
+        .page-wrapper {
+            max-width: 100%;
+            margin: 28px 0 80px;
+            padding: 0 24px;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
+
+        /* ── Header ─────────────────────────────────────────────── */
+        .page-header {
+            display: flex; align-items: flex-end; justify-content: space-between;
+            flex-wrap: wrap; gap: 14px;
+            margin-bottom: 22px; padding-bottom: 16px;
+            border-bottom: 1px solid #2a3550;
+        }
+        .page-title    { font-size: 26px; font-weight: 700; color: #95c4e8; }
+        .page-subtitle { font-size: 14px; color: #5a7a99; margin-top: 4px; font-family: 'Courier New', monospace; }
+
+        /* ── Toolbar ─────────────────────────────────────────────── */
+        .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .search-wrap { position: relative; display: inline-block; }
+        .search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #5a7a99; pointer-events: none; }
+        .search-input {
+            background: #23263a; border: 1.3px solid #2b3142; color: #f3f6fa;
+            border-radius: 6px; padding: 7px 12px 7px 32px;
+            font-size: 15px; width: 220px; outline: none; transition: border-color .2s;
+        }
+        .search-input:focus { border-color: #2196F3; }
+        .filter-select {
+            background: #23263a; border: 1.3px solid #2b3142; color: #f3f6fa;
+            border-radius: 6px; padding: 7px 10px; font-size: 15px; outline: none; cursor: pointer;
+        }
+        .btn-toolbar {
+            background: #23263a; border: 1.3px solid #2b3142; color: #bfc7d1;
+            border-radius: 6px; padding: 9px 16px; font-size: 15px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: background .15s;
+        }
+        .btn-toolbar:hover { background: #2b3142; }
+
+        /* ── Stats ──────────────────────────────────────────────── */
+        .stats-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .stat-chip {
+            display: flex; align-items: center; gap: 6px; padding: 5px 14px;
+            background: rgba(27,32,46,0.92); border: 1px solid #2a3550;
+            border-radius: 100px; font-size: 14px; color: #5a7a99;
+            font-family: 'Courier New', monospace;
+        }
+        .stat-chip .val { font-weight: 700; font-size: 14px; }
+        .stat-chip.s-total   .val { color: #95c4e8; }
+        .stat-chip.s-ansible .val { color: #f59e0b; }
+        .stat-chip.s-puppet  .val { color: #a78bfa; }
+        .stat-chip.s-done    .val { color: #4caf93; }
+
+        /* ── Project filter ─────────────────────────────────────── */
+        .project-bar {
+            background: rgba(27,32,46,0.96); border: 1px solid #2a3550;
+            border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        }
+        .project-bar label { font-size: 15px; color: #95c4e8; font-weight: 600; white-space: nowrap; }
+        .project-btn {
+            padding: 5px 14px; border-radius: 100px; font-size: 14px; font-weight: 600;
+            cursor: pointer; border: 1.3px solid #2b3142; background: #23263a;
+            color: #bfc7d1; transition: all .15s; font-family: 'Courier New', monospace;
+        }
+        .project-btn:hover  { border-color: #95c4e8; color: #95c4e8; }
+        .project-btn.active { background: #1a3550; border-color: #95c4e8; color: #95c4e8; }
+
+        .scode-bar {
+            display: none;
+            background: #0c1a2e;
+            border: 1px solid #2196F3;
+            border-radius: 8px;
+            padding: 10px 16px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            animation: scode-slide-in 0.25s ease;
+            box-shadow: 0 2px 12px rgba(33,150,243,0.12);
+        }
+        @keyframes scode-slide-in {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .scode-bar.open { display: flex; }
+        .scode-bar-label {
+            font-size: 13px; font-weight: 700;
+            font-family: 'Courier New', monospace;
+            color: #2196F3; white-space: nowrap;
+            margin-right: 4px; text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+        .scode-divider {
+            width: 1px; height: 18px;
+            background: #2a3550; flex-shrink: 0; margin: 0 4px;
+        }
+        .scode-chip {
+            padding: 4px 12px; border-radius: 100px; font-size: 13px;
+            font-family: 'Courier New', monospace; font-weight: 600;
+            cursor: pointer; border: 1.3px solid #2a3550;
+            background: #1a2030; color: #7a8fa6;
+            transition: all .15s;
+        }
+        .scode-chip:hover  { border-color: #95c4e8; color: #95c4e8; background: #162030; }
+        .scode-chip.active {
+            background: #1a3a5f; border-color: #2196F3;
+            color: #7dd3fc;
+            box-shadow: 0 0 0 2px rgba(33,150,243,0.2);
+        }
+        .scode-clear {
+            font-size: 13px; color: #5a7a99; background: none; border: none;
+            cursor: pointer; font-family: 'Courier New', monospace;
+            text-decoration: underline dotted; margin-left: 4px;
+        }
+        .scode-clear:hover { color: #c2d8f0; }
+        /* Light mode */
+        body.light-mode .scode-bar {
+            background: #eff6ff;
+            border-color: #2196F3;
+            box-shadow: 0 2px 12px rgba(33,150,243,0.10);
+        }
+        body.light-mode .scode-bar-label { color: #1d4ed8; }
+        body.light-mode .scode-divider   { background: #bfdbfe; }
+        body.light-mode .scode-chip {
+            background: #ffffff; border-color: #bfdbfe;
+            color: #374151;
+        }
+        body.light-mode .scode-chip:hover {
+            border-color: #2196F3; color: #1d4ed8; background: #dbeafe;
+        }
+        body.light-mode .scode-chip.active {
+            background: #dbeafe; border-color: #2196F3;
+            color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(33,150,243,0.15);
+        }
+        body.light-mode .scode-clear { color: #6b7280; }
+        body.light-mode .scode-clear:hover { color: #1d4ed8; }
+        .bulk-bar {
+            display: none; align-items: center; gap: 12px;
+            padding: 10px 16px; background: #0c2040;
+            border: 1px solid #1e3a5f; border-radius: 8px;
+            margin-bottom: 14px; font-family: 'Courier New', monospace;
+            font-size: 15px; color: #7dd3fc;
+        }
+        .bulk-bar.visible { display: flex; }
+        .bulk-bar-count { font-weight: 700; }
+        .btn-bulk-ansible {
+            background: #78350f; color: #f59e0b; border: 1px solid #92400e;
+            border-radius: 6px; padding: 8px 16px; font-size: 14px; font-weight: 700;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: filter .15s;
+        }
+        .btn-bulk-ansible:hover    { filter: brightness(1.25); }
+        .btn-bulk-ansible:disabled { opacity: .38; cursor: not-allowed; }
+        .btn-bulk-clear {
+            background: none; border: none; color: #5a7a99; font-size: 14px;
+            cursor: pointer; font-family: 'Courier New', monospace; text-decoration: underline dotted;
+        }
+        .btn-bulk-clear:hover { color: #c2d8f0; }
+
+        /* ── Table ──────────────────────────────────────────────── */
+        .table-card {
+            background: rgba(27,32,46,0.96); border: 1px solid #2a3550;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(33,150,243,0.09);
+        }
+        .table-scroll-wrap {
+            border-radius: 0 0 12px 12px;
+        }
+        .table-loading {
+            text-align: center; padding: 60px 20px;
+            font-family: 'Courier New', monospace; color: #5a7a99; font-size: 15px;
+        }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        /* Column widths */
+        thead th {
+            background: #1a2030; padding: 13px 16px; text-align: left;
+            font-size: 13px; font-weight: 700; letter-spacing: .07em;
+            text-transform: uppercase; color: #5a7a99;
+            border-bottom: 2px solid #2a3550; white-space: nowrap;
+            position: sticky; top: var(--nav-height, 56px); z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            overflow: visible;
+        }
+
+        tbody tr.data-row { border-bottom: 1px solid #1e2840; transition: background .12s; cursor: pointer; }
+        tbody tr.data-row:last-of-type { border-bottom: none; }
+        tbody tr.data-row:hover { background: #1e2840; }
+        td { padding: 10px 14px; vertical-align: middle; white-space: nowrap; }
+        /* Light mode table */
+        body.light-mode .table-card {
+            background: #ffffff !important;
+            border: 1.5px solid #64748b !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+        }
+        body.light-mode thead th {
+            background: #f1f5f9 !important;
+            color: #475569 !important;
+            border-bottom: 2px solid #64748b !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06) !important;
+        }
+        body.light-mode tbody tr.data-row { border-bottom: 1px solid #94a3b8 !important; }
+        body.light-mode tbody tr.data-row:last-of-type { border-bottom: none !important; }
+        body.light-mode tbody tr.data-row:hover { background: #f0f9ff !important; }
+
+        .cb-cell { width: 36px; text-align: center; }
+        input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2196F3; }
+
+        .vm-name-cell { font-family: 'Courier New', monospace; font-size: 15px; color: #c2d8f0; display: flex; align-items: center; gap: 9px; white-space: nowrap; overflow: hidden; }
+        .vm-name-cell img { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
+        .os-col {
+            font-size: 13px; font-family: 'Courier New', monospace; color: #5a7a99;
+            max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .action-cell  { white-space: nowrap; min-width: 110px; vertical-align: middle; }
+        .action-btns  { display: flex; flex-direction: row; gap: 6px; align-items: center; flex-wrap: nowrap; }
+        .vm-status { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-family: 'Courier New', monospace; font-weight: 700; }
+        .vm-status.active  { color: #4caf93; }
+        .vm-status.shutoff { color: #f87171; }
+        .vm-status.other   { color: #f59e0b; }
+
+        /* ── Badges ─────────────────────────────────────────────── */
+        .badge-prov {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 12px; border-radius: 100px;
+            font-size: 13px; font-weight: 700;
+            font-family: 'Courier New', monospace; white-space: nowrap;
+        }
+        .badge-done    { background: #0a2e1e; color: #4caf93; border: 1px solid #165c3a; }
+        .badge-pending { background: #2a1800; color: #f59e0b; border: 1px solid #78350f; }
+        .badge-na      { background: #1a1a2e; color: #4e4e7a; border: 1px solid #2a2a4a; }
+        .badge-running { background: #1c1400; color: #f59e0b; border: 1px solid #78350f; animation: pulse-amber 1.1s ease-in-out infinite; }
+        .badge-error   { background: #1a0000; color: #f87171; border: 1px solid #7f1d1d; }
+        @keyframes pulse-amber { 0%,100%{opacity:1} 50%{opacity:.5} }
+        body.light-mode .badge-done    { background: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+        body.light-mode .badge-pending { background: #fff7ed !important; color: #c2410c !important; border-color: #fdba74 !important; }
+        body.light-mode .badge-na      { background: #f1f5f9 !important; color: #94a3b8 !important; border-color: #cbd5e0 !important; }
+        body.light-mode .badge-running { background: #fff7ed !important; color: #c2410c !important; border-color: #fdba74 !important; }
+        body.light-mode .badge-error   { background: #fef2f2 !important; color: #dc2626 !important; border-color: #fca5a5 !important; }
+
+        /* ── Action buttons ─────────────────────────────────────── */
+        .btn-action {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 7px 13px; border-radius: 6px;
+            font-size: 14px; font-weight: 700; cursor: pointer; border: none;
+            transition: filter .15s, transform .1s; white-space: nowrap;
+        }
+        .btn-action:active    { transform: scale(.96); }
+        .btn-action:disabled  { opacity: .35; cursor: not-allowed; transform: none; }
+        .btn-ansible { background: #78350f; color: #f59e0b; border: 1px solid #92400e; }
+        .btn-ansible:hover:not(:disabled) { filter: brightness(1.25); }
+        .btn-puppet  { background: #2e1065; color: #a78bfa; border: 1px solid #3b0764; }
+        .btn-puppet:hover:not(:disabled)  { filter: brightness(1.25); }
+        .btn-recheck { background: #1a2030; color: #5a7a99; border: 1px solid #2a3550; font-size: 13px; padding: 4px 8px; }
+        .btn-recheck:hover:not(:disabled) { color: #95c4e8; border-color: #95c4e8; }
+
+        /* ── Pipeline ───────────────────────────────────────────── */
+        .pipeline { display: flex; align-items: center; }
+        .pip-step  { display: flex; align-items: center; gap: 5px; font-size: 12px; font-family: 'Courier New', monospace; font-weight: 700; }
+        .pip-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; transition: background 0.4s, box-shadow 0.4s; }
+
+        .pip-dot.done {
+            background: #4caf93;
+            animation: pip-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards,
+                       pip-glow 1.8s ease-in-out 0.5s infinite;
+        }
+        @keyframes pip-pop  { 0%{transform:scale(0.4);opacity:0.3} 60%{transform:scale(1.35)} 100%{transform:scale(1);opacity:1} }
+        @keyframes pip-glow {
+            0%,100% { box-shadow:0 0 0 2px rgba(76,175,147,0.4); background:#4caf93; }
+            50%     { box-shadow:0 0 0 6px rgba(76,175,147,0), 0 0 8px 2px rgba(76,175,147,0.6); background:#7ddfc0; }
+        }
+
+        .pip-dot.pending {
+            background: transparent; border: 1.5px solid #f59e0b;
+            animation: pip-pending 2s ease-in-out infinite;
+        }
+        @keyframes pip-pending {
+            0%,100% { border-color:#f59e0b; box-shadow:none; opacity:0.5; }
+            50%     { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,0.15); opacity:1; }
+        }
+
+        .pip-dot.checking {
+            background: transparent; border: 1.5px solid #2a3550;
+            animation: pip-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes pip-pulse {
+            0%,100% { border-color:#2a3550; box-shadow:none; }
+            50%     { border-color:#2196F3; box-shadow:0 0 0 3px rgba(33,150,243,0.18); }
+        }
+
+        .pip-dot.running { background: #f59e0b; animation: pip-ripple 1s ease-out infinite; }
+        @keyframes pip-ripple {
+            0%  { box-shadow:0 0 0 0px rgba(245,158,11,0.6); }
+            70% { box-shadow:0 0 0 5px rgba(245,158,11,0); }
+            100%{ box-shadow:0 0 0 0px rgba(245,158,11,0); }
+        }
+
+        .pip-dot.error { background: #f87171; animation: pip-shake 0.4s ease forwards; }
+        @keyframes pip-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-3px)} 60%{transform:translateX(3px)} }
+
+        .pip-dot.na { background: #2a2a4a; border: 1.5px dashed #4a4a6a; }
+
+        .pip-line {
+            width: 28px; height: 2px; background: #2a3550;
+            margin: 0 3px; border-radius: 1px;
+            position: relative; overflow: hidden;
+        }
+        .pip-line.done { background: #1a4a3a; }
+        .pip-line.done::after {
+            content: '';
+            position: absolute; top: 0; left: -100%;
+            width: 60%; height: 100%;
+            background: linear-gradient(90deg, transparent, #7ddfc0, #4caf93, #7ddfc0, transparent);
+            animation: wave-slide 1.2s linear infinite;
+        }
+        @keyframes wave-slide { 0% { left: -60%; } 100% { left: 100%; } }
+        body.light-mode .pip-line { background: #cbd5e0; }
+        body.light-mode .pip-line.done { background: #ccece8; }
+        body.light-mode .pip-line.done::after {
+            background: linear-gradient(90deg, transparent, #5eead4, #0d9488, #5eead4, transparent);
+        }
+
+        .pip-line.filling::after {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+            background: #4caf93; border-radius: 1px;
+            animation: line-fill 0.6s 0.1s ease forwards;
+        }
+        @keyframes line-fill { to { width: 100%; } }
+
+        /* ── Detail pane ─────────────────────────────────────────── */
+        .detail-row      { display: none; }
+        .detail-row.open { display: table-row; }
+        .detail-pane {
+            background: #0e1520; border-top: 1px solid #1e2840;
+            padding: 18px 20px 18px 24px;
+            animation: detailSlideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.light-mode .detail-pane {
+            background: #f8fafc !important;
+            border-top: 1px solid #cbd5e0 !important;
+        }
+        @keyframes detailSlideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .data-row { cursor: pointer; transition: background 0.15s; }
+        .data-row:hover { background: rgba(33,150,243,0.04); }
+        .data-row.detail-open { background: rgba(33,150,243,0.07); border-left: 3px solid #2196F3; }
+        .detail-grid     { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 800px) { .detail-grid { grid-template-columns: 1fr; } }
+
+        .vm-meta      { display: flex; flex-wrap: wrap; gap: 5px 18px; margin-bottom: 14px; }
+        .vm-meta-item { font-family: 'Courier New', monospace; font-size: 14px; color: #5a7a99; }
+        .vm-meta-item span { color: #c2d8f0; }
+        body.light-mode .vm-meta-item { color: #475569 !important; }
+        body.light-mode .vm-meta-item span { color: #1e293b !important; }
+
+        .action-panel { background: #1a2030; border: 1px solid #2a3550; border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+        body.light-mode .action-panel { background: #ffffff !important; border-color: #cbd5e0 !important; }
+        .action-panel-title { font-size: 14px; font-weight: 700; font-family: 'Courier New', monospace; display: flex; align-items: center; gap: 6px; }
+        .action-panel-title.ansible { color: #f59e0b; }
+        .action-panel-title.puppet  { color: #a78bfa; }
+        body.light-mode .action-panel-title.ansible { color: #d97706 !important; }
+        body.light-mode .action-panel-title.puppet  { color: #7c3aed !important; }
+        .action-panel-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .log-toggle { font-size: 13px; color: #5a7a99; background: none; border: none; cursor: pointer; padding: 0; font-family: 'Courier New', monospace; text-decoration: underline dotted; }
+        .log-toggle:hover { color: #c2d8f0; }
+        body.light-mode .log-toggle { color: #64748b !important; }
+        body.light-mode .log-toggle:hover { color: #1e293b !important; }
+        .log-box {
+            display: none; background: #060a10; border: 1px solid #1e2840;
+            border-radius: 6px; padding: 10px 12px; max-height: 180px; overflow-y: auto;
+            font-family: 'Courier New', monospace; font-size: 13px; color: #4caf93;
+            white-space: pre-wrap; word-break: break-all; line-height: 1.5; margin-top: 4px;
+            scrollbar-width: thin; scrollbar-color: #2a3550 transparent;
+        }
+        body.light-mode .log-box { background: #1e293b !important; border-color: #334155 !important; color: #4ade80 !important; }
+        .log-box.open { display: block; }
+
+        /* ── Spinner ─────────────────────────────────────────────── */
+        .spinner {
+            display: inline-block; width: 12px; height: 12px;
+            border: 2px solid #2a3550; border-top-color: #2196F3;
+            border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Terminal modal ──────────────────────────────────────── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.72); z-index: 9000;
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .terminal-modal {
+            background: #0a0e1a; border: 1px solid #1e2840; border-radius: 10px;
+            width: 860px; max-width: 95vw; max-height: 80vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            animation: modal-in 0.25s cubic-bezier(0.34,1.2,0.64,1);
+        }
+        @keyframes modal-in { from{opacity:0;transform:scale(0.94) translateY(16px)} to{opacity:1;transform:none} }
+        .terminal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; border-bottom: 1px solid #1e2840; flex-shrink: 0;
+        }
+        .terminal-title { font-family: 'Courier New', monospace; font-size: 15px; color: #95c4e8; display: flex; align-items: center; gap: 10px; }
+        .terminal-dots  { display: flex; gap: 6px; }
+        .terminal-dot   { width: 11px; height: 11px; border-radius: 50%; }
+        .terminal-dot.red    { background: #f87171; }
+        .terminal-dot.yellow { background: #f59e0b; }
+        .terminal-dot.green  { background: #4caf93; }
+        .terminal-status {
+            font-family: 'Courier New', monospace; font-size: 13px;
+            padding: 4px 12px; border-radius: 100px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .terminal-status.running { background: #1c1400; color: #f59e0b; border: 1px solid #78350f; animation: pulse-amber 1.2s ease-in-out infinite; }
+        .terminal-status.success { background: #0a2e1e; color: #4caf93; border: 1px solid #165c3a; }
+        .terminal-status.error   { background: #1a0000; color: #f87171; border: 1px solid #7f1d1d; }
+        .terminal-body {
+            flex: 1; overflow-y: auto; padding: 16px;
+            font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6; color: #c2d8f0;
+            scrollbar-width: thin; scrollbar-color: #1e2840 transparent; min-height: 300px;
+        }
+        .terminal-line          { white-space: pre-wrap; word-break: break-all; margin: 0; padding: 1px 0; }
+        .terminal-line.ok       { color: #4caf93; }
+        .terminal-line.changed  { color: #f59e0b; }
+        .terminal-line.failed   { color: #f87171; }
+        .terminal-line.task     { color: #95c4e8; font-weight: bold; }
+        .terminal-line.play     { color: #a78bfa; font-weight: bold; }
+        .terminal-line.recap    { color: #7ddfc0; }
+        .terminal-line.skipped  { color: #5a7a99; }
+        .terminal-cursor        { display: inline-block; width: 8px; height: 13px; background: #4caf93; vertical-align: middle; animation: blink 1s step-end infinite; margin-left: 2px; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        .terminal-footer {
+            padding: 10px 16px; border-top: 1px solid #1e2840;
+            display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+        .terminal-counter  { font-family: 'Courier New', monospace; font-size: 13px; color: #5a7a99; }
+        .btn-close-modal   { background: #1a2030; border: 1px solid #2a3550; color: #bfc7d1; border-radius: 6px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
+        .btn-close-modal:hover     { background: #2a3550; }
+        .btn-close-modal:disabled  { opacity: .4; cursor: not-allowed; }
+
+        /* ── Image filter dropdown ───────────────────────────── */
+        .img-filter-wrap { position: relative; display: inline-block; }
+        .img-filter-btn {
+            background: #23263a; border: 1.3px solid #2b3142; color: #bfc7d1;
+            border-radius: 6px; padding: 9px 16px; font-size: 15px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: background .15s, border-color .15s;
+            white-space: nowrap; user-select: none;
+            min-width: 110px; justify-content: space-between;
+        }
+        .img-filter-btn:hover { background: #2b3142; }
+        .img-filter-btn.active { border-color: #2196F3; color: #7dd3fc; }
+        .img-filter-dropdown {
+            display: none;
+            position: absolute; top: calc(100% + 6px); left: 0;
+            background: #1a2030; border: 1px solid #2a3550;
+            border-radius: 8px; min-width: 220px; max-height: 280px;
+            overflow-y: auto; z-index: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            scrollbar-width: thin; scrollbar-color: #2a3550 transparent;
+        }
+        .img-filter-dropdown.open { display: block; }
+        .img-filter-header {
+            padding: 8px 12px; border-bottom: 1px solid #2a3550;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; flex-wrap: nowrap;
+        }
+        .img-filter-header span { font-size: 13px; color: #5a7a99; font-family: 'Courier New', monospace; flex-shrink: 0; }
+        .img-filter-header-btns { display: flex; gap: 8px; flex-shrink: 0; }
+        .img-filter-clear { font-size: 12px; color: #2196F3; cursor: pointer; background: none; border: none; font-family: 'Courier New', monospace; white-space: nowrap; padding: 0; }
+        .img-filter-clear:hover { color: #7dd3fc; }
+        .img-filter-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 12px; cursor: pointer; font-size: 14px;
+            font-family: 'Courier New', monospace; color: #c2d8f0;
+            transition: background .1s;
+        }
+        .img-filter-item:hover { background: #1e2840; }
+        .img-filter-item input[type="checkbox"] { width: 13px; height: 13px; flex-shrink: 0; }
+
+        /* ── Plays detail ────────────────────────────────────────── */
+        .plays-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+        .play-item {
+            border: 1px solid #2a3550; border-radius: 6px;
+            overflow: hidden; font-family: 'Courier New', monospace;
+        }
+        body.light-mode .play-item { border-color: #cbd5e0 !important; }
+        .play-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 12px; cursor: pointer;
+            background: #1a2030; transition: background .12s;
+            font-size: 14px; user-select: none;
+        }
+        body.light-mode .play-header { background: #f1f5f9 !important; }
+        .play-header:hover { background: #1e2840; }
+        body.light-mode .play-header:hover { background: #e2e8f0 !important; }
+        .play-icon { font-size: 15px; flex-shrink: 0; }
+        .play-name { flex: 1; color: #c2d8f0; }
+        body.light-mode .play-name { color: #1e293b !important; }
+        .play-badge {
+            font-size: 12px; font-weight: 700; padding: 2px 8px;
+            border-radius: 100px; flex-shrink: 0;
+        }
+        .play-badge.done    { background: #0a2e1e; color: #4caf93; border: 1px solid #165c3a; }
+        .play-badge.pending { background: #1c1917; color: #f59e0b; border: 1px solid #78350f; }
+        .play-badge.loading { background: #0c1a2e; color: #5a7a99; border: 1px solid #2a3550; }
+        body.light-mode .play-badge.done    { background: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+        body.light-mode .play-badge.pending { background: #fef9c3 !important; color: #854d0e !important; border-color: #fde047 !important; }
+        body.light-mode .play-badge.loading { background: #f1f5f9 !important; color: #64748b !important; border-color: #cbd5e0 !important; }
+        .play-arrow { font-size: 12px; color: #5a7a99; transition: transform .2s; flex-shrink: 0; }
+        body.light-mode .play-arrow { color: #64748b !important; }
+        .play-arrow.open { transform: rotate(90deg); }
+        .play-detail {
+            display: none; padding: 6px 12px 8px 32px;
+            font-size: 13px; color: #5a7a99;
+            background: #0e1520; border-top: 1px solid #1e2840;
+        }
+        body.light-mode .play-detail { background: #f8fafc !important; color: #475569 !important; border-top-color: #e2e8f0 !important; }
+        .play-detail.open {
+            display: block;
+            animation: playDetailIn 0.18s ease;
+        }
+        @keyframes playDetailIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .plays-loading { font-family: 'Courier New', monospace; font-size: 14px; color: #5a7a99; display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+        body.light-mode .plays-loading { color: #64748b !important; }
+
+        .pw-expiry-col { font-size: 12px; white-space: nowrap; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .pw-ok       { color: #4caf93; }
+        .pw-warning  { color: #f59e0b; font-weight: 600; }
+        .pw-critical { color: #f87171; font-weight: 700; }
+        .pw-expired  { color: #f87171; font-weight: 700; }
+        .pw-never    { color: #5a7a99; }
+        .pw-error    { color: #3a5070; }
+
+        /* ── Pagination ──────────────────────────────────────────── */
+        .pagination-info { font-size: 13px; color: #5a7a99; font-family: 'Courier New', monospace; white-space: nowrap; }
+        .page-btn {
+            background: #23263a; border: 1px solid #2b3142; color: #bfc7d1;
+            border-radius: 6px; padding: 5px 11px; font-size: 13px;
+            cursor: pointer; transition: all .15s; font-family: 'Courier New', monospace;
+            min-width: 34px; text-align: center;
+        }
+        .page-btn:hover:not(:disabled) { background: #2b3142; border-color: #3a4460; }
+        .page-btn.active { background: #1a3a5f; border-color: #2196F3; color: #7dd3fc; font-weight: 700; }
+        .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .page-size-select {
+            background: #23263a; border: 1px solid #2b3142; color: #bfc7d1;
+            border-radius: 6px; padding: 5px 10px; font-size: 13px;
+            cursor: pointer; font-family: 'Courier New', monospace;
+        }
+
+        /* ── Playbook selector ───────────────────────────────────── */
+        .playbook-select-wrap { position: relative; display: inline-block; }
+        .playbook-select-btn {
+            background: #1a2e1a; border: 1.3px solid #2a4a2a; color: #7dd3a8;
+            border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: background .15s; white-space: nowrap; user-select: none;
+            min-width: 80px;
+        }
+        .playbook-select-btn:hover { background: #1e3a1e; }
+        .playbook-select-btn:disabled { opacity: .35; cursor: not-allowed; filter: grayscale(0.5); }
+        .playbook-select-btn.custom { border-color: #f59e0b; color: #fbbf24; background: #2a2000; }
+        .playbook-dropdown {
+            display: none; position: absolute; top: calc(100% + 6px); right: 0;
+            background: #1a2030; border: 1px solid #2a3550;
+            border-radius: 8px; min-width: 280px; max-height: 320px;
+            overflow-y: auto; z-index: 600;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        /* Bulk playbook dropdown opens left-aligned to prevent left-side cropping */
+        #bulk-pb-drop {
+            right: auto;
+            left: 0;
+        }
+        .playbook-dropdown.open { display: block; animation: scode-slide-in 0.2s ease; }
+        .playbook-dropdown-header {
+            padding: 8px 12px; border-bottom: 1px solid #2a3550;
+            font-size: 13px; color: #5a7a99; font-family: 'Courier New', monospace;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .playbook-option {
+            padding: 9px 14px; cursor: pointer; font-size: 13px;
+            font-family: 'Courier New', monospace; color: #c2d8f0;
+            transition: background .1s; display: flex; align-items: center; gap: 8px;
+        }
+        .playbook-option:hover  { background: #1e2840; }
+        .playbook-option.selected { background: #0c2240; color: #7dd3fc; }
+        .playbook-option:focus  { background: #1e2840; outline: 1px solid #2196F3; outline-offset: -1px; }
+        .playbook-option .pb-auto { font-size: 11px; color: #4caf93; margin-left: auto; }
+        #toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 9999; }
+        .toast {
+            padding: 10px 16px; border-radius: 8px; font-family: 'Courier New', monospace;
+            font-size: 14px; max-width: 360px; border: 1px solid;
+            opacity: 0; transform: translateY(8px);
+            animation: t-in .25s forwards, t-out .3s 3.5s forwards;
+        }
+        .toast.success { background: #0a2e1e; color: #4caf93; border-color: #165c3a; }
+        .toast.error   { background: #1a0000; color: #f87171; border-color: #7f1d1d; }
+        .toast.info    { background: #0c2040; color: #7dd3fc; border-color: #1e3a5f; }
+        @keyframes t-in  { to { opacity:1; transform:translateY(0); } }
+        @keyframes t-out { to { opacity:0; transform:translateY(8px); } }
+    </style>
+</head>
+<body>
+    {% include 'top_menu.html' %}
+
+    <div class="page-wrapper">
+
+        <div class="page-header">
+            <div>
+                <div class="page-title">🖥️ VM 프로비저닝</div>
+                <div class="page-subtitle">KakaoCloud VM → Ansible (/etc/puppet/puppet.conf) → Puppet (/var/cache/puppet/public/last_run_summary.yaml)</div>
+            </div>
+            <div class="toolbar">
+                <div class="search-wrap">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" class="search-input" id="searchInput" placeholder="VM명 검색..." autocomplete="off">
+                </div>
+                <div class="img-filter-wrap" id="autoStatusFilterWrap">
+                    <button class="img-filter-btn" id="autoStatusFilterBtn" onclick="toggleAutoStatusFilter(event)">
+                        <span>⚙ 자동화 상태</span>
+                        <span id="autoStatusFilterCount" style="font-size:13px;color:#7dd3fc;min-width:24px;text-align:center"></span>
+                        <span>▾</span>
+                    </button>
+                    <div class="img-filter-dropdown" id="autoStatusFilterDropdown">
+                        <div class="img-filter-header">
+                            <span>자동화 상태 선택</span>
+                            <div class="img-filter-header-btns"><button class="img-filter-clear" onclick="selectAllAutoStatus()">전체 선택</button><button class="img-filter-clear" onclick="clearAutoStatusFilter()">전체 해제</button></div>
+                        </div>
+                        <div id="autoStatusFilterList">
+                            <label class="img-filter-item"><input type="checkbox" value="ansible-pending" onchange="onAutoStatusChange(this)"> Ansible 미완료</label>
+                            <label class="img-filter-item"><input type="checkbox" value="puppet-pending" onchange="onAutoStatusChange(this)"> Puppet 미완료</label>
+                            <label class="img-filter-item"><input type="checkbox" value="done" onchange="onAutoStatusChange(this)"> 모두 완료</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="img-filter-wrap" id="vmStatusFilterWrap">
+                    <button class="img-filter-btn" id="vmStatusFilterBtn" onclick="toggleVmStatusFilter(event)">
+                        <span>🖥 VM 상태</span>
+                        <span id="vmStatusFilterCount" style="font-size:13px;color:#7dd3fc;min-width:24px;text-align:center"></span>
+                        <span>▾</span>
+                    </button>
+                    <div class="img-filter-dropdown" id="vmStatusFilterDropdown">
+                        <div class="img-filter-header">
+                            <span>VM 상태 선택</span>
+                            <div class="img-filter-header-btns"><button class="img-filter-clear" onclick="selectAllVmStatus()">전체 선택</button><button class="img-filter-clear" onclick="clearVmStatusFilter()">전체 해제</button></div>
+                        </div>
+                        <div id="vmStatusFilterList"></div>
+                    </div>
+                </div>
+                <div class="img-filter-wrap" id="imgFilterWrap">
+                    <button class="img-filter-btn" id="imgFilterBtn" onclick="toggleImgFilter(event)">
+                        <span>🖼 OS 필터</span>
+                        <span id="imgFilterCount" style="font-size:11px;color:#7dd3fc;min-width:24px;text-align:center"></span>
+                        <span>▾</span>
+                    </button>
+                    <div class="img-filter-dropdown" id="imgFilterDropdown">
+                        <div class="img-filter-header">
+                            <span>이미지 선택</span>
+                            <div class="img-filter-header-btns"><button class="img-filter-clear" onclick="selectAllImgFilter()">전체 선택</button><button class="img-filter-clear" onclick="clearImgFilter()">전체 해제</button></div>
+                        </div>
+                        <div id="imgFilterList"></div>
+                    </div>
+                </div>
+                <button class="btn-toolbar" onclick="loadVMs(true)">🔄 새로고침</button>
+                <select id="vmSortSelect" onchange="applyVmSort()"
+                        style="background:#1a2030;border:1px solid #2a3550;color:#c9d6e3;
+                               font-size:12px;padding:5px 8px;border-radius:6px;cursor:pointer">
+                    <option value="name_asc">이름 (A→Z)</option>
+                    <option value="name_desc">이름 (Z→A)</option>
+                    <option value="created_desc" selected>생성일 (최신순)</option>
+                    <option value="created_asc">생성일 (오래된순)</option>
+                </select>
+
+                <select class="page-size-select" id="pageSizeSelect" onchange="onPageSizeChange()">
+                    <option value="5">5개씩</option>
+                    <option value="10">10개씩</option>
+                    <option value="20">20개씩</option>
+                    <option value="50" selected>50개씩</option>
+                    <option value="100">100개씩</option>
+                </select>
+                <div class="pagination-controls" id="paginationControls" style="display:flex;align-items:center;gap:6px"></div>
+                <span class="pagination-info" id="paginationInfo"></span>
+            </div>
+        </div>
+
+        <div class="project-bar">
+            <label>프로젝트</label>
+            <button class="project-btn active" data-project="all" onclick="selectProject('all', this)">전체</button>
+            {% for p in projects %}
+            <button class="project-btn" data-project="{{ p }}" onclick="selectProject('{{ p }}', this)">{{ p }}</button>
+            {% endfor %}
+        </div>
+
+        <div class="scode-bar" id="scodeBar">
+            <span class="scode-bar-label">🏷 인프라 코드</span>
+            <div class="scode-divider"></div>
+            <div id="scodeList" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"></div>
+            <div class="scode-divider"></div>
+            <button class="scode-clear" onclick="clearScodeFilter()">전체 해제</button>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-chip s-total">전체 VM <span class="val" id="stat-total">-</span></div>
+            <div class="stat-chip s-ansible" id="chip-ansible">
+                <div class="spinner" id="spin-ansible" style="width:9px;height:9px;border-width:1.5px;display:none;vertical-align:middle;margin-right:4px"></div>
+                Ansible 완료 <span class="val" id="stat-ansible">-</span>
+                <span id="stat-ansible-pct" style="font-size:10px;opacity:.7;margin-left:2px"></span>
+            </div>
+            <div class="stat-chip s-puppet" id="chip-puppet">
+                <div class="spinner" id="spin-puppet" style="width:9px;height:9px;border-width:1.5px;display:none;vertical-align:middle;margin-right:4px"></div>
+                Puppet 완료 <span class="val" id="stat-puppet">-</span>
+                <span id="stat-puppet-pct" style="font-size:10px;opacity:.7;margin-left:2px"></span>
+            </div>
+            <div class="stat-chip s-puppet" id="chip-acc">
+                <div class="spinner" id="spin-acc" style="width:9px;height:9px;border-width:1.5px;display:none;vertical-align:middle;margin-right:4px"></div>
+                Acc 체크 완료 <span class="val" id="stat-acc">-</span>
+                <span id="stat-acc-pct" style="font-size:10px;opacity:.7;margin-left:2px"></span>
+            </div>
+            <div class="stat-chip s-done" id="chip-done">
+                <div class="spinner" id="spin-done" style="width:9px;height:9px;border-width:1.5px;display:none;vertical-align:middle;margin-right:4px"></div>
+                모두 완료 <span class="val" id="stat-done">-</span>
+                <span id="stat-done-pct" style="font-size:10px;opacity:.7;margin-left:2px"></span>
+            </div>
+
+            <div class="stat-chip" id="pw-check-progress" style="display:none;background:rgba(33,150,243,0.1);border-color:#2196F3;color:#7dd3fc">
+                <div class="spinner" style="width:10px;height:10px;border-width:1.5px;display:inline-block;vertical-align:middle;margin-right:5px"></div>
+                계정 상태 확인 중 <span id="pw-check-remaining"></span>
+            </div>
+        </div>
+
+        <div class="bulk-bar" id="bulkBar">
+            <span><span class="bulk-bar-count" id="bulkCount">0</span>개 선택됨</span>
+            <div class="playbook-select-wrap">
+                <button class="playbook-select-btn" id="bulk-pb-btn"
+                        onclick="toggleBulkPlaybookDropdown(event)"
+                        title="일괄 플레이북 선택">📋 일괄 플레이북 ▾</button>
+                <div class="playbook-dropdown" id="bulk-pb-drop"></div>
+            </div>
+            <button class="btn-bulk-ansible" id="bulkAnsibleBtn" onclick="runBulkAnsible()">
+                ▶ 선택 VM Ansible 일괄 실행
+            </button>
+            <button class="btn-bulk-ansible" id="bulkPuppetBtn"
+                    onclick="runBulkPuppet()"
+                    style="background:#2e1065;color:#a78bfa;border-color:#3b0764">
+                ▶ 선택 VM Puppet 일괄 실행
+            </button>
+            <button class="btn-bulk-clear" onclick="clearSelection()">선택 해제</button>
+        </div>
+
+        <div class="table-card">
+            <div class="table-loading" id="tableLoading">
+                <div class="spinner" style="width:20px;height:20px;border-width:3px;margin:0 auto 12px"></div>
+                VM 목록을 불러오는 중...
+            </div>
+            <div class="table-scroll-wrap" id="tableScrollWrap">
+            <table id="provTable" style="display:none">
+                <thead>
+                    <tr>
+                        <th class="cb-cell">
+                            <input type="checkbox" id="selectAll" title="전체 선택" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th>VM명</th>
+                        <th>인프라 코드</th>
+                        <th>VM 상태</th>
+                        <th>OS</th>
+                        <th id="pwExpiryHeader" onclick="togglePwExpirySort()" style="cursor:pointer;user-select:none">계정 상태 <span id="pwExpirySortIcon" style="opacity:0.4;font-size:11px"></span></th>
+                        <th>프로비저닝 단계</th>
+                        <th>Ansible</th>
+                        <th>Puppet</th>
+                        <th>액션</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-overlay" id="terminalOverlay">
+        <div class="terminal-modal">
+            <div class="terminal-header">
+                <div class="terminal-title">
+                    <div class="terminal-dots">
+                        <div class="terminal-dot red"></div>
+                        <div class="terminal-dot yellow"></div>
+                        <div class="terminal-dot green"></div>
+                    </div>
+                    <span id="terminalTitle">ansible-playbook</span>
+                </div>
+                <span class="terminal-status running" id="terminalStatus">
+                    <div class="spinner" style="width:9px;height:9px;border-width:1.5px"></div>
+                    실행 중...
+                </span>
+            </div>
+            <div class="terminal-body" id="terminalBody"></div>
+            <div class="terminal-footer">
+                <span class="terminal-counter" id="terminalCounter">0 lines</span>
+                <button class="btn-close-modal" id="terminalCloseBtn" onclick="closeTerminal()" disabled>닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/top_menu.js') }}"></script>
+    <script>
+    /* ── State ───────────────────────────────────────────────── */
+    let allVMs = [];
+    let currentProject = 'all';
+    let loadGeneration = 0;  // incremented on every loadVMs() to cancel stale checks
+    let terminalLines = 0;
+    let activeEventSource = null;
+
+    /* ── CSRF ────────────────────────────────────────────────── */
+    function getCsrf() {
+        const m = document.querySelector('meta[name="csrf-token"]');
+        if (m) return m.getAttribute('content');
+        const c = document.cookie.split(';').find(x => x.trim().startsWith('csrf_token='));
+        return c ? decodeURIComponent(c.split('=')[1]) : '';
+    }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    function toast(msg, type = 'info') {
+        const el = document.createElement('div');
+        el.className = `toast ${type}`;
+        el.textContent = msg;
+        document.getElementById('toast-container').appendChild(el);
+        setTimeout(() => el.remove(), 4200);
+    }
+
+    /* ── S-Code filter ───────────────────────────────────────── */
+    let selectedScodes = new Set();
+
+    /* ── Auto status filter ──────────────────────────────────── */
+    let selectedAutoStatuses = new Set();
+    let selectedVmStatuses   = new Set();
+
+    function closeAllFilterDropdowns() {
+        document.getElementById('autoStatusFilterDropdown')?.classList.remove('open');
+        document.getElementById('vmStatusFilterDropdown')?.classList.remove('open');
+        document.getElementById('imgFilterDropdown')?.classList.remove('open');
+    }
+    function toggleAutoStatusFilter(e) {
+        e.stopPropagation();
+        const isOpen = document.getElementById('autoStatusFilterDropdown').classList.contains('open');
+        closeAllFilterDropdowns();
+        if (!isOpen) document.getElementById('autoStatusFilterDropdown').classList.add('open');
+    }
+    function toggleVmStatusFilter(e) {
+        e.stopPropagation();
+        const isOpen = document.getElementById('vmStatusFilterDropdown').classList.contains('open');
+        closeAllFilterDropdowns();
+        if (!isOpen) document.getElementById('vmStatusFilterDropdown').classList.add('open');
+    }
+    function onAutoStatusChange(cb) {
+        if (cb.checked) selectedAutoStatuses.add(cb.value);
+        else selectedAutoStatuses.delete(cb.value);
+        updateFilterBtn('autoStatusFilterBtn', 'autoStatusFilterCount', selectedAutoStatuses);
+        currentPage = 1; applyPagination(); reprioritizeChecks();
+    }
+    function selectAllAutoStatus() {
+        document.querySelectorAll('#autoStatusFilterList input').forEach(cb => {
+            cb.checked = true;
+            selectedAutoStatuses.add(cb.value);
+        });
+        updateFilterBtn('autoStatusFilterBtn', 'autoStatusFilterCount', selectedAutoStatuses);
+        currentPage = 1; applyPagination(); reprioritizeChecks();
+    }
+    function clearAutoStatusFilter() {
+        selectedAutoStatuses.clear();
+        document.querySelectorAll('#autoStatusFilterList input').forEach(cb => cb.checked = false);
+        updateFilterBtn('autoStatusFilterBtn', 'autoStatusFilterCount', selectedAutoStatuses);
+        currentPage = 1; applyPagination();
+    }
+
+    function onVmStatusChange(cb) {
+        if (cb.checked) selectedVmStatuses.add(cb.value);
+        else selectedVmStatuses.delete(cb.value);
+        updateFilterBtn('vmStatusFilterBtn', 'vmStatusFilterCount', selectedVmStatuses);
+        currentPage = 1; applyPagination(); reprioritizeChecks();
+    }
+    function selectAllVmStatus() {
+        document.querySelectorAll('#vmStatusFilterList input').forEach(cb => {
+            cb.checked = true;
+            selectedVmStatuses.add(cb.value);
+        });
+        updateFilterBtn('vmStatusFilterBtn', 'vmStatusFilterCount', selectedVmStatuses);
+        currentPage = 1; applyPagination(); reprioritizeChecks();
+    }
+    function clearVmStatusFilter() {
+        selectedVmStatuses.clear();
+        document.querySelectorAll('#vmStatusFilterList input').forEach(cb => cb.checked = false);
+        updateFilterBtn('vmStatusFilterBtn', 'vmStatusFilterCount', selectedVmStatuses);
+        currentPage = 1; applyPagination();
+    }
+
+    function updateFilterBtn(btnId, countId, set) {
+        const btn   = document.getElementById(btnId);
+        const count = document.getElementById(countId);
+        if (set.size > 0) {
+            btn.classList.add('active');
+            count.textContent = `(${set.size})`;
+        } else {
+            btn.classList.remove('active');
+            count.textContent = '';
+        }
+    }
+
+    function buildVmStatusFilter(vms) {
+        const statuses = [...new Set(vms.map(v => v.status || '').filter(Boolean))].sort();
+        const list = document.getElementById('vmStatusFilterList');
+        list.innerHTML = '';
+        statuses.forEach(s => {
+            const label = document.createElement('label');
+            label.className = 'img-filter-item';
+            label.innerHTML = `<input type="checkbox" value="${s}" onchange="onVmStatusChange(this)"
+                ${selectedVmStatuses.has(s) ? 'checked' : ''}> ${s}`;
+            list.appendChild(label);
+        });
+    }
+
+    function buildScodeBar(project) {
+        const bar  = document.getElementById('scodeBar');
+        const list = document.getElementById('scodeList');
+
+        if (project === 'all') {
+            bar.classList.remove('open');
+            selectedScodes.clear();
+            currentPage = 1; applyPagination();
+            return;
+        }
+
+        // Collect unique S-Codes for this project from loaded VMs
+        const scodes = [...new Set(
+            allVMs
+                .filter(v => v.project_key === project)
+                .map(v => v.description || '-')
+                .filter(d => d && d !== '-')
+        )].sort();
+
+        if (scodes.length === 0) {
+            bar.classList.remove('open');
+            return;
+        }
+
+        list.innerHTML = '';
+        scodes.forEach(sc => {
+            const chip = document.createElement('button');
+            chip.className = `scode-chip${selectedScodes.has(sc) ? ' active' : ''}`;
+            chip.textContent = sc;
+            chip.onclick = () => toggleScode(chip, sc);
+            list.appendChild(chip);
+        });
+        bar.classList.add('open');
+        // Brief pulse on active project button to draw attention to s-code bar
+        const activeBtn = document.querySelector(`.project-btn[data-project="${project}"]`);
+        if (activeBtn) {
+            activeBtn.style.boxShadow = '0 0 0 3px rgba(33,150,243,0.4)';
+            setTimeout(() => { activeBtn.style.boxShadow = ''; }, 600);
+        }
+    }
+
+    function toggleScode(chip, sc) {
+        if (selectedScodes.has(sc)) {
+            selectedScodes.delete(sc);
+            chip.classList.remove('active');
+        } else {
+            selectedScodes.add(sc);
+            chip.classList.add('active');
+        }
+        currentPage = 1; applyPagination();
+        reprioritizeChecks();
+    }
+
+    function clearScodeFilter() {
+        selectedScodes.clear();
+        document.querySelectorAll('.scode-chip').forEach(c => c.classList.remove('active'));
+        currentPage = 1; applyPagination();
+        reprioritizeChecks();
+    }
+
+    /* ── Project filter ──────────────────────────────────────── */
+    function selectProject(project, btn) {
+        document.querySelectorAll('.project-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentProject = project;
+        selectedScodes.clear();
+        selectedImages.clear();
+        updateImgFilterBtn();
+        document.querySelectorAll('#imgFilterList input[type="checkbox"]')
+            .forEach(cb => cb.checked = false);
+        reprioritizeToken++;
+        document.getElementById('searchInput').value = '';
+        pwExpirySortDir = 'none';
+        const icon = document.getElementById('pwExpirySortIcon');
+        if (icon) { icon.textContent = ''; icon.style.opacity = '0.4'; }
+        selectedAutoStatuses.clear();
+        selectedVmStatuses.clear();
+        updateFilterBtn('autoStatusFilterBtn', 'autoStatusFilterCount', selectedAutoStatuses);
+        updateFilterBtn('vmStatusFilterBtn', 'vmStatusFilterCount', selectedVmStatuses);
+        document.querySelectorAll('#autoStatusFilterList input, #vmStatusFilterList input')
+            .forEach(cb => cb.checked = false);
+        loadVMs();
+    }
+
+    /* ── Load VM list ────────────────────────────────────────── */
+    async function loadVMs(forceRefresh = false) {
+        loadGeneration++;  // invalidate all pending checks from previous load
+        const myGeneration = loadGeneration;
+        document.getElementById('tableLoading').style.display = 'block';
+        document.getElementById('provTable').style.display = 'none';
+        document.getElementById('tableBody').innerHTML = '';
+        clearSelection();
+        Object.keys(playsLoaded).forEach(k => delete playsLoaded[k]);
+        updateStats([]);
+
+        try {
+            const res = await fetch('/api/provisioning/list_vms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ project_key: currentProject, force_refresh: forceRefresh })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '서버 오류');
+
+            allVMs = data.vms || [];
+            applyVmSort();
+            buildImgFilter(allVMs);
+            buildVmStatusFilter(allVMs);
+            buildScodeBar(currentProject);
+            currentPage = 1;
+            applyPagination();
+            document.getElementById('tableLoading').style.display = 'none';
+            document.getElementById('provTable').style.display = 'table';
+        } catch(e) {
+            document.getElementById('tableLoading').innerHTML =
+                `<span style="color:#f87171">오류: ${e.message}</span>`;
+        }
+    }
+
+    /* ── VM Sort ─────────────────────────────────────────────── */
+    function applyVmSort() {
+        const sel   = document.getElementById('vmSortSelect');
+        const order = sel ? sel.value : 'name_asc';
+        const sorted = [...allVMs];
+        if (order === 'name_asc')
+            sorted.sort((a, b) => a.vm_name.localeCompare(b.vm_name));
+        else if (order === 'name_desc')
+            sorted.sort((a, b) => b.vm_name.localeCompare(a.vm_name));
+        else if (order === 'created_desc')
+            sorted.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        else if (order === 'created_asc')
+            sorted.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+        renderTable(sorted);
+        filterTable();
+        currentPage = 1;
+        applyPagination();
+    }
+
+    /* ── Render table ────────────────────────────────────────── */
+    function renderTable(vms) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        vms.forEach((vm, idx) => {
+            const rid = idx;
+            const osLabel = vm.image || '-';
+            const vmStatusClass = vm.status === 'active' ? 'active' : vm.status === 'SHUTOFF' ? 'shutoff' : 'other';
+
+            const tr = document.createElement('tr');
+            tr.className = 'data-row';
+            tr.dataset.rid         = rid;
+            tr.dataset.vmName      = vm.vm_name;
+            tr.dataset.createdAt   = vm.created_at || '';
+            tr.dataset.osOk        = vm.os_ok ? '1' : '0';
+            tr.dataset.osType      = vm.os_type || 'skip';
+            tr.dataset.project     = vm.project_key;
+            tr.dataset.vmStatus    = vm.status || '';
+            tr.dataset.vmImage     = vm.image  || '';
+            tr.dataset.keyName     = vm.key_name   || '';
+            tr.dataset.privateIp   = vm.private_ip || '';
+            tr.dataset.projectId   = vm.project_id || '';
+            tr.dataset.description = vm.description || '-';
+            tr.dataset.ansible     = 'checking';
+            tr.dataset.puppet      = 'checking';
+            tr.onclick = (e) => toggleDetail(rid, e);
+
+            const osIcon = (() => {
+                const img = (vm.image || '').toLowerCase();
+                if (img.includes('ubuntu'))  return '<img src="/static/images/ubuntu.png"  title="Ubuntu">';
+                if (img.includes('rocky'))   return '<img src="/static/images/rocky.png"   title="Rocky Linux">';
+                if (img === 'k8s node')      return '<img src="/static/images/k8s.png"     title="K8s Node">';
+                if (img.includes('windows')) return '<img src="/static/images/windows.png" title="Windows">';
+                return '<span style="font-size:20px">🖥</span>';
+            })();
+
+            tr.innerHTML = `
+                <td class="cb-cell" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="vm-checkbox" data-rid="${rid}" onchange="onCheckboxChange(this)">
+                </td>
+                <td><div class="vm-name-cell">${osIcon} ${vm.vm_name}
+                    <button onclick="copyVmName('${vm.vm_name}', this)" 
+                        title="VM명 복사"
+                        style="background:none;border:none;cursor:pointer;color:#3a5070;font-size:17px;
+                               padding:2px 4px;flex-shrink:0;transition:color 0.15s;line-height:1"
+                        onmouseover="this.style.color='#7dd3fc'"
+                        onmouseout="this.style.color='#3a5070'">⎘</button>
+                </div></td>
+                <td style="font-family:'Courier New',monospace;font-size:12px;color:#c2d8f0">${vm.description || '-'}</td>
+                <td><span class="vm-status ${vmStatusClass}">${vm.status || '-'}</span></td>
+                <td class="os-col" title="${osLabel}">${osLabel}</td>
+                <td id="pw-expiry-${rid}" class="pw-expiry-col">
+                    <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;flex-wrap:nowrap">
+                        <span id="pw-expiry-label-${rid}" style="color:#3a5070;font-size:12px">-</span>
+                        ${vm.os_type !== 'skip' ? `<button id="pw-refresh-btn-${rid}"
+                            onclick="runPwRefresh('${vm.vm_name}', ${rid}, event)"
+                            title="비밀번호 만료일 90일 갱신"
+                            ${vm.status !== 'active' && vm.status ? 'disabled' : ''}
+                            style="background:none;border:none;cursor:pointer;color:#7dd3fc;font-size:15px;
+                                   padding:1px 3px;flex-shrink:0;transition:color 0.15s;line-height:1;
+                                   opacity:${vm.status === 'active' || !vm.status ? '1' : '0.35'}"
+                            onmouseover="if(!this.disabled)this.style.color='#bfdbfe'"
+                            onmouseout="if(!this.disabled)this.style.color='#7dd3fc'">↻</button>` : ''}
+                    </div>
+                </td>
+                <td>
+                    <div class="pipeline">
+                        <div class="pip-step">
+                            <div class="pip-dot checking" id="pip-ansible-${rid}"></div>
+                            <span style="color:#5a7a99;font-size:10px">Ansible</span>
+                        </div>
+                        <div class="pip-line" id="pip-line-${rid}"></div>
+                        <div class="pip-step">
+                            <div class="pip-dot checking" id="pip-puppet-${rid}"></div>
+                            <span style="color:#5a7a99;font-size:10px">Puppet</span>
+                        </div>
+                        <div class="pip-line"></div>
+                        <div class="pip-step">
+                            <div class="pip-dot checking" id="pip-acc-${rid}"></div>
+                            <span style="color:#5a7a99;font-size:10px">계정</span>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge-prov badge-running" id="ansible-badge-${rid}">
+                        <div class="spinner" style="width:9px;height:9px;border-width:1.5px"></div> 확인 중
+                    </span>
+                </td>
+                <td>
+                    <span class="badge-prov badge-running" id="puppet-badge-${rid}">
+                        <div class="spinner" style="width:9px;height:9px;border-width:1.5px"></div> 확인 중
+                    </span>
+                </td>
+                <td class="action-cell" onclick="event.stopPropagation()">
+                    <div class="action-btns">
+                        <div class="playbook-select-wrap">
+                            <button class="playbook-select-btn" id="pb-btn-${rid}"
+                                    onclick="togglePlaybookDropdown(${rid}, event)"
+                                    title="플레이북 선택"
+                                    ${vm.os_type === 'skip' ? 'disabled style="opacity:0.35;cursor:not-allowed"' : ''}>Select Playbook</button>
+                            <div class="playbook-dropdown" id="pb-drop-${rid}"></div>
+                        </div>
+                        <button class="btn-action btn-ansible" id="ansible-btn-${rid}"
+                                onclick="runAnsible('${vm.vm_name}', ${rid})" disabled>
+                            ${vm.os_type === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible'}
+                        </button>
+                        <button class="btn-action btn-puppet" id="puppet-btn-${rid}"
+                                onclick="runPuppet('${vm.vm_name}', ${rid})" disabled>▶ Puppet</button>
+                    </div>
+                </td>`;
+            tbody.appendChild(tr);
+
+            const dtr = document.createElement('tr');
+            dtr.className = 'detail-row';
+            dtr.id = `detail-${rid}`;
+            dtr.innerHTML = `
+                <td colspan="9">
+                    <div class="detail-pane">
+                        <div class="vm-meta">
+                            <div class="vm-meta-item">VM명: <span>${vm.vm_name}</span></div>
+                            <div class="vm-meta-item">인프라 코드: <span>${vm.description || '-'}</span></div>
+                            <div class="vm-meta-item">IP: <span>${vm.private_ip || '-'}</span></div>
+                            <div class="vm-meta-item">ID: <span style="font-size:11px">${vm.vm_id}</span></div>
+                            <div class="vm-meta-item">Flavor: <span>${vm.flavor || '-'}</span></div>
+                            <div class="vm-meta-item">AZ: <span>${vm.az || '-'}</span></div>
+                            <div class="vm-meta-item">OS: <span>${osLabel}</span></div>
+                        </div>
+                        <div class="detail-grid">
+                            <div class="action-panel">
+                                <div class="action-panel-title ansible">⚙ Ansible Playbook</div>
+                                <div id="plays-list-${rid}" class="plays-list">
+                                    <div class="plays-loading">
+                                        <div class="spinner" style="width:10px;height:10px;border-width:1.5px"></div>
+                                        플레이 상태 확인 중...
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="action-panel">
+                                <div class="action-panel-title puppet">🔧 Puppet Agent</div>
+                                <div class="action-panel-row">
+                                    <span id="puppet-status-text-${rid}"
+                                          style="font-size:12px;font-family:'Courier New',monospace;color:#5a7a99">
+                                        확인 중...
+                                    </span>
+                                </div>
+                                <div class="log-box" id="puppet-log-${rid}">로그 없음</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+                            <button class="btn-action btn-recheck"
+                                    onclick="recheckPlays('${vm.vm_name}', ${rid}, event)">
+                                🔄 Ansible 재확인
+                            </button>
+                            <button class="btn-action btn-recheck"
+                                    onclick="recheckStatus('${vm.vm_name}', ${rid}, event)">
+                                🔄 상태 재확인
+                            </button>
+                        </div>
+                    </div>
+                </td>`;
+            tbody.appendChild(dtr);
+        });
+
+        updateStats(vms);
+        filterTable();
+        applyPagination();
+        reprioritizeChecks();
+        // Start background check for ALL VMs independently
+        setTimeout(startFullBackgroundCheck, 1500);
+    }
+
+    /* ── Stats ───────────────────────────────────────────────── */
+    function updateStats(vms) {
+        document.getElementById('stat-total').textContent   = vms.length;
+        document.getElementById('stat-ansible').textContent = '-';
+        document.getElementById('stat-puppet').textContent  = '-';
+        document.getElementById('stat-done').textContent    = '-';
+    }
+
+    function recalcStats() {
+        const rows = document.querySelectorAll('.data-row');
+        let ansible = 0, puppet = 0, acc = 0, done = 0, checked = 0;
+        const total = rows.length;
+        rows.forEach(row => {
+            const a = row.dataset.ansible;
+            const p = row.dataset.puppet;
+            const c = row.dataset.acc;
+            if (a && a !== 'checking') checked++;
+            if (a === 'done') ansible++;
+            if (p === 'done') puppet++;
+            if (c === 'done') acc++;
+            if (a === 'done' && p === 'done' && c === 'done') done++;
+        });
+
+        const pct = total > 0 ? Math.round(checked / total * 100) : 0;
+        const checking = checked < total;
+
+        document.getElementById('stat-ansible').textContent = ansible;
+        document.getElementById('stat-puppet').textContent  = puppet;
+        document.getElementById('stat-acc').textContent     = acc;
+        document.getElementById('stat-done').textContent    = done;
+
+        // Update percentage text
+        const pctText = checking ? `${pct}%` : '';
+        document.getElementById('stat-ansible-pct').textContent = pctText;
+        document.getElementById('stat-puppet-pct').textContent  = pctText;
+        document.getElementById('stat-acc-pct').textContent     = pctText;
+        document.getElementById('stat-done-pct').textContent    = pctText;
+
+        // Toggle spinner and blue bg on each chip
+        ['ansible','puppet','acc','done'].forEach(id => {
+            const chip = document.getElementById(`chip-${id}`);
+            const spin = document.getElementById(`spin-${id}`);
+            if (!chip || !spin) return;
+            if (checking) {
+                chip.style.background   = 'rgba(33,150,243,0.12)';
+                chip.style.borderColor  = '#2196F3';
+                chip.style.color        = '#7dd3fc';
+                spin.style.display      = 'inline-block';
+            } else {
+                chip.style.background   = '';
+                chip.style.borderColor  = '';
+                chip.style.color        = '';
+                spin.style.display      = 'none';
+            }
+        });
+
+        // Update checked count reference elements if still present
+        const cc = document.getElementById('stat-checked-count');
+        const tc = document.getElementById('stat-total-count');
+        if (cc) cc.textContent = checked;
+        if (tc) tc.textContent = total;
+    }
+
+    /* ── Pipeline helper ─────────────────────────────────────── */
+    function setPipeline(rid, ansibleState, puppetState, accState = 'pending') {
+        const dotA = document.getElementById(`pip-ansible-${rid}`);
+        const dotP = document.getElementById(`pip-puppet-${rid}`);
+        const dotC = document.getElementById(`pip-acc-${rid}`);
+        const line = document.getElementById(`pip-line-${rid}`);
+        if (!dotA || !dotP || !line) return;
+
+        dotA.className = `pip-dot ${ansibleState}`;
+        dotP.className = `pip-dot ${puppetState}`;
+        if (dotC) dotC.className = `pip-dot ${accState}`;
+        line.className = 'pip-line';
+
+        if (ansibleState === 'done' && puppetState === 'done' && accState === 'done') {
+            line.classList.add('done');
+        } else if (ansibleState === 'done' && (puppetState === 'pending' || puppetState === 'checking')) {
+            line.classList.add('filling');
+        }
+    }
+
+    /* ── Concurrent status check ─────────────────────────────── */
+    async function checkAllWithConcurrency(rows, concurrency = 3, token = null) {
+        const queue = rows.filter(row => row.dataset.ansible === 'checking');
+        if (!queue.length) return;
+        async function worker() {
+            while (queue.length) {
+                if (token !== null && token !== reprioritizeToken) return;
+                const row = queue.shift();
+                if (row.dataset.ansible !== 'checking') continue;
+                await checkStatus(row.dataset.vmName, parseInt(row.dataset.rid),
+                    row.dataset.osOk === '1', row.dataset.vmStatus);
+                recalcStats(); // update live after each VM
+            }
+        }
+        await Promise.all(Array.from({ length: Math.min(concurrency, queue.length) }, worker));
+        recalcStats();
+    }
+
+    /* ── Check status for one VM ─────────────────────────────── */
+    async function fetchWithRetry(url, options, retries = 2) {
+        for (let i = 0; i <= retries; i++) {
+            try {
+                const res = await fetch(url, options);
+                return res;
+            } catch (e) {
+                if (i === retries) throw e;
+                await new Promise(r => setTimeout(r, 500 * (i + 1)));
+            }
+        }
+    }
+
+    async function checkStatus(vmName, rid, osOk, vmStatus) {
+        const ansibleBadge = document.getElementById(`ansible-badge-${rid}`);
+        const puppetBadge  = document.getElementById(`puppet-badge-${rid}`);
+        const ansibleBtn   = document.getElementById(`ansible-btn-${rid}`);
+        const puppetBtn    = document.getElementById(`puppet-btn-${rid}`);
+        const row          = document.querySelector(`[data-rid="${rid}"]`);
+        const atxt         = document.getElementById(`ansible-status-text-${rid}`);
+        const ptxt         = document.getElementById(`puppet-status-text-${rid}`);
+
+        if (!row || !ansibleBadge || !puppetBadge) return;
+        setPipeline(rid, 'checking', 'checking', 'checking');
+
+        try {
+            const res = await fetchWithRetry('/api/provisioning/check_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({
+                    vm_name:    vmName,
+                    os_ok:      osOk,
+                    vm_status:  vmStatus,
+                    image:      row.dataset.vmImage  || '',
+                    key_name:   row.dataset.keyName  || '',
+                    private_ip: row.dataset.privateIp || '',
+                    os_type:    row.dataset.osType || '',
+                    project_id: row.dataset.projectId || '',
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '서버 오류');
+
+            // K8s node or Windows → 대상 아님
+            if (data.na) {
+                ansibleBadge.className = 'badge-prov badge-na'; ansibleBadge.textContent = '대상 아님';
+                puppetBadge.className  = 'badge-prov badge-na'; puppetBadge.textContent  = '대상 아님';
+                ansibleBtn.disabled = true; puppetBtn.disabled = true;
+                row.dataset.ansible = 'na'; row.dataset.puppet = 'na';
+                setPipeline(rid, 'na', 'na', 'na');
+                if (atxt) { atxt.style.color = '#4e4e7a'; atxt.textContent = '대상 아님'; }
+                if (ptxt) { ptxt.style.color = '#4e4e7a'; ptxt.textContent = '대상 아님'; }
+                return;
+            }
+
+            // Non-active VM → 확인 불가
+            if (data.skipped) {
+                ansibleBadge.className = 'badge-prov badge-na'; ansibleBadge.textContent = '확인 불가';
+                puppetBadge.className  = 'badge-prov badge-na'; puppetBadge.textContent  = '확인 불가';
+                ansibleBtn.disabled = true; puppetBtn.disabled = true;
+                row.dataset.ansible = 'na'; row.dataset.puppet = 'na';
+                setPipeline(rid, 'na', 'na', 'na');
+                if (atxt) { atxt.style.color = '#4e4e7a'; atxt.textContent = 'VM이 활성 상태가 아님'; }
+                if (ptxt) { ptxt.style.color = '#4e4e7a'; ptxt.textContent = 'VM이 활성 상태가 아님'; }
+                return;
+            }
+
+            row.dataset.ansible = data.ansible_done ? 'done' : 'pending';
+            row.dataset.puppet  = data.puppet_done  ? 'done' : 'pending';
+            row.dataset.acc     = data.acc_done      ? 'done' : 'pending';
+
+            const aDot = data.ansible_done ? 'done' : 'pending';
+            const pDot = !osOk ? 'na' : data.puppet_error && !data.ansible_error ? 'error' : data.puppet_done ? 'done' : 'pending';
+            const cDot = data.acc_done ? 'done' : 'pending';
+            setPipeline(rid, aDot, pDot, cDot);
+
+            // Ansible
+            if (data.ansible_error) {
+                ansibleBadge.className = 'badge-prov badge-pending'; ansibleBadge.textContent = '미완료';
+                ansibleBtn.disabled = false;
+                if (atxt) { atxt.style.color = '#5a7a99'; atxt.textContent = 'SSH 확인 불가 — Ansible 실행으로 진행 가능'; }
+            } else if (data.ansible_done) {
+                ansibleBadge.className = 'badge-prov badge-done'; ansibleBadge.textContent = '✓ 완료';
+                ansibleBtn.disabled = false;
+                if (atxt) {
+                    atxt.style.color = '#4caf93';
+                    atxt.textContent = (data.os_type === 'ubuntu24')
+                        ? '✓ TOBE-Default-Playbook.yaml 실행 완료(/etc/puppet/puppet.conf 확인됨)'
+                        : '✓ Default-Playbook.yaml 실행 완료(/etc/default/kic_monitor_agent 확인됨)';
+                }
+            } else {
+                ansibleBadge.className = 'badge-prov badge-pending'; ansibleBadge.textContent = '미완료';
+                const osType = data.os_type || row.dataset.osType || 'ubuntu24';
+                ansibleBtn.innerHTML = osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible';
+                ansibleBtn.disabled = false;
+                if (atxt) {
+                    atxt.style.color = '#5a7a99';
+                    atxt.textContent = (data.os_type === 'ubuntu24')
+                        ? '/etc/puppet/puppet.conf 없음 — Ansible 실행 필요'
+                        : '/etc/default/kic_monitor_agent 없음 — Ansible 실행 필요';
+                }
+            }
+
+            const osType = data.os_type || row.dataset.osType || 'ubuntu24';
+
+            // Puppet section
+            if (osType !== 'ubuntu24') {
+                // Legacy OS — puppet not applicable
+                puppetBadge.className = 'badge-prov badge-na'; puppetBadge.textContent = '대상 아님';
+                puppetBtn.disabled = true;
+                row.dataset.puppet = 'na';
+                setPipeline(rid, aDot, 'na', 'na');
+                if (ptxt) { ptxt.style.color = '#4e4e7a'; ptxt.textContent = '대상 아님 (Ubuntu 24.04 미만 / Rocky)'; }
+            } else if (!osOk) {
+                puppetBadge.className = 'badge-prov badge-na'; puppetBadge.textContent = '대상 아님';
+                puppetBtn.disabled = true;
+                if (ptxt) { ptxt.style.color = '#4e4e7a'; ptxt.textContent = '대상 아님 (Ubuntu 24.04 미만)'; }
+            } else if (data.puppet_error) {
+                if (data.ansible_error) {
+                    puppetBadge.className = 'badge-prov badge-pending'; puppetBadge.textContent = '미완료';
+                    puppetBtn.disabled = true;
+                    if (ptxt) { ptxt.style.color = '#5a7a99'; ptxt.textContent = 'Ansible 실행 후 확인 가능'; }
+                } else {
+                    puppetBadge.className = 'badge-prov badge-error'; puppetBadge.textContent = 'SSH 오류';
+                    puppetBtn.disabled = true;
+                    if (ptxt) { ptxt.style.color = '#f87171'; ptxt.textContent = '⚠ SSH 연결 실패 — 상태 불명확'; }
+                }
+            } else if (data.puppet_done) {
+                puppetBadge.className = 'badge-prov badge-done'; puppetBadge.textContent = '✓ 완료';
+                puppetBtn.innerHTML = '✓ 완료됨'; puppetBtn.disabled = true;
+                if (ptxt) { ptxt.style.color = '#4caf93'; ptxt.textContent = '✓ Puppet manifest 적용 완료(/var/cache/puppet/public/last_run_summary.yaml 확인됨)'; }
+            } else {
+                puppetBadge.className = 'badge-prov badge-pending'; puppetBadge.textContent = '미완료';
+                puppetBtn.disabled = !data.ansible_done;
+                if (ptxt) {
+                    ptxt.style.color = '#5a7a99';
+                    if (!data.ansible_done) {
+                        ptxt.textContent = '⚠ Ansible 먼저 실행 필요';
+                    } else if (data.puppet_cert === 'none') {
+                        ptxt.textContent = 'puppet master에 인증서 요청 대기 중';
+                    } else if (data.puppet_cert === 'requested') {
+                        ptxt.textContent = '⏳ 인증서 수락 대기 중 (puppet master)';
+                    } else if (data.puppet_cert === 'signed') {
+                        ptxt.textContent = '인증서 수락됨 — puppet agent -t 실행 대기 중';
+                        ptxt.style.color = '#f59e0b';
+                    } else {
+                        ptxt.textContent = '대기 중';
+                    }
+                }
+            }
+
+        } catch(e) {
+            ansibleBadge.className = 'badge-prov badge-error'; ansibleBadge.textContent = '오류';
+            puppetBadge.className  = 'badge-prov badge-error'; puppetBadge.textContent  = '오류';
+            setPipeline(rid, 'error', 'error', 'error');
+            ansibleBtn.disabled = false;
+        }
+    }
+
+    /* ── Plays detail ────────────────────────────────────────── */
+    const playsLoaded = {};
+
+    async function loadPlays(vmName, rid, row) {
+        if (playsLoaded[rid]) return; // already loaded
+        const container = document.getElementById(`plays-list-${rid}`);
+        if (!container) return;
+
+        try {
+            const res = await fetchWithRetry('/api/provisioning/check_plays', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({
+                    vm_name:    vmName,
+                    image:      row.dataset.vmImage   || '',
+                    key_name:   row.dataset.keyName   || '',
+                    private_ip: row.dataset.privateIp || '',
+                    os_type:    row.dataset.osType || '',
+                })
+            });
+            const data = await res.json();
+
+            if (data.na) {
+                container.innerHTML = '<span style="color:#4e4e7a;font-size:12px;font-family:\'Courier New\',monospace">대상 아님</span>';
+                return;
+            }
+
+            const playbook = data.os_type === 'ubuntu24'
+                ? 'TOBE-Default-Playbook-V3.yaml'
+                : 'Default-Playbook-V3.yaml';
+
+            container.innerHTML = `
+                <div style="font-size:10px;color:#5a7a99;font-family:'Courier New',monospace;
+                            margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #1e2840">
+                    📋 ${playbook}
+                </div>
+                ${data.plays.map((play, i) => `
+                <div class="play-item">
+                    <div class="play-header" onclick="togglePlay(${rid}, ${i})">
+                        <span class="play-icon">${play.done ? '' : ''}</span>
+                        <span class="play-name">${play.name}</span>
+                        <span class="play-badge ${play.done ? 'done' : 'pending'}">
+                            ${play.done ? '완료' : '미완료'}
+                        </span>
+                        <span class="play-arrow" id="play-arrow-${rid}-${i}">▶</span>
+                    </div>
+                    <div class="play-detail" id="play-detail-${rid}-${i}">
+                        ${play.detail}
+                    </div>
+                </div>`).join('')}`;
+
+            playsLoaded[rid] = true;
+
+            // Sync badge with plays result
+            const allDone  = data.plays.length > 0 && data.plays.every(p => p.done);
+            const ansibleBadge = document.getElementById(`ansible-badge-${rid}`);
+            const ansibleBtn   = document.getElementById(`ansible-btn-${rid}`);
+            if (ansibleBadge && row) {
+                if (allDone && row.dataset.ansible !== 'done') {
+                    ansibleBadge.className = 'badge-prov badge-done'; ansibleBadge.textContent = '✓ 완료';
+                    if (ansibleBtn) { ansibleBtn.innerHTML = '✓ 완료됨'; ansibleBtn.disabled = false; }
+                    row.dataset.ansible = 'done';
+                    setPipeline(rid, 'done', row.dataset.puppet === 'done' ? 'done' : row.dataset.osType === 'ubuntu24' ? 'pending' : 'na', row.dataset.acc === 'done' ? 'done' : 'pending');
+                    recalcStats();
+                } else if (!allDone && row.dataset.ansible === 'done') {
+                    ansibleBadge.className = 'badge-prov badge-pending'; ansibleBadge.textContent = '미완료';
+                    if (ansibleBtn) {
+                        ansibleBtn.innerHTML = row.dataset.osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible';
+                        ansibleBtn.disabled = false;
+                    }
+                    row.dataset.ansible = 'pending';
+                    setPipeline(rid, 'pending', row.dataset.puppet === 'done' ? 'done' : 'pending', row.dataset.acc === 'done' ? 'done' : 'pending');
+                    recalcStats();
+                }
+            }
+        } catch(e) {
+            container.innerHTML = `<span style="color:#f87171;font-size:12px;font-family:'Courier New',monospace">오류: ${e.message}</span>`;
+        }
+    }
+
+    function togglePlay(rid, idx) {
+        const detail = document.getElementById(`play-detail-${rid}-${idx}`);
+        const arrow  = document.getElementById(`play-arrow-${rid}-${idx}`);
+        if (!detail) return;
+        detail.classList.toggle('open');
+        if (arrow) arrow.classList.toggle('open');
+    }
+
+    /* ── Toggle detail ───────────────────────────────────────── */
+    function toggleDetail(rid, event) {
+        if (event.target.closest('button, input')) return;
+        const detailRow = document.getElementById(`detail-${rid}`);
+        const dataRow   = document.querySelector(`[data-rid="${rid}"]`);
+        const isOpen    = detailRow.classList.toggle('open');
+        if (dataRow) dataRow.classList.toggle('detail-open', isOpen);
+
+        if (isOpen) {
+            const row    = dataRow;
+            const vmName = row.dataset.vmName;
+            loadPlays(vmName, rid, row);
+        }
+    }
+
+    function toggleLog(id) { document.getElementById(id).classList.toggle('open'); }
+
+    async function recheckPlays(vmName, rid, event) {
+        event.stopPropagation();
+        delete playsLoaded[rid];
+        const container = document.getElementById(`plays-list-${rid}`);
+        if (container) container.innerHTML = '<div class="plays-loading"><div class="spinner" style="width:10px;height:10px;border-width:1.5px"></div> 플레이 상태 확인 중...</div>';
+        const row = document.querySelector(`[data-rid="${rid}"]`);
+        await loadPlays(vmName, rid, row);
+    }
+
+    /* ── Re-check single row ─────────────────────────────────── */
+    async function recheckStatus(vmName, rid, event) {
+        event.stopPropagation();
+        const row      = document.querySelector(`[data-rid="${rid}"]`);
+        const osOk     = row.dataset.osOk === '1';
+        const vmStatus = row.dataset.vmStatus;
+        const ab = document.getElementById(`ansible-badge-${rid}`);
+        const pb = document.getElementById(`puppet-badge-${rid}`);
+        ab.className = 'badge-prov badge-running';
+        ab.innerHTML = '<div class="spinner" style="width:9px;height:9px;border-width:1.5px"></div> 확인 중';
+        pb.className = 'badge-prov badge-running';
+        pb.innerHTML = '<div class="spinner" style="width:9px;height:9px;border-width:1.5px"></div> 확인 중';
+        // Reset 계정 상태 so it re-checks
+        const pwCell  = document.getElementById(`pw-expiry-${rid}`);
+        const pwLabel = document.getElementById(`pw-expiry-label-${rid}`);
+        if (pwCell) {
+            delete pwCell.dataset.checked;
+            if (pwLabel) pwLabel.innerHTML = '<span style="color:#3a5070;font-size:11px">확인 중...</span>';
+        }
+        await checkStatus(vmName, rid, osOk, vmStatus);
+        if (pwCell && vmStatus === 'active' && row.dataset.osType !== 'skip') checkPasswordExpiry(row);
+        recalcStats();
+        toast(`${vmName} 상태 재확인 완료`, 'info');
+    }
+
+    /* ── Checkbox ────────────────────────────────────────────── */
+    function onCheckboxChange(cb) {
+        updateBulkBar();
+        const all     = document.querySelectorAll('.vm-checkbox');
+        const checked = document.querySelectorAll('.vm-checkbox:checked');
+        const sa = document.getElementById('selectAll');
+        sa.indeterminate = checked.length > 0 && checked.length < all.length;
+        sa.checked = checked.length === all.length && all.length > 0;
+    }
+
+    function toggleSelectAll(cb) {
+        document.querySelectorAll('.vm-checkbox').forEach(c => {
+            const row = document.querySelector(`[data-rid="${c.dataset.rid}"]`);
+            if (row && row.style.display !== 'none') c.checked = cb.checked;
+        });
+        updateBulkBar();
+    }
+
+    function updateBulkBar() {
+        const checked = document.querySelectorAll('.vm-checkbox:checked');
+        const bar = document.getElementById('bulkBar');
+        document.getElementById('bulkCount').textContent = checked.length;
+        checked.length > 0 ? bar.classList.add('visible') : bar.classList.remove('visible');
+
+        const ansibleBtn = document.getElementById('bulkAnsibleBtn');
+        const pbBtn      = document.getElementById('bulk-pb-btn');
+        const tooFew     = checked.length < 2;
+
+        // Ansible bulk: disabled if < 2 VMs OR any selected VM is ineligible
+        // Ineligible = wrong OS (na/skip) or still checking
+        const anyAnsibleIneligible = Array.from(checked).some(cb => {
+            const row = document.querySelector(`[data-rid="${cb.dataset.rid}"]`);
+            if (!row) return true;
+            const state = row.dataset.ansible;
+            return state === 'na' || state === 'checking';
+        });
+        if (ansibleBtn) {
+            ansibleBtn.disabled = tooFew || anyAnsibleIneligible;
+            ansibleBtn.title = tooFew
+                ? '2개 이상의 VM을 선택해야 합니다'
+                : anyAnsibleIneligible
+                    ? 'Ansible 실행이 불가하거나 이미 완료된 VM이 포함되어 있습니다'
+                    : '';
+        }
+        if (pbBtn) {
+            pbBtn.disabled = tooFew || anyAnsibleIneligible;
+        }
+
+        // Puppet bulk: disabled if ansible not done on any, OR puppet already done on any
+        const puppetBtn = document.getElementById('bulkPuppetBtn');
+        if (puppetBtn) {
+            const anyAnsibleNotDone = Array.from(checked).some(cb => {
+                const row = document.querySelector(`[data-rid="${cb.dataset.rid}"]`);
+                return row && row.dataset.ansible !== 'done';
+            });
+            const anyPuppetIneligible = Array.from(checked).some(cb => {
+                const row = document.querySelector(`[data-rid="${cb.dataset.rid}"]`);
+                return row && (row.dataset.puppet === 'na' || row.dataset.puppet === 'done');
+            });
+            puppetBtn.disabled = tooFew || anyAnsibleNotDone || anyPuppetIneligible;
+            puppetBtn.title = tooFew
+                ? '2개 이상의 VM을 선택해야 합니다'
+                : anyAnsibleNotDone
+                    ? 'Ansible이 완료되지 않은 VM이 포함되어 있습니다'
+                    : anyPuppetIneligible
+                        ? 'Puppet 미지원 또는 이미 완료된 VM이 포함되어 있습니다'
+                        : '';
+        }
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.vm-checkbox').forEach(c => c.checked = false);
+        const sa = document.getElementById('selectAll');
+        if (sa) { sa.checked = false; sa.indeterminate = false; }
+        selectBulkPlaybook(null);
+        updateBulkBar();
+    }
+
+    function getSelectedVMs() {
+        const selected = [];
+        document.querySelectorAll('.vm-checkbox:checked').forEach(cb => {
+            const rid = cb.dataset.rid;
+            const row = document.querySelector(`[data-rid="${rid}"]`);
+            if (!row) return;
+            selected.push({
+                hostname:   row.dataset.vmName,
+                private_ip: row.dataset.privateIp || '',
+                os_type:    row.dataset.osType || '',
+                image:      row.dataset.vmImage   || '',
+                key_name:   row.dataset.keyName   || '',
+                project_id: row.dataset.projectId || '',
+                rid:        parseInt(rid),
+            });
+        });
+        return selected;
+    }
+
+    /* ── Terminal modal ──────────────────────────────────────── */
+    function openTerminal(title) {
+        document.getElementById('terminalTitle').textContent = title;
+        document.getElementById('terminalBody').innerHTML = '';
+        document.getElementById('terminalStatus').className = 'terminal-status running';
+        document.getElementById('terminalStatus').innerHTML =
+            '<div class="spinner" style="width:9px;height:9px;border-width:1.5px"></div> 실행 중...';
+        document.getElementById('terminalCloseBtn').disabled = true;
+        document.getElementById('terminalCounter').textContent = '0 lines';
+        document.getElementById('terminalOverlay').classList.add('open');
+        terminalLines = 0;
+    }
+
+    function closeTerminal() {
+        document.getElementById('terminalOverlay').classList.remove('open');
+        if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
+    }
+
+    function appendTerminalLine(text) {
+        const body = document.getElementById('terminalBody');
+        const cursor = body.querySelector('.terminal-cursor');
+        if (cursor) cursor.remove();
+
+        const p = document.createElement('p');
+        p.className = 'terminal-line';
+        const t = text.toLowerCase();
+        if      (t.includes('play ['))              p.classList.add('play');
+        else if (t.includes('task ['))              p.classList.add('task');
+        else if (t.startsWith('ok:'))               p.classList.add('ok');
+        else if (t.startsWith('changed:'))          p.classList.add('changed');
+        else if (t.startsWith('failed:') || t.startsWith('fatal:')) p.classList.add('failed');
+        else if (t.startsWith('skipping:'))         p.classList.add('skipped');
+        else if (t.includes('play recap'))          p.classList.add('recap');
+        p.textContent = text;
+        body.appendChild(p);
+
+        const cur = document.createElement('span');
+        cur.className = 'terminal-cursor';
+        body.appendChild(cur);
+
+        terminalLines++;
+        document.getElementById('terminalCounter').textContent = `${terminalLines} lines`;
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function finishTerminal(success) {
+        const body = document.getElementById('terminalBody');
+        const cursor = body.querySelector('.terminal-cursor');
+        if (cursor) cursor.remove();
+        const status = document.getElementById('terminalStatus');
+        status.className = `terminal-status ${success ? 'success' : 'error'}`;
+        status.textContent = success ? '✓ 완료' : '❌ 실패';
+        document.getElementById('terminalCloseBtn').disabled = false;
+    }
+
+    document.getElementById('terminalOverlay').addEventListener('click', function(e) {
+        if (e.target === this && !document.getElementById('terminalCloseBtn').disabled) closeTerminal();
+    });
+
+    /* ── Playbook selector ───────────────────────────────────── */
+    /* ── Playbook selector ───────────────────────────────────── */
+    let availablePlaybooks  = [];
+    let selectedPlaybooks   = {}; // rid → playbook filename or null (auto)
+    let bulkSelectedPlaybook = null; // null = auto
+
+    async function loadPlaybooks() {
+        try {
+            const res  = await fetch('/api/provisioning/list_playbooks');
+            const data = await res.json();
+            availablePlaybooks = data.playbooks || [];
+        } catch(e) {
+            availablePlaybooks = [];
+        }
+    }
+
+    function toggleBulkPlaybookDropdown(event) {
+        event.stopPropagation();
+        if (document.getElementById('bulk-pb-btn')?.disabled) return;
+        const drop = document.getElementById('bulk-pb-drop');
+        if (!drop.classList.contains('open')) {
+            renderBulkPlaybookDropdown();
+            setTimeout(() => {
+                document.getElementById('bulk-pb-search')?.focus();
+                setupPlaybookKeyNav('bulk-pb-search', 'bulk-pb-list');
+            }, 50);
+        }
+        drop.classList.toggle('open');
+    }
+
+    function renderBulkPlaybookDropdown() {
+        const drop = document.getElementById('bulk-pb-drop');
+        drop.innerHTML = `
+            <div class="playbook-dropdown-header"><span>📋 일괄 플레이북 선택</span></div>
+            <div style="padding:8px 10px;border-bottom:1px solid #2a3550">
+                <input type="text" placeholder="검색..." autocomplete="off"
+                       style="width:100%;box-sizing:border-box;background:#0e1520;border:1px solid #2a3550;
+                              color:#c2d8f0;border-radius:5px;padding:5px 8px;font-size:13px;
+                              font-family:'Courier New',monospace"
+                       oninput="filterPlaybookList('bulk-pb-list', this.value)"
+                       onclick="event.stopPropagation()"
+                       id="bulk-pb-search">
+            </div>
+            <div id="bulk-pb-list">
+                <div class="playbook-option ${!bulkSelectedPlaybook ? 'selected' : ''}"
+                     onclick="selectBulkPlaybook(null)">
+                    <span>🔄 자동 선택</span>
+                    <span class="pb-auto">OS별 자동</span>
+                </div>
+                ${availablePlaybooks.map(pb => `
+                <div class="playbook-option ${bulkSelectedPlaybook === pb ? 'selected' : ''}"
+                     data-pb="${pb}" onclick="selectBulkPlaybook('${pb}')">
+                    <span>${pb}</span>
+                </div>`).join('')}
+            </div>`;
+    }
+
+    function selectBulkPlaybook(playbook) {
+        bulkSelectedPlaybook = playbook;
+        const btn = document.getElementById('bulk-pb-btn');
+        if (playbook) {
+            btn.classList.add('custom');
+            btn.textContent = `📋 ${playbook} ▾`;
+            btn.title = `일괄 플레이북: ${playbook}`;
+        } else {
+            btn.classList.remove('custom');
+            btn.textContent = '📋 일괄 플레이북 ▾';
+            btn.title = '일괄 플레이북 선택';
+        }
+        document.getElementById('bulk-pb-drop').classList.remove('open');
+    }
+    function togglePlaybookDropdown(rid, event) {
+        event.stopPropagation();
+        document.querySelectorAll('.playbook-dropdown.open').forEach(d => {
+            if (d.id !== `pb-drop-${rid}`) d.classList.remove('open');
+        });
+        const drop = document.getElementById(`pb-drop-${rid}`);
+        if (!drop.classList.contains('open')) {
+            renderPlaybookDropdown(rid);
+            setTimeout(() => {
+                document.getElementById(`pb-search-${rid}`)?.focus();
+                setupPlaybookKeyNav(`pb-search-${rid}`, `pb-list-${rid}`);
+            }, 50);
+        }
+        drop.classList.toggle('open');
+    }
+
+    function renderPlaybookDropdown(rid) {
+        const row    = document.querySelector(`[data-rid="${rid}"]`);
+        const osType = row?.dataset.osType || 'ubuntu24';
+        const autoPb = osType === 'ubuntu24' ? 'TOBE-Default-Playbook-V3.yaml' : 'Default-Playbook-V3.yaml';
+        const current = selectedPlaybooks[rid] || null;
+        const drop    = document.getElementById(`pb-drop-${rid}`);
+        drop.innerHTML = `
+            <div class="playbook-dropdown-header"><span>📋 플레이북 선택</span></div>
+            <div style="padding:8px 10px;border-bottom:1px solid #2a3550">
+                <input type="text" placeholder="검색..." autocomplete="off"
+                       style="width:100%;box-sizing:border-box;background:#0e1520;border:1px solid #2a3550;
+                              color:#c2d8f0;border-radius:5px;padding:5px 8px;font-size:13px;
+                              font-family:'Courier New',monospace"
+                       oninput="filterPlaybookList('pb-list-${rid}', this.value)"
+                       onclick="event.stopPropagation()"
+                       id="pb-search-${rid}">
+            </div>
+            <div id="pb-list-${rid}">
+                <div class="playbook-option ${!current ? 'selected' : ''}"
+                     onclick="selectPlaybook(${rid}, null, '${autoPb}')">
+                    <span>🔄 자동 선택</span>
+                    <span class="pb-auto">${autoPb}</span>
+                </div>
+                ${availablePlaybooks.map(pb => `
+                <div class="playbook-option ${current === pb ? 'selected' : ''}"
+                     data-pb="${pb}" onclick="selectPlaybook(${rid}, '${pb}', '${pb}')">
+                    <span>${pb}</span>
+                    ${pb === autoPb ? '<span class="pb-auto">기본값</span>' : ''}
+                </div>`).join('')}
+            </div>`;
+    }
+
+    function filterPlaybookList(listId, query) {
+        const q = query.toLowerCase();
+        document.querySelectorAll('#' + listId + ' .playbook-option[data-pb]').forEach(el => {
+            el.style.display = el.dataset.pb.toLowerCase().includes(q) ? '' : 'none';
+        });
+        // Reset focus to first visible item
+        const first = document.querySelector(`#${listId} .playbook-option:not([style*="none"])`);
+        if (first) first.setAttribute('tabindex', '0');
+    }
+
+    function setupPlaybookKeyNav(searchInputId, listId) {
+        const input = document.getElementById(searchInputId);
+        if (!input) return;
+        input.addEventListener('keydown', (e) => {
+            const items = [...document.querySelectorAll(`#${listId} .playbook-option`)]
+                .filter(el => el.style.display !== 'none');
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                items[0].focus();
+            } else if (e.key === 'Enter' && items.length === 1) {
+                e.preventDefault();
+                items[0].click();
+            }
+        });
+
+        // Arrow key nav within list items
+        const list = document.getElementById(listId);
+        if (!list) return;
+        list.addEventListener('keydown', (e) => {
+            const items = [...list.querySelectorAll('.playbook-option')]
+                .filter(el => el.style.display !== 'none');
+            const idx = items.indexOf(document.activeElement);
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (idx < items.length - 1) items[idx + 1].focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (idx > 0) items[idx - 1].focus();
+                else input.focus();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (idx >= 0) items[idx].click();
+            } else if (e.key === 'Escape') {
+                input.closest('.playbook-dropdown')?.classList.remove('open');
+            }
+        });
+
+        // Make items focusable
+        list.querySelectorAll('.playbook-option').forEach(el => {
+            if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+        });
+    }
+
+    function selectPlaybook(rid, playbook, label) {
+        selectedPlaybooks[rid] = playbook;
+        const btn    = document.getElementById(`pb-btn-${rid}`);
+        if (playbook) {
+            btn.classList.remove('custom');
+            btn.textContent = playbook.split('/').pop(); // show filename only
+            btn.title = playbook;
+        } else {
+            btn.classList.remove('custom');
+            btn.textContent = 'Select Playbook';
+            btn.title = '플레이북 선택';
+        }
+        document.getElementById(`pb-drop-${rid}`)?.classList.remove('open');
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.playbook-select-wrap')) {
+            document.querySelectorAll('.playbook-dropdown.open')
+                .forEach(d => d.classList.remove('open'));
+        }
+        if (!e.target.closest('.img-filter-wrap')) {
+            document.getElementById('imgFilterDropdown')?.classList.remove('open');
+        }
+        if (!e.target.closest('#autoStatusFilterWrap')) {
+            document.getElementById('autoStatusFilterDropdown')?.classList.remove('open');
+        }
+        if (!e.target.closest('#vmStatusFilterWrap')) {
+            document.getElementById('vmStatusFilterDropdown')?.classList.remove('open');
+        }
+    });
+
+    // Set sticky header offset based on actual nav height
+    (function() {
+        const nav = document.querySelector('nav');
+        const h   = nav ? nav.getBoundingClientRect().height : 56;
+        document.documentElement.style.setProperty('--nav-height', h + 'px');
+    })();
+
+    // Load available playbooks
+    loadPlaybooks();
+
+    function copyVmName(name, btn) {
+        navigator.clipboard.writeText(name).then(() => {
+            const orig = btn.style.color;
+            btn.textContent = '✓';
+            btn.style.color = '#4caf93';
+            setTimeout(() => { btn.textContent = '⎘'; btn.style.color = '#3a5070'; }, 1500);
+        }).catch(() => {
+            // Fallback for older browsers
+            const el = document.createElement('textarea');
+            el.value = name; el.style.position = 'fixed'; el.style.opacity = '0';
+            document.body.appendChild(el); el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            btn.textContent = '✓'; btn.style.color = '#4caf93';
+            setTimeout(() => { btn.textContent = '⎘'; btn.style.color = '#3a5070'; }, 1500);
+        });
+    }
+
+    /* ── 계정 상태 column sort ───────────────────────────────── */
+    let pwExpirySortDir = 'none'; // 'none' | 'asc' | 'desc'
+
+    function togglePwExpirySort() {
+        pwExpirySortDir = pwExpirySortDir === 'asc' ? 'desc' : pwExpirySortDir === 'desc' ? 'none' : 'asc';
+        const icon = document.getElementById('pwExpirySortIcon');
+        if (icon) {
+            icon.textContent = pwExpirySortDir === 'asc' ? '▲' : pwExpirySortDir === 'desc' ? '▼' : '';
+            icon.style.opacity = pwExpirySortDir === 'none' ? '0.4' : '1';
+        }
+        applyPwExpirySort();
+    }
+
+    function applyPwExpirySort() {
+        const tbody = document.getElementById('tableBody');
+        const rows  = [...tbody.querySelectorAll('.data-row')];
+
+        if (pwExpirySortDir === 'none') {
+            rows.sort((a, b) => parseInt(a.dataset.rid) - parseInt(b.dataset.rid));
+        } else {
+            const getDays = (row) => {
+                const label = document.getElementById(`pw-expiry-label-${row.dataset.rid}`);
+                if (!label) return 99999;
+                const text = label.textContent.trim();
+                if (text === '만료됨') return -1;
+                const m = text.match(/^(\d+)d/);
+                if (m) return parseInt(m[1]);
+                return 99999;
+            };
+            rows.sort((a, b) => pwExpirySortDir === 'asc'
+                ? getDays(a) - getDays(b)
+                : getDays(b) - getDays(a));
+        }
+
+        rows.forEach(r => {
+            tbody.appendChild(r);
+            const det = document.getElementById(`detail-${r.dataset.rid}`);
+            if (det) tbody.appendChild(det);
+        });
+        applyPagination();
+    }
+
+    /* ── PW Refresh (reset expiry to 90d) ───────────────────── */
+    async function runPwRefresh(vmName, rid, event) {
+        event.stopPropagation();
+        const row    = document.querySelector(`[data-rid="${rid}"]`);
+        const osType = row?.dataset.osType || 'skip';
+        const image  = row?.dataset.vmImage || '';
+
+        // Select playbook based on OS type
+        let playbook = '';
+        if (osType === 'ubuntu24') {
+            playbook = 'update/update-os-password_for_ubuntu24.04.yaml';
+        } else if (osType === 'legacy') {
+            if ((image || '').toLowerCase().includes('rocky')) {
+                playbook = 'update/update-os-password-rocky.yaml';
+            } else {
+                playbook = 'update/update-os-password.yaml';
+            }
+        } else {
+            toast(`${vmName} — 지원하지 않는 OS입니다.`, 'error');
+            return;
+        }
+
+        if (!confirm(`${vmName} 의 OS 계정 비밀번호 만료일을 90일로 갱신하시겠습니까?\n플레이북: ${playbook}`)) return;
+
+        const btn = document.getElementById(`pw-refresh-btn-${rid}`);
+        const label = document.getElementById(`pw-expiry-label-${rid}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.35';
+            btn.style.animation = '';
+            btn.innerHTML = '<div class="spinner" style="width:10px;height:10px;border-width:1.5px;display:inline-block;vertical-align:middle"></div>';
+        }
+
+        const params = new URLSearchParams({
+            hostname:   vmName,
+            private_ip: row.dataset.privateIp || '',
+            os_type:    row.dataset.osType || '',
+            image:      image,
+            key_name:   row.dataset.keyName   || '',
+            project_id: row.dataset.projectId || '',
+            playbook:   playbook,
+        });
+
+        openTerminal(`PW 갱신 → ${vmName}`);
+
+        const es = new EventSource(`/api/provisioning/stream_ansible?${params}`);
+        es.onmessage = (e) => {
+            if (e.data.startsWith('__EXIT__')) {
+                const success = parseInt(e.data.replace('__EXIT__', '')) === 0;
+                es.close();
+                finishTerminal(success);
+                if (btn) { btn.disabled = false; btn.style.opacity='1'; btn.style.animation=''; btn.innerHTML='↻'; btn.style.color='#7dd3fc'; }
+                if (success) {
+                    toast(`${vmName} — PW 만료일 갱신 완료`, 'success');
+                    // Audit log
+                    fetch('/api/history/log', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            event_type: 'VM',
+                            title: `OS PW 갱신: ${vmName}`,
+                            detail: `scv 계정 비밀번호 만료일 90일 갱신 완료 (플레이북: ${playbook})`
+                        })
+                    }).catch(() => {});
+                    const pwCell2 = document.getElementById(`pw-expiry-${rid}`);
+                    const label2  = document.getElementById(`pw-expiry-label-${rid}`);
+                    const row2    = document.querySelector(`[data-rid="${rid}"]`);
+                    if (pwCell2) delete pwCell2.dataset.checked;
+                    if (label2) label2.innerHTML = '<span style="color:#3a5070;font-size:11px">확인 중...</span>';
+                    if (row2) setTimeout(() => checkPasswordExpiry(row2), 1500);
+                } else {
+                    toast(`${vmName} — PW 갱신 실패`, 'error');
+                }
+            } else if (e.data.startsWith('__ERROR__')) {
+                es.close(); finishTerminal(false);
+                if (btn) { btn.disabled = false; btn.style.opacity='1'; btn.style.animation=''; btn.innerHTML='↻'; btn.style.color='#7dd3fc'; }
+                toast(`${vmName} — 연결 오류`, 'error');
+            } else {
+                appendTerminalLine(e.data);
+            }
+        };
+        es.onerror = () => {
+            es.close(); finishTerminal(false);
+            if (btn) { btn.disabled = false; btn.style.opacity='1'; btn.style.animation=''; btn.innerHTML='↻'; btn.style.color='#7dd3fc'; }
+            toast(`${vmName} — 연결 끊김`, 'error');
+        };
+    }
+
+    /* ── Password expiry check ───────────────────────────────── */
+    let pwCheckTotal     = 0;
+    let pwCheckCompleted = 0;
+
+    function updatePwCheckProgress() {
+        const remaining = pwCheckTotal - pwCheckCompleted;
+        const bar       = document.getElementById('pw-check-progress');
+        const rem       = document.getElementById('pw-check-remaining');
+        if (!bar) return;
+        if (remaining > 0) {
+            bar.style.display = '';
+            if (rem) rem.textContent = `(${pwCheckCompleted}/${pwCheckTotal})`;
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    function resetPwCheckProgress(total) {
+        pwCheckTotal     = total;
+        pwCheckCompleted = 0;
+        updatePwCheckProgress();
+    }
+
+    async function checkPasswordExpiry(row, generation, retryCount = 0) {
+        // If generation is stale (project switched), abort
+        if (generation !== undefined && generation !== loadGeneration) return;
+        const rid   = row.dataset.rid;
+        const cell  = document.getElementById(`pw-expiry-${rid}`);
+        const label = document.getElementById(`pw-expiry-label-${rid}`);
+        if (!cell || cell.dataset.checked || cell.dataset.checking) return;
+        cell.dataset.checking = '1';
+        if (label) label.innerHTML = '<div class="spinner" style="width:10px;height:10px;border-width:1.5px;display:inline-block;vertical-align:middle"></div>';
+
+        try {
+            const resp = await fetch('/api/provisioning/check_password_expiry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({
+                    vm_name:    row.dataset.vmName,
+                    image:      row.dataset.vmImage || '',
+                    key_name:   row.dataset.keyName || '',
+                    private_ip: row.dataset.privateIp || '',
+                    os_type:    row.dataset.osType || '',
+                })
+            });
+            const data = await resp.json();
+            // Abort if project switched while waiting for response
+            if (generation !== undefined && generation !== loadGeneration) {
+                delete cell.dataset.checking;
+                return;
+            }
+            const cls = {
+                ok:       'pw-ok',
+                warning:  'pw-warning',
+                critical: 'pw-critical',
+                expired:  'pw-expired',
+                na:       'pw-error',
+                unknown:  'pw-error',
+                error:    'pw-error',
+            }[data.status] || 'pw-error';
+
+            if (label) label.innerHTML = data.status === 'na'
+                ? '<span style="color:#3a5070">-</span>'
+                : `<span class="${cls}">${data.label}</span>`;
+
+            // Only mark as fully checked on a definitive result
+            if (data.status && data.status !== 'error') {
+                cell.dataset.checked = '1';
+                pwCheckCompleted++;
+                updatePwCheckProgress();
+            }
+            delete cell.dataset.checking;
+        } catch(e) {
+            delete cell.dataset.checking;
+            if (retryCount < 2 && generation === loadGeneration) {
+                const delay = (retryCount + 1) * 3000;
+                if (label) label.innerHTML = '<div class="spinner" style="width:10px;height:10px;border-width:1.5px;display:inline-block;vertical-align:middle"></div>';
+                setTimeout(() => checkPasswordExpiry(row, generation, retryCount + 1), delay);
+            } else {
+                if (label) label.innerHTML = '<span class="pw-error">확인 불가</span>';
+                pwCheckCompleted++;
+                updatePwCheckProgress();
+            }
+        }
+    }
+
+    /* ── Run Ansible (single) ────────────────────────────────── */
+    async function runAnsible(vmName, rid) {
+        const row      = document.querySelector(`[data-rid="${rid}"]`);
+        const osType   = row?.dataset.osType || 'ubuntu24';
+        const autoPb   = osType === 'ubuntu24' ? 'TOBE-Default-Playbook-V3.yaml' : 'Default-Playbook-V3.yaml';
+        const playbook = selectedPlaybooks[rid] || autoPb;
+        const playbook_label = playbook;
+        if (!confirm(`${vmName} 에 ${playbook_label} 을 실행하시겠습니까?`)) return;
+        const btn   = document.getElementById(`ansible-btn-${rid}`);
+        const badge = document.getElementById(`ansible-badge-${rid}`);
+        if (!btn || !badge) { console.error('Ansible btn/badge not found for rid:', rid); return; }
+
+        btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>&nbsp;실행 중...';
+        badge.className = 'badge-prov badge-running'; badge.textContent = '⏳ 실행 중';
+        setPipeline(rid, 'running', 'pending', 'pending');
+        openTerminal(`${playbook} → ${vmName}`);
+
+        const params = new URLSearchParams({
+            hostname:   vmName,
+            private_ip: row.dataset.privateIp || '',
+            os_type:    row.dataset.osType || '',
+            image:      row.dataset.vmImage   || '',
+            key_name:   row.dataset.keyName   || '',
+            project_id: row.dataset.projectId || '',
+            playbook:   selectedPlaybooks[rid] || '',
+        });
+
+        const es = new EventSource(`/api/provisioning/stream_ansible?${params}`);
+        activeEventSource = es;
+
+        es.onmessage = (e) => {
+            if (e.data.startsWith('__EXIT__')) {
+                const success = parseInt(e.data.replace('__EXIT__', '')) === 0;
+                es.close(); activeEventSource = null;
+                finishTerminal(success);
+                if (success) {
+                    badge.className = 'badge-prov badge-checking'; badge.textContent = '확인 중...';
+                    btn.disabled = false;
+                    btn.innerHTML = osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible';
+                    // Reset state and run full recheck to get accurate badge
+                    row.dataset.ansible = 'checking';
+                    delete playsLoaded[rid];
+                    recalcStats();
+                    toast(`${vmName} — Ansible 완료! 상태 재확인 중...`, 'success');
+                    setTimeout(() => recheckStatus(vmName, rid, { stopPropagation: ()=>{} }), 1500);
+                } else {
+                    badge.className = 'badge-prov badge-error'; badge.textContent = '❌ 오류';
+                    btn.disabled = false;
+                    btn.innerHTML = osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible';
+                    setPipeline(rid, 'error', 'pending');
+                    toast(`Ansible 실패: ${vmName}`, 'error');
+                    // Auto-recheck so badge reflects actual state
+                    setTimeout(() => recheckStatus(vmName, rid, { stopPropagation: ()=>{} }), 2000);
+                }
+            } else if (e.data.startsWith('__ERROR__')) {
+                appendTerminalLine(`오류: ${e.data.replace('__ERROR__', '')}`);
+                finishTerminal(false); es.close(); activeEventSource = null;
+                badge.className = 'badge-prov badge-error'; badge.textContent = '❌ 오류';
+                btn.disabled = false;
+                btn.innerHTML = osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible';
+                setPipeline(rid, 'error', 'pending');
+            } else {
+                appendTerminalLine(e.data);
+            }
+        };
+
+        es.onerror = () => {
+            finishTerminal(false); es.close(); activeEventSource = null;
+            badge.className = 'badge-prov badge-pending'; badge.textContent = '확인 중...';
+            btn.disabled = false;
+            btn.innerHTML = osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible';
+            setPipeline(rid, 'pending', 'pending');
+            toast(`연결 종료 — 실행 결과를 재확인합니다.`, 'error');
+            setTimeout(() => recheckStatus(vmName, rid, { stopPropagation: ()=>{} }), 3000);
+        };
+    }
+
+    /* ── Run Puppet ──────────────────────────────────────────── */
+    async function runPuppet(vmName, rid) {
+        const row = document.querySelector(`[data-rid="${rid}"]`);
+        if (row && row.dataset.ansible !== 'done') {
+            alert(`⚠️ ${vmName}은 Ansible이 완료되지 않았습니다.\nAnsible을 먼저 실행해주세요.`);
+            return;
+        }
+        if (!confirm(`${vmName} 에 Puppet을 자동으로 실행하시겠습니까?\n\n순서:\n1. 인증서 상태 확인\n2. puppet agent -t (인증서 요청)\n3. 인증서 자동 서명\n4. puppet agent -t (manifest 적용)`)) return;
+
+        const btn   = document.getElementById(`puppet-btn-${rid}`);
+        const badge = document.getElementById(`puppet-badge-${rid}`);
+
+        btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>&nbsp;실행 중...';
+        badge.className = 'badge-prov badge-running'; badge.textContent = '⏳ 실행 중';
+        setPipeline(rid, 'done', 'running');
+        openTerminal(`puppet agent → ${vmName}`);
+
+        const params = new URLSearchParams({
+            hostname:   vmName,
+            key_name:   row.dataset.keyName   || '',
+            image:      row.dataset.vmImage   || '',
+            private_ip: row.dataset.privateIp || '',
+            os_type:    row.dataset.osType || '',
+        });
+
+        const es = new EventSource(`/api/provisioning/stream_puppet?${params}`);
+        activeEventSource = es;
+
+        es.onmessage = (e) => {
+            if (e.data.startsWith('__EXIT__')) {
+                const success = parseInt(e.data.replace('__EXIT__', '')) === 0;
+                es.close(); activeEventSource = null;
+                finishTerminal(success);
+                if (success) {
+                    badge.className = 'badge-prov badge-done'; badge.textContent = '✓ 완료';
+                    btn.innerHTML = '✓ 완료됨'; btn.disabled = true;
+                    setPipeline(rid, 'done', 'done');
+                    row.dataset.puppet = 'done';
+                    recalcStats();
+                    toast(`${vmName} — Puppet 완료!`, 'success');
+                } else {
+                    badge.className = 'badge-prov badge-error'; badge.textContent = '❌ 오류';
+                    btn.disabled = false; btn.innerHTML = '▶ Puppet';
+                    setPipeline(rid, 'done', 'error');
+                    toast(`Puppet 실패: ${vmName}`, 'error');
+                }
+            } else if (e.data.startsWith('__ERROR__')) {
+                appendTerminalLine(`오류: ${e.data.replace('__ERROR__', '')}`);
+                finishTerminal(false); es.close(); activeEventSource = null;
+                badge.className = 'badge-prov badge-error'; badge.textContent = '❌ 오류';
+                btn.disabled = false; btn.innerHTML = '▶ Puppet';
+                setPipeline(rid, 'done', 'error');
+            } else {
+                appendTerminalLine(e.data);
+            }
+        };
+
+        es.onerror = () => {
+            finishTerminal(false); es.close(); activeEventSource = null;
+            badge.className = 'badge-prov badge-error'; badge.textContent = '❌ 오류';
+            btn.disabled = false; btn.innerHTML = '▶ Puppet';
+            setPipeline(rid, 'done', 'error');
+            toast(`연결 오류: ${vmName}`, 'error');
+        };
+    }
+
+
+    /* ── Bulk Puppet ─────────────────────────────────────────── */
+    async function runBulkPuppet() {
+        const vms = getSelectedVMs();
+        if (!vms.length) return;
+
+        // Check if any selected VMs haven't had ansible run yet
+        const notReady = vms.filter(v => {
+            const row = document.querySelector(`[data-rid="${v.rid}"]`);
+            return row && row.dataset.ansible !== 'done';
+        });
+
+        if (notReady.length > 0) {
+            const names = notReady.map(v => v.hostname).join('\n');
+            if (!confirm(`⚠️ 아래 ${notReady.length}개 VM은 Ansible이 완료되지 않았습니다:\n\n${names}\n\nAnsible 미완료 VM은 건너뛰고 나머지만 실행하시겠습니까?`)) return;
+            // Filter out VMs where ansible isn't done
+            vms.splice(0, vms.length, ...vms.filter(v => {
+                const row = document.querySelector(`[data-rid="${v.rid}"]`);
+                return row && row.dataset.ansible === 'done';
+            }));
+            if (!vms.length) {
+                toast('Ansible이 완료된 VM이 없습니다.', 'error');
+                return;
+            }
+        }
+
+        const names = vms.map(v => v.hostname).join('\n');
+        if (!confirm(`${vms.length}개 VM에 Puppet을 순차적으로 실행하시겠습니까?\n\n${names}`)) return;
+
+        // Set all selected puppet rows to running
+        vms.forEach(v => {
+            const badge = document.getElementById(`puppet-badge-${v.rid}`);
+            const btn   = document.getElementById(`puppet-btn-${v.rid}`);
+            if (badge) { badge.className = 'badge-prov badge-running'; badge.textContent = '⏳ 실행 중'; }
+            if (btn)   { btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>&nbsp;실행 중...'; }
+            setPipeline(v.rid, 'done', 'running');
+        });
+
+        document.getElementById('bulkPuppetBtn').disabled = true;
+        openTerminal(`Puppet 일괄 실행 → ${vms.length}개 VM (순차)`);
+
+        let puppetToken;
+        try {
+            const r = await fetch('/api/provisioning/bulk_register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ vms: vms.map(v => ({
+                    hostname:   v.hostname,
+                    key_name:   v.key_name,
+                    image:      v.image,
+                    private_ip: v.private_ip,
+                })), playbook: '' })
+            });
+            const d = await r.json();
+            puppetToken = d.token;
+        } catch(e) {
+            toast('일괄 Puppet 등록 실패: ' + e.message, 'error');
+            document.getElementById('bulkPuppetBtn').disabled = false;
+            return;
+        }
+
+        const es = new EventSource(`/api/provisioning/stream_bulk_puppet?token=${puppetToken}`);
+        activeEventSource = es;
+
+        es.onmessage = (e) => {
+            if (e.data.startsWith('__VM_DONE__')) {
+                const vmName = e.data.replace('__VM_DONE__', '');
+                const v = vms.find(v => v.hostname === vmName);
+                if (v) {
+                    const badge = document.getElementById(`puppet-badge-${v.rid}`);
+                    const btn   = document.getElementById(`puppet-btn-${v.rid}`);
+                    const row   = document.querySelector(`[data-rid="${v.rid}"]`);
+                    if (badge) { badge.className = 'badge-prov badge-done'; badge.textContent = '✓ 완료'; }
+                    if (btn)   { btn.innerHTML = '✓ 완료됨'; btn.disabled = true; }
+                    if (row)   { row.dataset.puppet = 'done'; }
+                    setPipeline(v.rid, 'done', 'done');
+                }
+            } else if (e.data.startsWith('__VM_FAIL__')) {
+                const vmName = e.data.replace('__VM_FAIL__', '');
+                const v = vms.find(v => v.hostname === vmName);
+                if (v) {
+                    const badge = document.getElementById(`puppet-badge-${v.rid}`);
+                    const btn   = document.getElementById(`puppet-btn-${v.rid}`);
+                    if (badge) { badge.className = 'badge-prov badge-error'; badge.textContent = '❌ 오류'; }
+                    if (btn)   { btn.disabled = false; btn.innerHTML = '▶ Puppet'; }
+                    setPipeline(v.rid, 'done', 'error');
+                }
+            } else if (e.data.startsWith('__EXIT__')) {
+                const success = parseInt(e.data.replace('__EXIT__', '')) === 0;
+                es.close(); activeEventSource = null;
+                finishTerminal(success);
+                document.getElementById('bulkPuppetBtn').disabled = false;
+                clearSelection();
+                recalcStats();
+                toast(`Puppet 일괄 실행 ${success ? '완료' : '일부 실패'} (${vms.length}개 VM)`,
+                      success ? 'success' : 'error');
+            } else {
+                appendTerminalLine(e.data);
+            }
+        };
+
+        es.onerror = () => {
+            finishTerminal(false); es.close(); activeEventSource = null;
+            document.getElementById('bulkPuppetBtn').disabled = false;
+            toast('연결 오류', 'error');
+        };
+    }
+
+    /* ── Bulk Ansible ────────────────────────────────────────── */
+    async function runBulkAnsible() {
+        const vms = getSelectedVMs();
+        if (!vms.length) return;
+
+        // Check if all selected VMs have the same playbook override
+        const overrides = [...new Set(vms.map(v => selectedPlaybooks[v.rid] || ''))];
+        // Bulk playbook: use bulk selector > individual overrides > auto
+        const bulkPlaybook = bulkSelectedPlaybook ||
+            (overrides.length === 1 && overrides[0] ? overrides[0] : '');
+        const playbookLabel = bulkPlaybook || '자동 선택 (OS별)';
+
+        const names = vms.map(v => v.hostname).join('\n');
+        if (!confirm(`${vms.length}개 VM에 [${playbookLabel}] 을 일괄 실행하시겠습니까?\n\n${names}`)) return;
+
+        vms.forEach(v => {
+            const badge = document.getElementById(`ansible-badge-${v.rid}`);
+            const btn   = document.getElementById(`ansible-btn-${v.rid}`);
+            if (badge) { badge.className = 'badge-prov badge-running'; badge.textContent = '⏳ 실행 중'; }
+            if (btn)   { btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>&nbsp;실행 중...'; }
+            setPipeline(v.rid, 'running', 'pending');
+        });
+
+        document.getElementById('bulkAnsibleBtn').disabled = true;
+        openTerminal(`ansible-playbook → ${vms.length}개 VM 일괄 실행`);
+
+        // POST VM list first to avoid URL length limit (400 Bad Request on 40+ VMs)
+        const vmPayload = vms.map(v => ({
+            hostname:   v.hostname,
+            private_ip: v.private_ip,
+            image:      v.image,
+            key_name:   v.key_name,
+            project_id: v.project_id,
+        }));
+
+        let token;
+        try {
+            const r = await fetch('/api/provisioning/bulk_register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ vms: vmPayload, playbook: bulkPlaybook })
+            });
+            const d = await r.json();
+            token = d.token;
+        } catch(e) {
+            toast('일괄 실행 등록 실패: ' + e.message, 'error');
+            document.getElementById('bulkAnsibleBtn').disabled = false;
+            return;
+        }
+
+        const es = new EventSource(`/api/provisioning/stream_bulk_ansible?token=${token}`);
+        activeEventSource = es;
+
+        es.onmessage = (e) => {
+            if (e.data.startsWith('__EXIT__')) {
+                const success = parseInt(e.data.replace('__EXIT__', '')) === 0;
+                es.close(); activeEventSource = null;
+                finishTerminal(success);
+                // Reset all ansible buttons and trigger recheck
+                vms.forEach((v, i) => {
+                    const row   = document.querySelector(`[data-rid="${v.rid}"]`);
+                    const btn   = document.getElementById(`ansible-btn-${v.rid}`);
+                    const badge = document.getElementById(`ansible-badge-${v.rid}`);
+                    if (btn)   { btn.disabled = false; btn.innerHTML = row?.dataset.osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible'; }
+                    if (badge) { badge.className = 'badge-prov badge-checking'; badge.textContent = '확인 중...'; }
+                    if (row)   { row.dataset.ansible = 'checking'; delete playsLoaded[v.rid]; }
+                    if (row) setTimeout(() => checkStatus(v.hostname, v.rid, row.dataset.osOk === '1', row.dataset.vmStatus), 500);
+                    // Recheck 계정 상태
+                    const pwCell = document.getElementById(`pw-expiry-${v.rid}`);
+                    const pwLabel = document.getElementById(`pw-expiry-label-${v.rid}`);
+                    if (pwCell && row?.dataset.vmStatus === 'active' && row?.dataset.osType !== 'skip') {
+                        delete pwCell.dataset.checked;
+                        if (pwLabel) pwLabel.innerHTML = '<span style="color:#3a5070;font-size:11px">확인 중...</span>';
+                        setTimeout(() => { const r = document.querySelector(`[data-rid="${v.rid}"]`); if (r) checkPasswordExpiry(r); }, 2000 + i * 300);
+                    }
+                });
+                document.getElementById('bulkAnsibleBtn').disabled = false;
+                clearSelection();
+                recalcStats();
+                toast(`일괄 Ansible ${success ? '완료' : '실패'} (${vms.length}개 VM)`, success ? 'success' : 'error');
+            } else if (e.data.startsWith('__ERROR__')) {
+                appendTerminalLine(`오류: ${e.data.replace('__ERROR__', '')}`);
+                finishTerminal(false); es.close(); activeEventSource = null;
+                vms.forEach(v => {
+                    const btn = document.getElementById(`ansible-btn-${v.rid}`);
+                    const row = document.querySelector(`[data-rid="${v.rid}"]`);
+                    if (btn) { btn.disabled = false; btn.innerHTML = row?.dataset.osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible'; }
+                });
+                document.getElementById('bulkAnsibleBtn').disabled = false;
+            } else {
+                appendTerminalLine(e.data);
+            }
+        };
+
+        es.onerror = (err) => {
+            if (activeEventSource === es) {
+                finishTerminal(false); es.close(); activeEventSource = null;
+                vms.forEach(v => {
+                    const btn = document.getElementById(`ansible-btn-${v.rid}`);
+                    const row = document.querySelector(`[data-rid="${v.rid}"]`);
+                    if (btn) { btn.disabled = false; btn.innerHTML = row?.dataset.osType === 'ubuntu24' ? '▶ Ansible' : '▶ Legacy Ansible'; }
+                });
+                document.getElementById('bulkAnsibleBtn').disabled = false;
+                toast('연결 오류 — 서버에서 실행은 계속됩니다. 상태 재확인을 눌러주세요.', 'error');
+            }
+        };
+    }
+
+    /* ── Image filter ────────────────────────────────────────── */
+    let selectedImages = new Set();
+
+    function buildImgFilter(vms) {
+        const images = [...new Set(vms.map(v => v.image || '-').filter(Boolean))].sort();
+        const list = document.getElementById('imgFilterList');
+        list.innerHTML = '';
+        images.forEach(img => {
+            const item = document.createElement('label');
+            item.className = 'img-filter-item';
+            item.innerHTML = `
+                <input type="checkbox" value="${img}" onchange="onImgFilterChange(this)"
+                       ${selectedImages.has(img) ? 'checked' : ''}>
+                <span>${img}</span>`;
+            list.appendChild(item);
+        });
+        updateImgFilterBtn();
+    }
+
+    function onImgFilterChange(cb) {
+        if (cb.checked) selectedImages.add(cb.value);
+        else selectedImages.delete(cb.value);
+        updateImgFilterBtn();
+        filterTable();
+        reprioritizeChecks();
+    }
+
+    function selectAllImgFilter() {
+        document.querySelectorAll('#imgFilterList input').forEach(cb => {
+            cb.checked = true;
+            selectedImages.add(cb.value);
+        });
+        updateFilterBtn('imgFilterBtn', 'imgFilterCount', selectedImages);
+        currentPage = 1; applyPagination(); reprioritizeChecks();
+    }
+    function clearImgFilter() {
+        selectedImages.clear();
+        document.querySelectorAll('#imgFilterList input[type="checkbox"]')
+            .forEach(cb => cb.checked = false);
+        updateImgFilterBtn();
+        filterTable();
+    }
+
+    function updateImgFilterBtn() {
+        const btn   = document.getElementById('imgFilterBtn');
+        const count = document.getElementById('imgFilterCount');
+        if (selectedImages.size > 0) {
+            btn.classList.add('active');
+            count.textContent = `(${selectedImages.size})`;
+        } else {
+            btn.classList.remove('active');
+            count.textContent = '';
+        }
+    }
+
+    function toggleImgFilter(e) {
+        e.stopPropagation();
+        const isOpen = document.getElementById('imgFilterDropdown').classList.contains('open');
+        closeAllFilterDropdowns();
+        if (!isOpen) document.getElementById('imgFilterDropdown').classList.add('open');
+    }
+
+    // Close all filter dropdowns on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.img-filter-btn') && !e.target.closest('.img-filter-dropdown')) {
+            closeAllFilterDropdowns();
+        }
+    });
+
+    /* ── Pagination ──────────────────────────────────────────── */
+    let currentPage = 1;
+    let pageSize    = 50;
+
+    function onPageSizeChange() {
+        pageSize    = parseInt(document.getElementById('pageSizeSelect').value);
+        currentPage = 1;
+        applyPagination();
+    }
+
+    function applyPagination() {
+        const allRows = Array.from(document.querySelectorAll('.data-row'));
+
+        // Reset paged-hidden state first
+        allRows.forEach(r => {
+            if (r.dataset.paged === 'hidden') {
+                r.style.display = '';
+                r.dataset.paged = '';
+            }
+        });
+
+        // Apply filters
+        filterTable();
+
+        // Now apply pagination on currently visible rows
+        const filteredRows = allRows.filter(r => r.style.display !== 'none');
+        const total        = filteredRows.length;
+        const totalPages   = Math.max(1, Math.ceil(total / pageSize));
+        currentPage        = Math.min(currentPage, totalPages);
+        const start        = (currentPage - 1) * pageSize;
+        const end          = start + pageSize;
+
+        filteredRows.forEach((r, i) => {
+            const show = i >= start && i < end;
+            if (!show) {
+                r.style.display = 'none';
+                r.dataset.paged = 'hidden';
+                const detailRow = document.getElementById(`detail-${r.dataset.rid}`);
+                if (detailRow) detailRow.style.display = 'none';
+            }
+        });
+
+        renderPaginationControls(total, totalPages);
+
+        // Only check status for rows currently visible in pagination
+        const pageRows = filteredRows.slice(start, end);
+        const unchecked = pageRows.filter(r => r.dataset.ansible === 'checking');
+        if (unchecked.length > 0) {
+            checkAllWithConcurrency(unchecked, 3);
+        }
+        const activeRows = pageRows.filter(r => r.dataset.vmStatus === 'active'
+            && r.dataset.osType !== 'skip'
+            && !document.getElementById(`pw-expiry-${r.dataset.rid}`)?.dataset.checked
+            && !document.getElementById(`pw-expiry-${r.dataset.rid}`)?.dataset.checking);
+        const gen = loadGeneration;
+        if (activeRows.length > 0) resetPwCheckProgress(activeRows.length);
+        activeRows.forEach((r, i) => {
+            setTimeout(() => checkPasswordExpiry(r, gen), 2000 + i * 300);
+        });
+    }
+
+    function renderPaginationControls(total, totalPages) {
+        const start = Math.min((currentPage - 1) * pageSize + 1, total);
+        const end   = Math.min(currentPage * pageSize, total);
+        document.getElementById('paginationInfo').textContent =
+            total === 0 ? '결과 없음' : `${start}–${end} / 총 ${total}개`;
+
+        const ctrl = document.getElementById('paginationControls');
+        ctrl.innerHTML = '';
+
+        const addBtn = (label, page, active = false, disabled = false) => {
+            const btn = document.createElement('button');
+            btn.className = 'page-btn' + (active ? ' active' : '');
+            btn.textContent = label;
+            btn.disabled = disabled;
+            btn.onclick = () => { currentPage = page; applyPagination(); };
+            ctrl.appendChild(btn);
+        };
+
+        addBtn('◀', currentPage - 1, false, currentPage === 1);
+
+        // Page number buttons — show max 7
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push('...');
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+            if (currentPage < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+
+        pages.forEach(p => {
+            if (p === '...') {
+                const span = document.createElement('span');
+                span.textContent = '…';
+                span.style.cssText = 'color:#5a7a99;padding:0 4px;font-size:13px';
+                ctrl.appendChild(span);
+            } else {
+                addBtn(p, p, p === currentPage);
+            }
+        });
+
+        addBtn('▶', currentPage + 1, false, currentPage === totalPages);
+    }
+
+    /* ── Filter + Pagination hook ────────────────────────────── */
+    let reprioritizeToken = 0;
+
+    document.getElementById('searchInput').addEventListener('input', () => {
+        currentPage = 1;
+        applyPagination();
+        const q = document.getElementById('searchInput').value.trim();
+        if (q.length > 0) reprioritizeChecks();
+    });
+
+    /* ── Reprioritize checks based on visible rows ───────────── */
+    async function reprioritizeChecks() {
+        const token = ++reprioritizeToken;
+        // Only check visible rows on current page
+        const visibleRows = Array.from(document.querySelectorAll('.data-row'))
+            .filter(row => row.style.display !== 'none' && row.dataset.paged !== 'hidden');
+        const visibleUnchecked = visibleRows.filter(row => row.dataset.ansible === 'checking');
+        if (visibleUnchecked.length > 0) {
+            await checkAllWithConcurrency(visibleUnchecked, 3, token);
+        }
+        if (token !== reprioritizeToken) return;
+        if (visibleRows.length > 0 && visibleRows.length <= 5) {
+            for (const row of visibleRows) {
+                if (token !== reprioritizeToken) return;
+                const rid    = parseInt(row.dataset.rid);
+                const vmName = row.dataset.vmName;
+                if (!playsLoaded[rid]) {
+                    await loadPlays(vmName, rid, row);
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            }
+        }
+    }
+
+    // Called once after all VMs load — checks ALL rows regardless of page
+    let _bgCheckRunning = false;
+    async function startFullBackgroundCheck() {
+        if (_bgCheckRunning) return;
+        _bgCheckRunning = true;
+        while (true) {
+            const unchecked = Array.from(document.querySelectorAll('.data-row'))
+                .filter(row => row.dataset.ansible === 'checking');
+            if (!unchecked.length) break;
+            await checkAllWithConcurrency(unchecked, 8, null);
+            await new Promise(r => setTimeout(r, 300));
+        }
+        _bgCheckRunning = false;
+        recalcStats();
+    }
+
+    function filterTable() {
+        const q        = document.getElementById('searchInput').value.toLowerCase();
+        document.querySelectorAll('.data-row').forEach(row => {
+            const rid      = row.dataset.rid;
+            const name     = row.dataset.vmName.toLowerCase();
+            const ansible  = row.dataset.ansible;
+            const puppet   = row.dataset.puppet;
+            const image    = row.dataset.vmImage || '';
+            const desc     = row.dataset.description || '-';
+            const rowVmSt  = (row.dataset.vmStatus || '').toLowerCase();
+            const allDone  = ansible === 'done' && puppet === 'done';
+            const matchQ   = name.includes(q);
+
+            // Auto status multi-select
+            const matchS = selectedAutoStatuses.size === 0 || [...selectedAutoStatuses].some(s =>
+                (s === 'ansible-pending' && ansible !== 'done') ||
+                (s === 'puppet-pending'  && puppet  !== 'done') ||
+                (s === 'done'            && allDone)
+            );
+
+            // VM status multi-select
+            const matchVmSt  = selectedVmStatuses.size === 0 || selectedVmStatuses.has(rowVmSt);
+            const matchImg   = selectedImages.size === 0 || selectedImages.has(image);
+            const matchScode = selectedScodes.size === 0 || selectedScodes.has(desc);
+            const detailRow  = document.getElementById(`detail-${rid}`);
+            const show       = matchQ && matchS && matchImg && matchScode && matchVmSt;
+            row.style.display                      = show ? '' : 'none';
+            if (detailRow) detailRow.style.display = show ? '' : 'none';
+        });
+    }
+
+    /* ── Init ────────────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', loadVMs);
+
+    /* ── Column resize ───────────────────────────────────────── */
+    </script>
+</body>
+</html>

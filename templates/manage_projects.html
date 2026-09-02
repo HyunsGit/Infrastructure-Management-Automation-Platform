@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로젝트 관리 — InfraPilot</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+            min-height: 100vh; font-family: 'Segoe UI', Arial, sans-serif;
+            color: #f3f6fa; padding: 40px 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .logo { font-size: 20px; font-weight: 700; color: #7dd3fc; margin-bottom: 4px; }
+        h2 { font-size: 18px; color: #c2d8f0; margin-bottom: 24px; }
+        .card {
+            background: rgba(27,32,46,0.97); border: 1px solid #2a3550;
+            border-radius: 12px; padding: 28px; margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .card-title { font-size: 14px; font-weight: 700; color: #7dd3fc;
+            text-transform: uppercase; letter-spacing: .06em; margin-bottom: 16px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 10px; align-items: end; }
+        label { font-size: 12px; color: #5a7a99; display: block; margin-bottom: 5px; }
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 9px 12px; background: #0e1520;
+            border: 1px solid #2a3550; border-radius: 6px; color: #f3f6fa;
+            font-size: 13px; font-family: 'Courier New', monospace; outline: none;
+            transition: border-color .2s;
+        }
+        input:focus { border-color: #2196F3; }
+        .btn {
+            padding: 9px 18px; border: none; border-radius: 6px; font-size: 13px;
+            font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap;
+        }
+        .btn-primary { background: #2196F3; color: #fff; }
+        .btn-primary:hover { background: #1976D2; }
+        .btn-danger  { background: #7f1d1d; color: #f87171; }
+        .btn-danger:hover  { background: #991b1b; }
+        .btn-refresh { background: #1a3a1a; color: #4caf93; }
+        .btn-refresh:hover { background: #1e4a1e; }
+        .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+        .alert-danger  { background: #1a0000; border: 1px solid #7f1d1d; color: #f87171; }
+        .alert-success { background: #0a2e1e; border: 1px solid #165c3a; color: #4caf93; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700;
+            color: #5a7a99; text-transform: uppercase; letter-spacing: .06em;
+            border-bottom: 1px solid #2a3550;
+        }
+        td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #1e2840; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(33,150,243,0.04); }
+        .zone-name { font-family: 'Courier New', monospace; color: #7dd3fc; font-weight: 600; }
+        .token-age { font-size: 11px; color: #5a7a99; font-family: 'Courier New', monospace; }
+        .has-creds { color: #4caf93; font-size: 11px; }
+        .no-creds  { color: #5a7a99; font-size: 11px; }
+        .action-btns { display: flex; gap: 6px; }
+        .back { margin-top: 16px; }
+        .back a { color: #7dd3fc; font-size: 13px; text-decoration: none; }
+        .count-badge {
+            background: #1a3a5f; color: #7dd3fc; border-radius: 100px;
+            padding: 2px 8px; font-size: 11px; margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logo">InfraPilot</div>
+    <h2>프로젝트 관리</h2>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    <!-- Add project -->
+    <div class="card">
+        <div class="card-title">프로젝트 추가</div>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add">
+            <div class="form-row">
+                <div>
+                    <label>Zone 이름</label>
+                    <input type="text" name="zone" placeholder="예: infra, kw-db" required autofocus>
+                </div>
+                <div>
+                    <label>Access ID</label>
+                    <input type="text" name="access_id" placeholder="Application Credential ID" required>
+                </div>
+                <div>
+                    <label>Secret Key</label>
+                    <input type="password" name="secret_key" placeholder="Application Credential Secret" required>
+                </div>
+                <div>
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">+ 추가</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Project list -->
+    <div class="card">
+        <div class="card-title">
+            프로젝트 목록
+            <span class="count-badge">{{ projects|length }}개</span>
+        </div>
+        {% if projects %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Zone</th>
+                    <th>자격증명</th>
+                    <th>마지막 토큰 갱신</th>
+                    <th>액션</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for proj in projects %}
+            <tr>
+                <td><span class="zone-name">{{ proj.zone }}</span></td>
+                <td>
+                    {% if proj.access_id %}
+                    <span class="has-creds">✓ 저장됨</span>
+                    {% else %}
+                    <span class="no-creds">없음 (토큰 파일에서 가져옴)</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if proj.token_refreshed_at %}
+                    <span class="token-age">{{ (proj.token_refreshed_at + timedelta(hours=9)).strftime('%Y/%m/%d %H:%M') }} KST</span>
+                    {% else %}
+                    <span class="no-creds">미갱신</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="action-btns">
+                        {% if proj.access_id %}
+                        <form method="POST" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="refresh">
+                            <input type="hidden" name="zone" value="{{ proj.zone }}">
+                            <button type="submit" class="btn btn-refresh">갱신</button>
+                        </form>
+                        {% endif %}
+                        <form method="POST" style="display:inline"
+                              onsubmit="return confirm('{{ proj.zone }} 프로젝트를 삭제하시겠습니까?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="zone" value="{{ proj.zone }}">
+                            <button type="submit" class="btn btn-danger">삭제</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:#5a7a99;font-size:13px;text-align:center;padding:20px">프로젝트가 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <div class="back">
+        <a href="{{ url_for('summary') }}">← 메인으로</a>
+        &nbsp;&nbsp;
+        <a href="{{ url_for('create_user') }}">👤 사용자 관리</a>
+    </div>
+</div>
+</body>
+</html>

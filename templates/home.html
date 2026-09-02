@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>Home — InfraPilot</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0; padding-top: 48px;
+    font-family: 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+    background: var(--bg-page); color: var(--text); font-size: 14px;
+}
+.home-wrapper { max-width: 1400px; margin: 0 auto; padding: 28px 24px; }
+.home-greeting { margin-bottom: 24px; }
+.home-greeting h1 { font-size: 22px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+.home-greeting p  { font-size: 13px; color: var(--text-dim); margin: 0; }
+
+.home-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) 340px;
+    grid-template-rows: repeat(2, 400px);
+    gap: 16px;
+}
+.pw-panel {
+    grid-column: 4;
+    grid-row: 1 / 3;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+    display: flex; flex-direction: column;
+}
+.pw-summary {
+    display: flex; gap: 10px; margin-bottom: 14px; flex-shrink: 0;
+}
+.pw-stat {
+    flex: 1; text-align: center; padding: 12px 8px;
+    background: var(--bg-elevated); border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+.pw-stat-num  { font-size: 24px; font-weight: 700; line-height: 1; }
+.pw-stat-lbl  { font-size: 10px; color: var(--text-dim); margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+.pw-stat.critical .pw-stat-num { color: #f87171; }
+.pw-stat.warning  .pw-stat-num { color: #fbbf24; }
+.pw-stat.total    .pw-stat-num { color: var(--text); }
+.pw-list {
+    flex: 1; overflow-y: auto; padding-right: 6px;
+    scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.12) transparent; transition: scrollbar-color .25s;
+}
+.pw-list:hover { scrollbar-color: rgba(0,0,0,.3) transparent; }
+.pw-list::-webkit-scrollbar { width: 4px; }
+.pw-list::-webkit-scrollbar-track { background: transparent; }
+.pw-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 99px; transition: background .25s; }
+.pw-list:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); }
+.pw-list::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.4) !important; }
+body.light-mode .pw-list:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,.25); }
+body.light-mode .pw-list::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.45) !important; }
+.pw-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
+.pw-item:last-child { border-bottom: none; }
+.pw-vm   { font-size: 12px; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-days { font-size: 12px; font-family: monospace; white-space: nowrap; flex-shrink: 0; }
+.pw-days.critical { color: #f87171; font-weight: 700; }
+.pw-days.warning  { color: #fbbf24; font-weight: 600; }
+.home-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+    display: flex; flex-direction: column;
+}
+.home-card-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+}
+.home-card-icon  { font-size: 16px; }
+.home-card-title { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+.home-card-link  { font-size: 12px; color: var(--accent); text-decoration: none; }
+.home-card-body  {
+    flex: 1; overflow-y: auto; min-height: 0;
+    padding-right: 6px; position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,.12) transparent;
+    transition: scrollbar-color .25s;
+}
+.home-card-body:hover {
+    scrollbar-color: rgba(0,0,0,.3) transparent;
+}
+.home-card-body::-webkit-scrollbar { width: 4px; }
+.home-card-body::-webkit-scrollbar-track { background: transparent; }
+.home-card-body::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,.12); border-radius: 99px;
+    transition: background .25s;
+}
+.home-card-body:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); }
+.home-card-body::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.4) !important; }
+body.light-mode .home-card-body:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,.25); }
+body.light-mode .home-card-body::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.45) !important; }
+
+/* Fade hint — shows there's more content below */
+.home-card { position: relative; }
+.home-card::after {
+    content: ''; pointer-events: none;
+    position: absolute; bottom: 18px; left: 20px; right: 20px; height: 28px;
+    background: linear-gradient(transparent, var(--bg-card, #0f1923));
+    border-radius: 0 0 4px 4px; z-index: 1;
+}
+body.light-mode .home-card::after {
+    background: linear-gradient(transparent, #faf6f0);
+}
+
+/* Recent */
+.recent-category { margin-bottom: 12px; }
+.recent-category-label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+.recent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.recent-item { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 7px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); text-decoration: none; color: var(--text-secondary); transition: all .15s; }
+.recent-item:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text); }
+.recent-item-label { font-size: 13px; font-weight: 500; }
+.recent-item-time  { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.empty-state { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 13px; }
+
+/* Badges */
+.notif-badge { font-size: 11px; padding: 2px 7px; border-radius: 3px; font-weight: 700; white-space: nowrap; }
+.nb-장애 { background: rgba(239,68,68,.15);  color: #f87171; }
+.nb-점검 { background: rgba(245,158,11,.15); color: #fbbf24; }
+.nb-안내 { background: rgba(33,150,243,.15); color: #7dd3fc; }
+.nb-보안 { background: rgba(139,92,246,.15); color: #c084fc; }
+
+/* Inner tabs (알림) */
+.inner-tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; flex-shrink: 0; }
+.inner-tab { flex: 1; padding: 7px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--text-muted); transition: all .15s; }
+.inner-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.inner-tab:hover  { color: var(--text); }
+
+/* Shared item row */
+.item-row { padding: 9px 0; border-bottom: 1px solid var(--border-subtle); }
+.item-row:last-child { border-bottom: none; }
+.item-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.item-time { font-size: 11px; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+.item-title { font-size: 13px; color: var(--text); font-weight: 500; word-break: keep-all; }
+.item-sub   { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+/* CloudTrail */
+.log-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
+.log-item:last-child { border-bottom: none; }
+.log-type { font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: var(--bg-hover); color: var(--text-dim); white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+.log-type-IAM           { background:#0c1a2e; color:#7dd3fc; }
+.log-type-VM            { background:#0a1a0a; color:#4ade80; }
+.log-type-ANSIBLE       { background:#1a1a0a; color:#fbbf24; }
+.log-type-PUPPET        { background:#1a0a1a; color:#c084fc; }
+.log-type-TOKEN_REFRESH { background:#0a1a1a; color:#22d3ee; }
+.log-summary { color: var(--text-secondary); flex: 1; font-size: 13px; line-height: 1.4; }
+.log-time    { font-size: 11px; color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+
+/* Changelog */
+.cl-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+.cl-new      { background: rgba(52,211,153,.12);  color: #34d399; }
+.cl-improved { background: rgba(59,130,246,.12);  color: #60a5fa; }
+.cl-fixed    { background: rgba(245,158,11,.12);  color: #fbbf24; }
+.cl-version  { font-size: 11px; color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+
+/* Favorites */
+.fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fav-item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 8px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); }
+.fav-link { text-decoration: none; color: var(--text); font-size: 13px; font-weight: 500; flex: 1; }
+.fav-link:hover { color: var(--accent); }
+.fav-cat  { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.fav-del  { background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 0; flex-shrink: 0; }
+.fav-del:hover { color: #f87171; }
+
+/* System status */
+.sys-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); }
+.sys-item:last-child { border-bottom: none; }
+.sys-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sys-dot.up      { background: #4ade80; box-shadow: 0 0 5px rgba(74,222,128,.5); }
+.sys-dot.down    { background: #f87171; box-shadow: 0 0 5px rgba(248,113,113,.5); }
+.sys-dot.timeout { background: #fbbf24; box-shadow: 0 0 5px rgba(251,191,36,.5); }
+.sys-dot.loading { background: var(--border); }
+.sys-name   { font-size: 13px; font-weight: 500; color: var(--text); flex: 1; }
+.sys-host   { font-size: 11px; color: var(--text-dim); }
+.sys-ms     { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+.sys-status { font-size: 12px; font-weight: 700; width: 48px; text-align: right; }
+.sys-status.up      { color: #4ade80; }
+.sys-status.down    { color: #f87171; }
+.sys-status.timeout { color: #fbbf24; }
+.sys-status.loading { color: var(--text-dim); }
+</style>
+</head>
+<body>
+{% include 'top_menu.html' %}
+<div class="home-wrapper">
+
+    <div class="home-greeting">
+        <h1>👋 안녕하세요, {{ current_user.get_id() }}님</h1>
+        <p>InfraPilot 콘솔에 오신 것을 환영합니다.</p>
+    </div>
+
+    <div class="home-grid">
+
+        <!-- ROW 1: USER ──────────────────────────────── -->
+
+        <!-- 1. 최근 방문 -->
+        <div class="home-card">
+            <div class="home-card-header">
+                <span class="home-card-icon">🕐</span>
+                <span class="home-card-title">최근 방문</span>
+            </div>
+            <div class="home-card-body">
+            {% if recent %}
+                {% set ns = namespace(current_cat=None) %}
+                {% for item in recent %}
+                    {% set cat = item.page_category or '기타' %}
+                    {% if cat != ns.current_cat %}
+                        {% if ns.current_cat is not none %}</div></div>{% endif %}
+                        {% set ns.current_cat = cat %}
+                        <div class="recent-category">
+                        <div class="recent-category-label">{{ cat }}</div>
+                        <div class="recent-grid">
+                    {% endif %}
+                    <a href="{{ item.page_url }}" class="recent-item">
+                        <div class="recent-item-label">{{ item.page_label }}</div>
+                        <div class="recent-item-time">{{ (item.visited_at + timedelta(hours=9)).strftime('%m/%d %H:%M') if item.visited_at else '' }}</div>
+                    </a>
+                {% endfor %}
+                {% if ns.current_cat is not none %}</div></div>{% endif %}
+            {% else %}
+                <div class="empty-state">아직 방문한 페이지가 없습니다.<br><small>Services 메뉴에서 탐색하면 여기에 표시됩니다.</small></div>
+            {% endif %}
+            </div>
+        </div>
+
+        <!-- 2. 알림 -->
+        <div class="home-card">
+            <div class="home-card-header">
+                <span class="home-card-icon">🔔</span>
+                <span class="home-card-title">알림</span>
+            </div>
+            <div class="inner-tab-bar">
+                <button class="inner-tab active" id="notif-btn-pw" onclick="showNotifTab('pw')">사용자 알림</button>
+                <button class="inner-tab" id="notif-btn-kc" onclick="showNotifTab('kc')">KC 공지</button>
+            </div>
+            <div class="home-card-body" id="notif-content"></div>
+        </div>
+
+        <!-- 3. 즐겨찾기 -->
+        <div class="home-card">
+            <div class="home-card-header">
+                <span class="home-card-icon">⭐</span>
+                <span class="home-card-title">즐겨찾기</span>
+            </div>
+            <div class="home-card-body" id="fav-body">
+            {% if favorites %}
+                {% set URL_CAT = {
+                    '/vm_create': 'Compute — Instances',
+                    '/vm_search': 'Compute — Instances',
+                    '/get_server_info': 'Compute — Volumes',
+                    '/create_volumes': 'Compute — Volumes',
+                    '/attach_volumes': 'Compute — Volumes',
+                    '/check_connectivity': 'Network — VPC',
+                    '/summary': 'Management Tools — Overview',
+                    '/provisioning': 'Management Tools — Provisioning',
+                    '/history': 'IAM',
+                    '/iam': 'IAM'
+                } %}
+                {% set ns = namespace(current_cat=None) %}
+                {% for f in favorites %}
+                    {% set cat = f.page_category %}
+                    {% if not cat %}
+                        {% for url, c in URL_CAT.items() %}
+                            {% if f.page_url.startswith(url) and not cat %}
+                                {% set cat = c %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% set cat = cat or '기타' %}
+                    {% if cat != ns.current_cat %}
+                        {% if ns.current_cat is not none %}</div></div>{% endif %}
+                        {% set ns.current_cat = cat %}
+                        <div class="recent-category">
+                        <div class="recent-category-label">{{ cat }}</div>
+                        <div class="fav-grid">
+                    {% endif %}
+                    <div class="fav-item">
+                        <div style="flex:1;min-width:0">
+                            <a href="{{ f.page_url }}" class="fav-link"
+                               {% if f.page_url.startswith('http') %}target="_blank" rel="noopener"{% endif %}>{{ f.page_label }}</a>
+                            {% if f.page_desc %}<div class="fav-cat">{{ f.page_desc }}</div>{% endif %}
+                        </div>
+                        <button class="fav-del" onclick="removeFav('{{ f.page_key }}')" title="삭제">✕</button>
+                    </div>
+                {% endfor %}
+                {% if ns.current_cat is not none %}</div></div>{% endif %}
+            {% else %}
+                <div class="empty-state">즐겨찾기가 없습니다.<br><small>Services 메뉴 항목 옆 ⭐를 눌러 추가하세요.</small></div>
+            {% endif %}
+            </div>
+        </div>
+
+        <!-- ROW 2: APP ───────────────────────────────── -->
+
+        <!-- 4. CloudTrail -->
+        <div class="home-card">
+            <div class="home-card-header">
+                <span class="home-card-icon">📜</span>
+                <span class="home-card-title">CloudTrail</span>
+                <a href="{{ url_for('history') }}" class="home-card-link">전체 보기 →</a>
+            </div>
+            <div class="home-card-body">
+            {% if history %}
+                {% for h in history %}
+                {% if not (h.event_type == 'VM' and 'PW 만료' in (h.title or '')) %}
+                <div class="log-item">
+                    <span class="log-type log-type-{{ h.event_type or '' }}">{{ h.event_type or 'SYS' }}</span>
+                    <div class="log-summary">{{ h.title or '' }}</div>
+                    <span class="log-time">{{ (h.created_at + timedelta(hours=9)).strftime('%m/%d %H:%M') if h.created_at else '' }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">기록이 없습니다.</div>
+            {% endif %}
+            </div>
+        </div>
+
+        <!-- 5. 업데이트 로그 -->
+        <div class="home-card">
+            <div class="home-card-header">
+                <span class="home-card-icon">📝</span>
+                <span class="home-card-title">업데이트 로그</span>
+                <a href="{{ url_for('summary') }}#changelog" class="home-card-link">전체 보기 →</a>
+            </div>
+            <div class="home-card-body">
+            {% if changelog %}
+                {% for c in changelog %}
+                {% set badge = {'NEW':'cl-new','IMPROVED':'cl-improved','FIXED':'cl-fixed'}.get(c.change_type,'cl-improved') %}
+                <div class="item-row">
+                    <div class="item-header">
+                        <span class="cl-badge {{ badge }}">{{ c.change_type }}</span>
+                        <span class="cl-version">{{ c.version }}</span>
+                    </div>
+                    <div class="item-title">{{ c.title }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">업데이트 로그가 없습니다.</div>
+            {% endif %}
+            </div>
+        </div>
+
+        <!-- 6. 시스템 상태 -->
+        <div class="home-card">
+            <div class="home-card-header">
+                <span class="home-card-icon">🟢</span>
+                <span class="home-card-title">시스템 상태</span>
+                <button onclick="loadStatus()" style="background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0">새로고침</button>
+            </div>
+            <div class="home-card-body" id="status-body">
+                {% for ep in ['BCS (Compute)', 'VPC (Network)', 'Network', 'Volume', 'Image'] %}
+                <div class="sys-item">
+                    <div class="sys-dot loading"></div>
+                    <div><div class="sys-name">{{ ep }}</div></div>
+                    <span class="sys-ms"></span>
+                    <span class="sys-status loading">확인 중</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 🔑 OS PW 만료 — spans both rows, col 4 -->
+        <div class="pw-panel">
+            <div class="home-card-header" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border-subtle);flex-shrink:0">
+                <span class="home-card-icon">🔑</span>
+                <span class="home-card-title">OS PW 만료</span>
+                <button onclick="refreshPwPanel()" style="background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:11px;padding:0">새로고침</button>
+            </div>
+            <div class="pw-summary">
+                <div class="pw-stat total">
+                    <div class="pw-stat-num" id="pw-total">-</div>
+                    <div class="pw-stat-lbl">전체</div>
+                </div>
+                <div class="pw-stat critical">
+                    <div class="pw-stat-num" id="pw-critical">-</div>
+                    <div class="pw-stat-lbl">CRITICAL<br>≤7일</div>
+                </div>
+                <div class="pw-stat warning">
+                    <div class="pw-stat-num" id="pw-warning">-</div>
+                    <div class="pw-stat-lbl">WARNING<br>≤30일</div>
+                </div>
+            </div>
+            <div class="pw-list" id="pw-list">
+                <div style="text-align:center;padding:20px;color:var(--text-dim);font-size:12px">로딩 중...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Notif templates -->
+    <script type="text/html" id="tpl-notif-pw">
+    <div class="empty-state">✅ 사용자 알림 없음</div>
+    </script>
+    <script type="text/html" id="tpl-notif-kc">
+    {% if kc_notices %}
+        {% for n in kc_notices[:8] %}
+        {% set bc = {'장애':'nb-장애','점검':'nb-점검','안내':'nb-안내','보안':'nb-보안'}.get(n.type,'nb-안내') %}
+        <div class="item-row">
+            <div class="item-header">
+                <span class="notif-badge {{ bc }}">{{ n.type or '안내' }}</span>
+                {% if n.is_new %}<span style="font-size:10px;color:var(--accent);font-weight:700">🆕</span>{% endif %}
+                <span class="item-time">{{ n.date or '' }}</span>
+            </div>
+            <a href="{{ n.url or '#' }}" target="_blank" rel="noopener" style="text-decoration:none">
+                <div class="item-title">{{ n.title or '공지' }}</div>
+            </a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">KC 공지 없음</div>
+    {% endif %}
+    </script>
+
+</div>
+
+<script>
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+// ── 알림 inner tabs ────────────────────────────────────────
+function showNotifTab(tab) {
+    const nc = document.getElementById('notif-content');
+    if (!nc) return;
+    nc.innerHTML = document.getElementById('tpl-notif-' + tab).innerHTML;
+    document.getElementById('notif-btn-pw').classList.toggle('active', tab === 'pw');
+    document.getElementById('notif-btn-kc').classList.toggle('active', tab === 'kc');
+}
+showNotifTab('pw');
+
+// ── OS PW 만료 패널 ───────────────────────────────────────
+async function loadPwPanel() {
+    const list = document.getElementById('pw-list');
+    if (!list) return;
+    try {
+        const data = await fetch('/api/notifications/pw_list').then(r => r.json());
+        if (!data.length) {
+            list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:12px">✅ 만료 임박 VM 없음</div>';
+            document.getElementById('pw-total').textContent    = '0';
+            document.getElementById('pw-critical').textContent = '0';
+            document.getElementById('pw-warning').textContent  = '0';
+            return;
+        }
+        const critical = data.filter(n => n.days_left <= 7).length;
+        const warning  = data.filter(n => n.days_left > 7).length;
+        document.getElementById('pw-total').textContent    = data.length;
+        document.getElementById('pw-critical').textContent = critical;
+        document.getElementById('pw-warning').textContent  = warning;
+        list.innerHTML = data.map(n => {
+            const cls  = n.days_left <= 7 ? 'critical' : 'warning';
+            const dStr = n.days_left < 0 ? '만료됨' : `D-${n.days_left}`;
+            return `<div class="pw-item">
+                <span class="notif-badge ${n.days_left <= 7 ? 'nb-장애' : 'nb-점검'}" style="flex-shrink:0">${n.days_left <= 7 ? 'CRITICAL' : 'WARNING'}</span>
+                <span class="pw-vm" title="${n.vm_name}">${n.vm_name}</span>
+                <span class="pw-days ${cls}">${dStr}</span>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        if (list) list.innerHTML = '<div style="text-align:center;padding:20px;color:#f87171;font-size:12px">로드 실패</div>';
+    }
+}
+
+function refreshPwPanel() { loadPwPanel(); }
+loadPwPanel();
+async function loadFavs() {
+    const body = document.getElementById('fav-body');
+    if (!body) return;
+    try {
+        const data = await fetch('/api/favorites').then(r => r.json());
+        if (!data.length) {
+            body.innerHTML = '<div class="empty-state">즐겨찾기가 없습니다.<br><small>Services 메뉴 항목 옆 ⭐를 눌러 추가하세요.</small></div>';
+            return;
+        }
+        const URL_CATEGORY = {
+            '/vm_create':'Compute — Instances','/vm_search':'Compute — Instances',
+            '/get_server_info':'Compute — Volumes','/create_volumes':'Compute — Volumes',
+            '/attach_volumes':'Compute — Volumes','/check_connectivity':'Network — VPC',
+            '/summary':'Management Tools — Overview','/provisioning':'Management Tools — Provisioning',
+            '/history':'IAM','/iam':'IAM',
+        };
+        data.forEach(f => {
+            if (!f.page_category) {
+                const match = Object.entries(URL_CATEGORY).find(([url]) => f.page_url.startsWith(url));
+                if (match) f.page_category = match[1];
+            }
+        });
+        const groups = {};
+        data.forEach(f => {
+            const cat = f.page_category || '기타';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(f);
+        });
+        body.innerHTML = Object.entries(groups).sort(([a],[b]) => a.localeCompare(b)).map(([cat, items]) => `
+            <div class="recent-category">
+                <div class="recent-category-label">${cat}</div>
+                <div class="fav-grid">${items.sort((a,b) => a.page_label.localeCompare(b.page_label)).map(f => `
+                    <div class="fav-item">
+                        <div style="flex:1;min-width:0">
+                            <a href="${f.page_url}" class="fav-link" ${f.page_url.startsWith('http') ? 'target="_blank" rel="noopener"' : ''}>${f.page_label}</a>
+                            ${f.page_desc ? `<div class="fav-cat">${f.page_desc}</div>` : ''}
+                        </div>
+                        <button class="fav-del" onclick="removeFav('${f.page_key}')" title="삭제">✕</button>
+                    </div>`).join('')}
+                </div>
+            </div>`).join('');
+    } catch(e) {
+        if (body) body.innerHTML = '<div class="empty-state">로드 실패</div>';
+    }
+}
+
+async function removeFav(key) {
+    await fetch('/api/favorites/' + encodeURIComponent(key), {
+        method: 'DELETE', headers: { 'X-CSRFToken': CSRF }
+    });
+    loadFavs();
+}
+
+// ── 시스템 상태 ────────────────────────────────────────────
+async function loadStatus() {
+    const body = document.getElementById('status-body');
+    if (!body) return;
+    body.innerHTML = ['BCS (Compute)','VPC (Network)','Network','Volume','Image'].map(n =>
+        `<div class="sys-item"><div class="sys-dot loading"></div><div style="flex:1"><div class="sys-name">${n}</div></div><span class="sys-ms"></span><span class="sys-status loading">확인 중</span></div>`
+    ).join('');
+    try {
+        const data = await fetch('/api/system_status').then(r => r.json());
+        body.innerHTML = data.map(ep => {
+            const label = ep.status === 'up' ? '정상' : ep.status === 'timeout' ? '지연' : '오류';
+            const ms    = ep.status !== 'timeout' ? `${ep.ms}ms` : '5s+';
+            return `<div class="sys-item">
+                <div class="sys-dot ${ep.status}"></div>
+                <div style="flex:1"><div class="sys-name">${ep.name}</div><div class="sys-host">${ep.host}</div></div>
+                <span class="sys-ms">${ms}</span>
+                <span class="sys-status ${ep.status}">${label}</span>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        if (body) body.innerHTML = '<div class="empty-state">상태 확인 실패</div>';
+    }
+}
+
+window.loadFavs = loadFavs;
+loadStatus();
+</script>
+</body>
+</html>

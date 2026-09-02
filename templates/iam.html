@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>IAM — InfraPilot</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --nav-height: 48px;
+            --sidebar-width: 220px;
+            --bg: #0f1117;
+            --surface: #161b27;
+            --surface2: #1c2333;
+            --border: #232d42;
+            --accent: #2196F3;
+            --accent-dim: #1a3a5f;
+            --text: #e2e8f0;
+            --text-dim: #7a8fa6;
+            --text-muted: #4a5568;
+            --green: #10b981;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --red-dim: #450a0a;
+        }
+
+        body.light-mode {
+            --bg:         #f0ebe3;
+            --surface:    #faf6f0;
+            --surface2:   #e8e3db;
+            --border:     #d0c9c0;
+            --text:       #1a1612;
+            --text-dim:   #6b6258;
+            --text-muted: #9a8e83;
+            --accent-dim: #dbeafe;
+            --red-dim:    #fee2e2;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Top Nav ── */
+        .top-bar {
+            height: var(--nav-height);
+            background: #0d1117;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .top-bar-logo {
+            font-size: 15px;
+            font-weight: 700;
+            color: #7dd3fc;
+            letter-spacing: -0.02em;
+            text-decoration: none;
+        }
+        .top-bar-sep { color: var(--border); font-size: 18px; }
+        .top-bar-title {
+            font-size: 14px;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+        .top-bar-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+        .top-bar-breadcrumb a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        .top-bar-breadcrumb a:hover { text-decoration: underline; }
+
+        /* ── Layout ── */
+        .console-layout {
+            display: flex;
+            flex: 1;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #0d1117;
+            border-right: 1px solid var(--border);
+            padding: 0;
+            position: sticky;
+            top: var(--nav-height);
+            height: calc(100vh - var(--nav-height));
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex-shrink: 0;
+            transition: width 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        .sidebar.collapsed { width: 48px; }
+        .sidebar-section-title,
+        .sidebar-item span:not(.dot),
+        .sidebar-item .badge-count {
+            transition: opacity 0.15s ease;
+        }
+        .sidebar.collapsed .sidebar-section-title,
+        .sidebar.collapsed .sidebar-item span:not(.dot),
+        .sidebar.collapsed .sidebar-item .badge-count {
+            opacity: 0; pointer-events: none; width: 0; overflow: hidden;
+        }
+        .sidebar.collapsed .sidebar-item {
+            padding: 10px 0; justify-content: center; gap: 0;
+        }
+        .sidebar.collapsed .dot { width: 8px; height: 8px; }
+        .sidebar.collapsed .sidebar-section { padding: 0; }
+        
+
+        .sidebar-item { white-space: nowrap; overflow: hidden; }
+        .sidebar-collapse-btn {
+            display: flex; align-items: center; justify-content: flex-end;
+            padding: 10px 12px 10px;
+            cursor: pointer; color: #7a8fa6;
+            transition: color 0.12s, background 0.12s;
+            user-select: none;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+        .sidebar-collapse-btn:hover { color: #e2e8f0; background: rgba(33,150,243,0.06); }
+        .sidebar-collapse-btn svg {
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        .sidebar.collapsed .sidebar-collapse-btn { justify-content: center; padding: 10px 0; }
+        .sidebar.collapsed .sidebar-collapse-btn svg { transform: rotate(180deg); }
+        .sidebar.collapsed .sidebar-section-title { display: none; }
+        .sidebar.collapsed .sidebar-item-text { display: none; }
+        .sidebar.collapsed .badge-count { display: none; }
+        .sidebar.collapsed .sidebar-item { padding: 10px 0; justify-content: center; gap: 0; }
+        .sidebar-section {
+            margin-bottom: 8px;
+        }
+        .sidebar-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 6px 20px;
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            font-size: 13px;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            border-left: 2px solid transparent;
+            user-select: none;
+        }
+        .sidebar-item:hover {
+            background: rgba(33,150,243,0.06);
+            color: var(--text);
+        }
+        .sidebar-item.active {
+            background: rgba(33,150,243,0.1);
+            color: #7dd3fc;
+            border-left-color: var(--accent);
+            font-weight: 600;
+        }
+        .sidebar-item .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+        .sidebar-item.active .dot { opacity: 1; }
+
+        /* ── Main content ── */
+        .main-content {
+            flex: 1;
+            padding: 28px 32px;
+            overflow-y: auto;
+        }
+
+        /* ── Section header ── */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .section-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+        .section-header p {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-top: 4px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+            font-family: 'SF Mono', monospace;
+            white-space: nowrap;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #1976D2; }
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: #232d42; color: var(--text); }
+        .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid #7f1d1d; }
+        .btn-danger:hover { background: #5c1111; }
+        .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+        /* ── Table ── */
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .table-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .search-input {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 12px;
+            font-size: 13px;
+            color: var(--text);
+            outline: none;
+            width: 220px;
+            font-family: inherit;
+            transition: border-color 0.15s;
+        }
+        .search-input:focus { border-color: var(--accent); }
+        .table-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            background: var(--surface2);
+            padding: 11px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid var(--border);
+        }
+        tbody td {
+            padding: 12px 16px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(35,45,66,0.5);
+            vertical-align: middle;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: rgba(33,150,243,0.03); }
+
+        /* ── Role badge ── */
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .role-admin   { background: rgba(33,150,243,0.15); color: #7dd3fc; border: 1px solid rgba(33,150,243,0.3); }
+        .role-operator{ background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .role-viewer  { background: rgba(100,100,120,0.15); color: #94a3b8; border: 1px solid rgba(100,100,120,0.3); }
+
+        /* ── Status dot ── */
+        .status-dot {
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .status-active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .status-pending { background: var(--amber); }
+
+        /* ── Token status ── */
+        .token-ok   { color: var(--green); font-size: 12px; }
+        .token-none { color: var(--text-muted); font-size: 12px; }
+        .token-age  { color: var(--text-dim); font-size: 12px; font-family: monospace; }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            animation: modalIn 0.2s cubic-bezier(0.4,0,0.2,1);
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to   { opacity: 1; transform: scale(1)    translateY(0); }
+        }
+        .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .modal p  { font-size: 13px; color: var(--text-dim); margin-bottom: 20px;
+                    font-family: 'Segoe UI', Arial, sans-serif; }
+        .modal label { font-size: 12px; color: var(--text-muted); display: block;
+                       margin-bottom: 5px; margin-top: 14px; text-transform: uppercase;
+                       letter-spacing: 0.06em; }
+        .modal input, .modal select {
+            width: 100%; padding: 10px 12px; background: var(--surface2);
+            border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text); font-size: 13px; font-family: inherit; outline: none;
+            transition: border-color 0.15s;
+        }
+        .modal input:focus, .modal select:focus { border-color: var(--accent); }
+        .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+        .modal-alert { background: var(--red-dim); border: 1px solid #7f1d1d; color: var(--red);
+                       border-radius: 6px; padding: 8px 12px; font-size: 12px; margin-bottom: 14px; }
+        .modal-success { background: #052e16; border: 1px solid #166534; color: #34d399;
+                         border-radius: 6px; padding: 8px 12px; font-size: 12px; margin-bottom: 14px;
+                         font-family: 'Segoe UI', Arial, sans-serif; }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* ── Tabs ── */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ── Alert ── */
+        .alert {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .alert-danger  { background: var(--red-dim); border: 1px solid #7f1d1d; color: var(--red); }
+        .alert-success { background: #052e16; border: 1px solid #166534; color: #34d399; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        /* ── Light mode ── */
+        body.light-mode {
+            --bg: #f0f4f8;
+            --surface: #ffffff;
+            --surface2: #f8fafc;
+            --border: #e2e8f0;
+            --text: #111827;
+            --text-dim: #374151;
+            --text-muted: #6b7280;
+            --accent-dim: #dbeafe;
+            --red-dim: #fee2e2;
+            --red: #dc2626;
+            --green: #059669;
+        }
+        body.light-mode .sidebar { background: #ffffff !important; border-right-color: #e2e8f0 !important; }
+        body.light-mode .sidebar-collapse-btn { color: #6b7280 !important; border-bottom-color: #e2e8f0 !important; }
+        body.light-mode .sidebar-collapse-btn:hover { background: #f1f5f9 !important; color: #111827 !important; }
+        body.light-mode .sidebar-section-title { color: #9ca3af !important; }
+        body.light-mode .sidebar-item { color: #374151 !important; }
+        body.light-mode .sidebar-item:hover { background: #f1f5f9 !important; color: #111827 !important; }
+        body.light-mode .sidebar-item.active { background: #dbeafe !important; color: #1d4ed8 !important; border-left-color: #2196F3 !important; }
+        body.light-mode .main-content { background: #f0f4f8 !important; }
+        body.light-mode .table-card { background: #ffffff !important; border-color: #e2e8f0 !important; }
+        body.light-mode .table-toolbar { border-color: #e2e8f0 !important; background: #f8fafc !important; }
+        body.light-mode .search-input { background: #ffffff !important; border-color: #d1d5db !important; color: #111827 !important; }
+        body.light-mode .table-count { color: #374151 !important; }
+        body.light-mode thead th { background: #f8fafc !important; color: #374151 !important; border-color: #e2e8f0 !important; font-weight: 700 !important; }
+        body.light-mode tbody td { color: #111827 !important; border-color: #f3f4f6 !important; }
+        body.light-mode tbody tr:hover td { background: #f0f9ff !important; }
+        body.light-mode .token-ok   { color: #059669 !important; }
+        .scode-save-btn {
+            display: flex; align-items: center; gap: 7px;
+            padding: 8px 20px; background: #1d4ed8; border: 1px solid #2563eb;
+            color: #ffffff; border-radius: 6px; font-size: 13px;
+            font-weight: 600; cursor: pointer; transition: background .15s;
+        }
+        .scode-save-btn:hover { background: #1e40af; }
+        body.light-mode .scode-save-btn,
+        body.light-mode .scode-save-btn * {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+        /* S-Code tab contrast improvements */
+        body.light-mode #scodeStats { color: #374151 !important; }
+        body.light-mode #tab-scode .section-title { color: #111827 !important; }
+        body.light-mode #tab-scode .section-desc { color: #4b5563 !important; }
+        /* Tester panel */
+        body.light-mode #scodeTestHostname,
+        body.light-mode #scodeTestExpected {
+            background: #ffffff !important;
+            color: #111827 !important;
+            border-color: #d1d5db !important;
+        }
+        /* Rule cards */
+        body.light-mode .scode-rule-card { background: #ffffff !important; border-color: #e5e7eb !important; }
+        body.light-mode .scode-rule-card.is-default { background: #eff6ff !important; border-color: #93c5fd !important; }
+        body.light-mode .scode-rule-card input {
+            background: #f9fafb !important; color: #111827 !important; border-color: #d1d5db !important;
+        }
+        body.light-mode .scode-rule-card select {
+            background: #f9fafb !important; border-color: #d1d5db !important;
+        }
+        body.light-mode .scode-rule-card .drag-handle { color: #6b7280 !important; }
+        /* Save bar */
+        body.light-mode #tab-scode > div:last-of-type {
+            background: #f3f4f6 !important; border-color: #e5e7eb !important;
+        }
+        /* VM counts panel */
+        body.light-mode #scodeVmCounts > div {
+            background: #ffffff !important; border-color: #e5e7eb !important;
+        }
+        body.light-mode #scodeVmCounts [style*="background:var(--surface2)"] {
+            background: #f3f4f6 !important;
+        }
+        body.light-mode #scodeVmCounts span[style*="color:var(--text)"] {
+            color: #111827 !important;
+        }
+        /* Test result panel */
+        body.light-mode #scodeTestResult [style*="background:#0d2d1a"] {
+            background: #f0fdf4 !important; border-color: #86efac !important;
+        }
+        body.light-mode #scodeTestResult [style*="color:#4ade80"] { color: #15803d !important; }
+        body.light-mode #scodeTestResult [style*="background:#2d0d0d"] {
+            background: #fef2f2 !important; border-color: #fca5a5 !important;
+        }
+        body.light-mode #scodeTestResult [style*="color:#f87171"] { color: #dc2626 !important; }
+        body.light-mode #scodeTestResult [style*="background:var(--surface)"] {
+            background: #f9fafb !important; border-color: #e5e7eb !important;
+        }
+        body.light-mode .scode-rule-card {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+        }
+        body.light-mode .scode-rule-card.is-default {
+            border-color: #3b82f6 !important;
+            background: #eff6ff !important;
+        }
+        body.light-mode .scode-rule-card input {
+            background: #f8fafc !important;
+            color: #111827 !important;
+            border-color: #cbd5e0 !important;
+        }
+        body.light-mode .token-none { color: #9ca3af !important; }
+        body.light-mode .token-age  { color: #374151 !important; }
+        body.light-mode .btn-danger { background: #fee2e2 !important; color: #dc2626 !important; border-color: #fca5a5 !important; }
+        body.light-mode .btn-danger:hover { background: #fecaca !important; }
+        body.light-mode .section-title { color: #111827 !important; }
+        body.light-mode .section-desc  { color: #6b7280 !important; }
+        body.light-mode .modal-overlay { background: rgba(0,0,0,0.4) !important; }
+        body.light-mode .modal { background: #ffffff !important; border-color: #e2e8f0 !important; }
+        body.light-mode .modal h3 { color: #111827 !important; }
+        body.light-mode .modal label { color: #4b5563 !important; }
+        body.light-mode .modal input,
+        body.light-mode .modal select,
+        body.light-mode .modal textarea { background: #f9fafb !important; border-color: #d1d5db !important; color: #111827 !important; }
+        body.light-mode .modal-alert { background: #fee2e2 !important; border-color: #fca5a5 !important; color: #dc2626 !important; }
+        body.light-mode .alert-danger { background: #fee2e2 !important; border-color: #fca5a5 !important; color: #dc2626 !important; }
+        body.light-mode .page-title { color: #111827 !important; }
+        body.light-mode .page-desc  { color: #6b7280 !important; }
+        body.light-mode select.form-select { background: #ffffff !important; border-color: #d1d5db !important; color: #111827 !important; }
+    </style>
+</head>
+<body>
+
+{% include 'top_menu.html' %}
+
+<div class="console-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="iamSidebar">
+        <div class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <span class="sidebar-item-text" style="font-size:12px;margin-right:6px;">접기</span>
+            <svg id="sidebarToggleIcon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">접근 관리</div>
+            <div class="sidebar-item active" data-tab="users" onclick="switchTab('users', this)">
+                <span class="dot"></span><span class="sidebar-item-text"> 사용자</span>
+            </div>
+            <div class="sidebar-item" data-tab="pending" onclick="switchTab('pending', this)" id="pendingNavItem">
+                <span class="dot"></span><span class="sidebar-item-text"> 승인 대기</span>
+                {% if pending %}<span class="badge-count" style="background:#0073bb;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto">{{ pending|length }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">리소스</div>
+            <div class="sidebar-item" data-tab="projects" onclick="switchTab('projects', this)">
+                <span class="dot"></span><span class="sidebar-item-text"> 프로젝트 관리</span>
+            </div>
+            <div class="sidebar-item" data-tab="scode" onclick="switchTab('scode', this)">
+                <span class="dot"></span><span class="sidebar-item-text"> 인프라 코드 관리</span>
+            </div>
+            <div class="sidebar-item" data-tab="personnel" onclick="switchTab('personnel', this)">
+                <span class="dot"></span><span class="sidebar-item-text"> 담당자 관리</span>
+            </div>
+
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">감사 로그</div>
+            <div class="sidebar-item" data-tab="history" onclick="switchTab('history', this)">
+                <span class="dot"></span><span class="sidebar-item-text"> History</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endwith %}
+
+        <!-- ── Users Tab ── -->
+        <div id="tab-users" class="tab-content active">
+            <div class="section-header">
+                <div>
+                    <h2>사용자</h2>
+                    <p>InfraPilot에 접근하는 사용자와 역할을 관리합니다.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openCreateUser()">+ 사용자 생성</button>
+            </div>
+
+            <div class="table-card">
+                <div class="table-toolbar">
+                    <input type="text" class="search-input" id="userSearch"
+                           placeholder="사용자명 검색..."
+                           oninput="filterUsers()">
+                    <span class="table-count" id="userCount"></span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>사용자명</th>
+                            <th>역할</th>
+                            <th>2FA</th>
+                            <th>마지막 로그인</th>
+                            <th>생성일</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        {% for u in users %}
+                        <tr data-username="{{ u.username }}">
+                            <td>
+                                <span style="color:var(--text);font-weight:600">{{ u.username }}</span>
+                                {% if u.username == current_user.get_id() %}
+                                <span style="font-size:10px;color:var(--accent);margin-left:6px">(나)</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="role-badge role-{{ u.role or 'operator' }}">
+                                    {{ u.role or 'operator' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if u.totp_secret %}
+                                <span class="token-ok">● 활성</span>
+                                {% else %}
+                                <span class="token-none">○ 미설정</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.last_login %}
+                                <span class="token-age">{{ u.last_login.strftime('%Y/%m/%d %H:%M') }} KST</span>
+                                {% else %}
+                                <span class="token-none">없음</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.created_at %}
+                                <span class="token-age">{{ u.created_at.strftime('%Y/%m/%d') }}</span>
+                                {% else %}
+                                <span class="token-none">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px">
+                                    <button class="btn btn-secondary btn-sm"
+                                            onclick="openEditUser('{{ u.username }}', '{{ u.role or 'operator' }}')">
+                                        역할 변경
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm"
+                                            onclick="openResetPw('{{ u.username }}')"
+                                            title="비밀번호 초기화">
+                                        PW 초기화
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm"
+                                            onclick="resetTotp('{{ u.username }}')"
+                                            title="2FA 초기화">
+                                        2FA 초기화
+                                    </button>
+                                    {% if u.username != current_user.get_id() %}
+                                    <button class="btn btn-danger btn-sm"
+                                            onclick="confirmDeleteUser('{{ u.username }}')">
+                                        삭제
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Pending Tab ── -->
+        <div id="tab-pending" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2>승인 대기</h2>
+                    <p>가입 신청한 사용자를 승인하거나 거절합니다.</p>
+                </div>
+            </div>
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>사용자명</th>
+                            <th>이메일</th>
+                            <th>요청 역할</th>
+                            <th>요청 사유</th>
+                            <th>신청일</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in pending %}
+                        <tr>
+                            <td><span style="color:var(--text);font-weight:600">{{ u.username }}</span></td>
+                            <td><span style="color:var(--text-dim);font-size:12px">{{ u.email or '-' }}</span></td>
+                            <td><span class="role-badge role-{{ u.role }}">{{ u.role }}</span></td>
+                            <td><span style="color:var(--text-dim);font-size:12px">{{ u.role_reason or '-' }}</span></td>
+                            <td><span class="token-age">{{ (u.created_at + timedelta(hours=9)).strftime('%Y/%m/%d %H:%M') if u.created_at else '-' }} KST</span></td>
+                            <td>
+                                <div style="display:flex;gap:6px">
+                                    <button class="btn btn-primary btn-sm"
+                                            data-username="{{ u.username }}"
+                                            data-role="{{ u.role }}"
+                                            data-reason="{{ u.role_reason or '' }}"
+                                            onclick="openApproveModal(this)">승인</button>
+                                    <button class="btn btn-danger btn-sm"
+                                            onclick="openRejectModal('{{ u.username }}')">거절</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">대기 중인 요청이 없습니다.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── History Tab ── -->
+        <div id="tab-history" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2>History</h2>
+                    <p>애플리케이션의 모든 작업 내역입니다. (최근 200건)</p>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="text" id="historySearch" placeholder="🔍 검색..."
+                           style="background:var(--bg-input);border:1px solid var(--border);color:var(--text);
+                                  font-size:12px;padding:5px 10px;border-radius:6px;width:180px"
+                           oninput="filterHistoryTable()">
+                    <select id="historySearchCol" onchange="filterHistoryTable()"
+                            style="background:var(--bg-input);border:1px solid var(--border);color:var(--text);
+                                   font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer">
+                        <option value="all">전체 컬럼</option>
+                        <option value="title">제목</option>
+                        <option value="detail">상세</option>
+                        <option value="username">사용자</option>
+                    </select>
+                    <select id="historyTypeFilter" onchange="loadAppHistory(0)"
+                            style="background:var(--bg-input);border:1px solid var(--border);color:var(--text);
+                                   font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer">
+                        <option value="all">전체</option>
+                        <option value="IAM">IAM</option>
+                        <option value="VM">VM</option>
+                        <option value="ANSIBLE">Ansible</option>
+                        <option value="PUPPET">Puppet</option>
+                        <option value="TOKEN_REFRESH">Token</option>
+                    </select>
+                    <!-- Pagination controls -->
+                    <div style="display:flex;align-items:center;gap:4px;margin-left:8px">
+                        <button id="hist-prev" onclick="historyChangePage(-1)"
+                            style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+                                   background:var(--bg-input);color:var(--text);cursor:pointer;font-size:12px">◀</button>
+                        <span id="hist-page-info" style="font-size:12px;color:var(--text-muted);white-space:nowrap;padding:0 6px">1 / 1</span>
+                        <button id="hist-next" onclick="historyChangePage(1)"
+                            style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+                                   background:var(--bg-input);color:var(--text);cursor:pointer;font-size:12px">▶</button>
+                    </div>
+                    <span id="hist-total-info" style="font-size:11px;color:var(--text-dim);white-space:nowrap"></span>
+                </div>
+            </div>
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>유형</th>
+                            <th>제목</th>
+                            <th>상세</th>
+                            <th>사용자</th>
+                            <th>일시</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">로딩 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-projects" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2>프로젝트 관리</h2>
+                    <p>KakaoCloud 프로젝트 자격증명과 토큰을 관리합니다.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openAddProject()">+ 프로젝트 추가</button>
+            </div>
+
+            <div class="table-card">
+                <div class="table-toolbar">
+                    <input type="text" class="search-input" id="projectSearch"
+                           placeholder="프로젝트 검색..."
+                           oninput="filterProjects()">
+                    <span class="table-count" id="projectCount"></span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>프로젝트</th>
+                            <th>Alias</th>
+                            <th>자격증명</th>
+                            <th>토큰 상태</th>
+                            <th>마지막 갱신</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectTableBody">
+                        {% for proj in projects %}
+                        <tr data-zone="{{ proj.zone }}">
+                            <td><span style="color:var(--text);font-weight:600;font-family:monospace">{{ proj.zone }}</span></td>
+                            <td><span style="color:var(--text);font-size:13px">{{ proj.alias or '—' }}</span></td>
+                            <td>
+                                {% if proj.access_id %}
+                                <span class="token-ok">● 저장됨</span>
+                                {% else %}
+                                <span class="token-none">○ 없음</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if proj.token %}
+                                    {% set age_hours = ((now - proj.token_refreshed_at).total_seconds() / 3600)|int if proj.token_refreshed_at else 999 %}
+                                    {% if not proj.access_id and age_hours >= 20 %}
+                                    <span style="color:#f59e0b;font-size:12px">⚠ 만료 임박</span>
+                                    {% elif not proj.access_id and age_hours >= 24 %}
+                                    <span style="color:#ef4444;font-size:12px">✕ 만료됨</span>
+                                    {% else %}
+                                    <span class="token-ok">● 유효</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="token-none">○ 없음</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if proj.token_refreshed_at %}
+                                <span class="token-age">{{ (proj.token_refreshed_at + timedelta(hours=9)).strftime('%Y/%m/%d %H:%M') }} KST</span>
+                                {% else %}
+                                <span class="token-none">미갱신</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px">
+                                    <button class="btn btn-secondary btn-sm"
+                                            onclick="openEditProject('{{ proj.zone }}', '{{ proj.alias or '' }}', '{{ proj.access_id or '' }}')">수정</button>
+                                    {% if proj.access_id %}
+                                    <form method="POST" action="{{ url_for('manage_projects') }}" style="display:inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="refresh">
+                                        <input type="hidden" name="zone" value="{{ proj.zone }}">
+                                        <button type="submit" class="btn btn-secondary btn-sm">갱신</button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="POST" action="{{ url_for('manage_projects') }}" style="display:inline"
+                                          onsubmit="return confirm('{{ proj.zone }} 프로젝트를 삭제하시겠습니까?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="zone" value="{{ proj.zone }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── 인프라 코드 관리 Tab ── -->
+        <div id="tab-scode" class="tab-content">
+
+            <!-- Header -->
+            <div style="margin-bottom:16px">
+                <div class="section-title">인프라 코드 관리</div>
+                <div class="section-desc">전체 프로젝트에 적용되는 글로벌 규칙입니다. VM 호스트명 패턴에 따라 인프라 코드가 자동 할당됩니다.</div>
+            </div>
+
+            <!-- ── 인프라 코드 VM 현황 (TOP) ── -->
+            <div style="margin-bottom:20px">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+                            letter-spacing:.07em;color:var(--text-muted);margin-bottom:10px;
+                            display:flex;align-items:center;gap:8px">
+                    인프라 코드 별 VM 현황
+                    <span style="font-weight:400;opacity:.6;font-size:10px">클릭 → CMDB 조회</span>
+                </div>
+                <div id="scodeVmCounts" style="display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start">
+                    <div style="color:var(--text-muted);font-size:12px;padding:8px">로딩 중...</div>
+                </div>
+            </div>
+
+            <!-- ── Hostname Tester ── -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;
+                        padding:16px 18px;margin-bottom:20px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;
+                            display:flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    호스트명 테스터
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+                    <div style="flex:1;min-width:200px">
+                        <input type="text" id="scodeTestHostname" placeholder="호스트명 입력 (예: infra-iet-prometheus-01)"
+                               oninput="testScodeHostname()"
+                               style="width:100%;background:var(--surface2);border:1px solid var(--border);
+                                      border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);
+                                      outline:none;font-family:monospace;transition:border-color .15s"
+                               onfocus="this.style.borderColor='#2196F3'"
+                               onblur="this.style.borderColor='var(--border)'">
+                    </div>
+                    <div style="min-width:160px">
+                        <select id="scodeTestExpected"
+                                onchange="testScodeHostname()"
+                                style="width:100%;background:var(--surface2);border:1px solid var(--border);
+                                       color:var(--text);border-radius:6px;padding:8px 12px;
+                                       font-size:13px;outline:none;cursor:pointer">
+                            <option value="">예상 인프라 코드 (선택)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="scodeTestResult" style="margin-top:12px;display:none"></div>
+            </div>
+
+            <!-- Stats bar -->
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap">
+                <div id="scodeStats" style="font-size:12px;color:var(--text)"></div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+                    <span style="font-size:11px;color:var(--text-muted);opacity:.7">↕ 드래그하여 우선순위 변경</span>
+                    <button onclick="addScodeRule()" id="btnAddRule"
+                            style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                                   background:var(--surface2);border:1px solid var(--border);
+                                   color:var(--text);border-radius:6px;font-size:12px;
+                                   cursor:pointer;transition:all .15s;white-space:nowrap">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        규칙 추가
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rules cards -->
+            <div id="scodeRulesBody" style="display:flex;flex-direction:column;gap:8px"></div>
+
+            <!-- Save bar -->
+            <div style="margin-top:20px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);
+                        border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                <div style="font-size:12px;color:var(--text-muted)">
+                    변경사항은 저장 후 VM 프로비저닝 조회 시 즉시 반영됩니다.
+                </div>
+                <button onclick="saveScodeRules()" id="btnSaveRulesBottom" class="scode-save-btn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    규칙 저장
+                </button>
+            </div>
+        </div>
+
+        <!-- ── 담당자 관리 Tab ── -->
+        <div id="tab-personnel" class="tab-content">
+            <div style="margin-bottom:20px">
+                <div class="section-title">담당자 관리</div>
+                <div class="section-desc">각 인프라 코드별 담당 엔지니어, 실무자(개발), 관리자(PM)를 등록합니다.</div>
+            </div>
+            <div id="scodePersonnelList" style="display:flex;flex-direction:column;gap:6px">
+                <div style="color:var(--text-muted);font-size:13px;padding:8px">로딩 중...</div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ── Edit Project Modal ── -->
+<div class="modal-overlay" id="editProjectModal" style="display:none">
+    <div class="modal">
+        <h3>프로젝트 수정</h3>
+        <form method="POST" action="{{ url_for('manage_projects') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="zone" id="editZoneOld">
+            <label>프로젝트명 (변경 시 입력)</label>
+            <input type="text" name="new_zone" id="editZoneNew" class="form-input"
+                   placeholder="변경할 프로젝트명 (비우면 유지)">
+            <label>Alias</label>
+            <input type="text" name="alias" id="editAlias" class="form-input"
+                   placeholder="표시 이름 (선택)">
+            <label>Access ID (변경 시 입력)</label>
+            <input type="text" name="access_id" id="editAccessId" class="form-input"
+                   placeholder="변경할 Access ID (비우면 유지)">
+            <label>Secret Key (변경 시 입력)</label>
+            <input type="password" name="secret_key" class="form-input"
+                   placeholder="변경할 Secret Key (비우면 유지)">
+            <div style="display:flex;gap:8px;margin-top:16px">
+                <button type="submit" class="btn btn-primary" style="flex:1">저장</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditProject()">취소</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal-overlay" id="approveModal">
+    <div class="modal">
+        <h3>가입 승인</h3>
+        <p id="approveDesc"></p>
+        <div id="approveReason" style="display:none;background:#0e1520;border:1px solid #2a3550;
+             border-radius:6px;padding:10px 12px;margin-bottom:14px;">
+            <div style="font-size:11px;color:#5a7a99;text-transform:uppercase;
+                        letter-spacing:0.05em;margin-bottom:4px">요청 사유</div>
+            <div id="approveReasonText" style="font-size:13px;color:#c2d8f0;line-height:1.5"></div>
+        </div>
+        <div style="margin-bottom:14px">
+            <label style="font-size:12px;color:#5a7a99;text-transform:uppercase;
+                           letter-spacing:0.05em;display:block;margin-bottom:6px">승인 역할</label>
+            <select id="approveRoleSelect" name="role"
+                    style="width:100%;padding:9px 12px;background:#0e1520;border:1px solid #2a3550;
+                           border-radius:6px;color:#e2e8f0;font-size:13px;">
+                <option value="viewer">Viewer</option>
+                <option value="operator">Operator</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <form method="POST" action="{{ url_for('iam_update_user') }}" id="approveForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="approve">
+            <input type="hidden" name="username" id="approveUsername">
+            <input type="hidden" name="approved_role" id="approveRoleHidden">
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('approveModal')">취소</button>
+                <button type="submit" class="btn btn-primary" onclick="syncApproveRole()">승인</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Reject Modal ── -->
+<div class="modal-overlay" id="rejectModal">
+    <div class="modal">
+        <h3>가입 거절</h3>
+        <p id="rejectDesc"></p>
+        <form method="POST" action="{{ url_for('iam_update_user') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="reject">
+            <input type="hidden" name="username" id="rejectUsername">
+            <label>거절 사유 (선택)</label>
+            <input type="text" name="reason" placeholder="예: 정보 불충분, 중복 계정 등">
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('rejectModal')">취소</button>
+                <button type="submit" class="btn btn-danger">거절</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Create User Modal ── -->
+<div class="modal-overlay" id="createUserModal">
+    <div class="modal">
+        <h3>사용자 생성</h3>
+        <p>임시 비밀번호로 새 사용자를 생성합니다. 첫 로그인 시 비밀번호 변경이 필요합니다.</p>
+        <div id="createUserAlert"></div>
+        <form method="POST" action="{{ url_for('iam_update_user') }}" id="createUserForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="create">
+            <label>사용자명</label>
+            <input type="text" name="username" placeholder="예: john.doe" required autofocus>
+            <label>역할</label>
+            <select name="role">
+                <option value="operator">Operator — VM 프로비저닝, 볼륨 관리 가능</option>
+                <option value="viewer">Viewer — 조회만 가능</option>
+                <option value="admin">Admin — 전체 접근</option>
+            </select>
+            <label>임시 비밀번호</label>
+            <input type="password" name="temp_password" placeholder="6자 이상" required>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">취소</button>
+                <button type="submit" class="btn btn-primary">생성</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Edit Role Modal ── -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal">
+        <h3>역할 변경</h3>
+        <p id="editUserDesc"></p>
+        <div id="editUserAlert"></div>
+        <form method="POST" action="{{ url_for('iam_update_user') }}" id="editUserForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="username" id="editUsername">
+            <input type="hidden" name="action" value="update_role">
+            <label>역할</label>
+            <select name="role" id="editRole">
+                <option value="admin">Admin — 전체 접근</option>
+                <option value="operator">Operator — VM 프로비저닝, 볼륨 관리 가능</option>
+                <option value="viewer">Viewer — 조회만 가능</option>
+            </select>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">취소</button>
+                <button type="submit" class="btn btn-primary">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Reset Password Modal ── -->
+<div class="modal-overlay" id="resetPwModal">
+    <div class="modal">
+        <h3>비밀번호 초기화</h3>
+        <p id="resetPwDesc"></p>
+        <form method="POST" action="{{ url_for('iam_update_user') }}" id="resetPwForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="username" id="resetPwUsername">
+            <input type="hidden" name="action" value="reset_password">
+            <label>임시 비밀번호 <span style="color:#f87171">*</span></label>
+            <input type="password" name="new_password" id="resetPwInput"
+                   placeholder="6자 이상 입력" autocomplete="new-password"
+                   style="width:100%;padding:8px 10px;background:var(--bg-input);
+                          border:1px solid var(--border);border-radius:6px;
+                          color:var(--text);font-size:13px;margin-bottom:8px">
+            <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px">
+                사용자는 다음 로그인 시 비밀번호 변경을 요청받습니다.
+            </p>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('resetPwModal')">취소</button>
+                <button type="submit" class="btn btn-primary">초기화</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Delete User Modal ── -->
+<div class="modal-overlay" id="deleteUserModal">
+    <div class="modal">
+        <h3>사용자 삭제</h3>
+        <p id="deleteUserDesc"></p>
+        <form method="POST" action="{{ url_for('iam_update_user') }}" id="deleteUserForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="username" id="deleteUsername">
+            <input type="hidden" name="action" value="delete">
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('deleteUserModal')">취소</button>
+                <button type="submit" class="btn btn-danger">삭제</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Add Project Modal ── -->
+<div class="modal-overlay" id="addProjectModal">
+    <div class="modal">
+        <h3>프로젝트 추가</h3>
+        <p>KakaoCloud Application Credential을 입력하세요. 즉시 토큰을 발급합니다.</p>
+        <form method="POST" action="{{ url_for('manage_projects') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add">
+            <label>Zone 이름</label>
+            <input type="text" name="zone" placeholder="예: infra, kw-db" required autofocus>
+            <label>Access ID</label>
+            <input type="text" name="access_id" placeholder="Application Credential ID" required>
+            <label>Secret Key</label>
+            <input type="password" name="secret_key" placeholder="Application Credential Secret" required>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addProjectModal')">취소</button>
+                <button type="submit" class="btn btn-primary">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // ── Tab switching ─────────────────────────────────────────
+    // ── S-Code Rules ──────────────────────────────────────
+    let _scodeRules = [];
+
+    const MATCH_LABELS = { contains: '포함', contains_all: '모두포함', startswith: '시작', endswith: '끝', exact: '일치' };
+    const MATCH_COLORS = { contains: '#3b82f6', contains_all: '#06b6d4', startswith: '#10b981', endswith: '#a855f7', exact: '#f59e0b' };
+
+    async function loadScodeRules() {
+        try {
+            const [rulesRes, infoRes] = await Promise.all([
+                fetch('/api/scode_rules'),
+                fetch('/api/scode_info')
+            ]);
+            _scodeRules = await rulesRes.json();
+            _scodeInfo  = await infoRes.json();
+            renderScodeRules();
+            loadScodeCounts();
+            renderScodePersonnel();
+            // Populate expected S-Code dropdown
+            const sel = document.getElementById('scodeTestExpected');
+            if (sel) {
+                const scodes = [...new Set(_scodeRules.filter(r => r.scode).map(r => r.scode))].sort();
+                sel.innerHTML = '<option value="">예상 인프라 코드 (선택)</option>' +
+                    scodes.map(s => `<option value="${s}">${s}</option>`).join('');
+            }
+        } catch(e) {
+            alert('규칙 로드 실패: ' + e.message);
+        }
+    }
+
+    let _scodeInfo = {};
+
+    async function loadScodePersonnel() {
+        try {
+            const [rulesRes, infoRes] = await Promise.all([
+                fetch('/api/scode_rules'),
+                fetch('/api/scode_info')
+            ]);
+            _scodeRules = await rulesRes.json();
+            _scodeInfo  = await infoRes.json();
+            renderScodePersonnel();
+        } catch(e) {
+            document.getElementById('scodePersonnelList').innerHTML =
+                '<div style="color:#f87171;font-size:13px;padding:8px">로드 실패: ' + e.message + '</div>';
+        }
+    }
+
+    function renderScodePersonnel() {
+        const container = document.getElementById('scodePersonnelList');
+        if (!container) return;
+        // Get unique S-Codes from rules
+        const scodes = [...new Set(_scodeRules.filter(r => r.scode && !r.is_default).map(r => r.scode))].sort();
+        if (!scodes.length) {
+            container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px">규칙을 먼저 추가하세요</div>';
+            return;
+        }
+        container.innerHTML = scodes.map(scode => {
+            const info = _scodeInfo[scode] || {};
+            return `
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                        padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <div style="min-width:130px;font-family:monospace;font-size:13px;font-weight:600;
+                            color:var(--text);flex-shrink:0">${scode}</div>
+                <div style="display:flex;gap:8px;flex:1;flex-wrap:wrap;min-width:0">
+                    <div style="flex:1;min-width:120px">
+                        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">엔지니어</div>
+                        <input type="text" value="${info.engineer || ''}"
+                               oninput="_scodeInfo['${scode}'] = _scodeInfo['${scode}'] || {}; _scodeInfo['${scode}'].engineer = this.value"
+                               placeholder="담당 엔지니어"
+                               style="width:100%;background:var(--surface2);border:1px solid var(--border);
+                                      border-radius:5px;padding:5px 8px;font-size:12px;color:var(--text);outline:none"
+                               onfocus="this.style.borderColor='#2196F3'"
+                               onblur="this.style.borderColor='var(--border)'">
+                    </div>
+                    <div style="flex:1;min-width:120px">
+                        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">실무자(개발)</div>
+                        <input type="text" value="${info.developer || ''}"
+                               oninput="_scodeInfo['${scode}'] = _scodeInfo['${scode}'] || {}; _scodeInfo['${scode}'].developer = this.value"
+                               placeholder="담당 개발자"
+                               style="width:100%;background:var(--surface2);border:1px solid var(--border);
+                                      border-radius:5px;padding:5px 8px;font-size:12px;color:var(--text);outline:none"
+                               onfocus="this.style.borderColor='#2196F3'"
+                               onblur="this.style.borderColor='var(--border)'">
+                    </div>
+                    <div style="flex:1;min-width:120px">
+                        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">관리자(PM)</div>
+                        <input type="text" value="${info.manager || ''}"
+                               oninput="_scodeInfo['${scode}'] = _scodeInfo['${scode}'] || {}; _scodeInfo['${scode}'].manager = this.value"
+                               placeholder="담당 PM"
+                               style="width:100%;background:var(--surface2);border:1px solid var(--border);
+                                      border-radius:5px;padding:5px 8px;font-size:12px;color:var(--text);outline:none"
+                               onfocus="this.style.borderColor='#2196F3'"
+                               onblur="this.style.borderColor='var(--border)'">
+                    </div>
+                </div>
+                <button onclick="saveScodePersonnel('${scode}')"
+                        style="padding:6px 12px;background:#1d4ed8;border:1px solid #2563eb;
+                               color:#fff;border-radius:5px;font-size:12px;cursor:pointer;
+                               flex-shrink:0;transition:background .15s"
+                        onmouseover="this.style.background='#1e40af'"
+                        onmouseout="this.style.background='#1d4ed8'">저장</button>
+            </div>`;
+        }).join('');
+    }
+
+    async function saveScodePersonnel(scode) {
+        const info = _scodeInfo[scode] || {};
+        try {
+            await fetch('/api/scode_info', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    scode:     scode,
+                    engineer:  info.engineer  || '',
+                    developer: info.developer || '',
+                    manager:   info.manager   || '',
+                })
+            });
+        } catch(e) { alert('저장 실패: ' + e.message); }
+    }
+
+    function testScodeHostname() {
+        const hostname = document.getElementById('scodeTestHostname').value.trim();
+        const expected = document.getElementById('scodeTestExpected').value;
+        const resultEl = document.getElementById('scodeTestResult');
+        if (!hostname) { resultEl.style.display = 'none'; return; }
+        resultEl.style.display = '';
+
+        const hostname_lower = hostname.casefold ? hostname.casefold() : hostname.toLowerCase();
+
+        // Find matching rule
+        let matched = null;
+        const nonDefaults = _scodeRules.filter(r => !r.is_default);
+        for (const r of nonDefaults) {
+            const val = r.match_value.toLowerCase();
+            let hits = false;
+            if (r.match_type === 'contains')     hits = val !== '' && hostname_lower.includes(val);
+            if (r.match_type === 'contains_all') hits = val.split(',').every(p => p.trim() && hostname_lower.includes(p.trim()));
+            if (r.match_type === 'startswith')   hits = hostname_lower.startsWith(val);
+            if (r.match_type === 'endswith')     hits = hostname_lower.endsWith(val);
+            if (r.match_type === 'exact')        hits = hostname_lower === val;
+            if (hits) { matched = r; break; }
+        }
+        // Check default
+        if (!matched) {
+            matched = _scodeRules.find(r => r.is_default) || null;
+        }
+
+        // Find all other matching rules (conflicts)
+        const allMatches = nonDefaults.filter(r => {
+            if (r === matched) return false;
+            const val = r.match_value.toLowerCase();
+            if (r.match_type === 'contains')     return val !== '' && hostname_lower.includes(val);
+            if (r.match_type === 'contains_all') return val.split(',').every(p => p.trim() && hostname_lower.includes(p.trim()));
+            if (r.match_type === 'startswith')   return hostname_lower.startsWith(val);
+            if (r.match_type === 'endswith')     return hostname_lower.endsWith(val);
+            if (r.match_type === 'exact')        return hostname_lower === val;
+            return false;
+        });
+
+        const matchedScode = matched ? matched.scode : 'invalid';
+        const isCorrect = !expected || matchedScode === expected;
+
+        let html = '';
+
+        // Main result
+        if (matched) {
+            const ruleIdx = _scodeRules.indexOf(matched) + 1;
+            const ruleDesc = matched.is_default
+                ? '기본값 규칙'
+                : `규칙 #${ruleIdx} — ${MATCH_LABELS[matched.match_type]} "${matched.match_value}"`;
+            html += `
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                            background:${isCorrect ? '#0d2d1a' : '#2d0d0d'};
+                            border:1px solid ${isCorrect ? '#166534' : '#7f1d1d'};
+                            border-radius:8px;margin-bottom:8px">
+                    <span style="font-size:16px">${isCorrect ? '✓' : '✗'}</span>
+                    <div style="flex:1">
+                        <div style="font-size:13px;font-weight:700;color:${isCorrect ? '#4ade80' : '#f87171'}">
+                            ${ruleDesc} → <span style="font-family:monospace">${matchedScode}</span>
+                        </div>
+                        ${!isCorrect && expected ? `
+                        <div style="font-size:12px;color:#f87171;margin-top:3px">
+                            예상: <span style="font-family:monospace;font-weight:700">${expected}</span>
+                            — 해당 규칙이 우선순위 #${ruleIdx}보다 위에 있어야 합니다
+                        </div>` : ''}
+                    </div>
+                </div>`;
+        } else {
+            html += `
+                <div style="padding:10px 14px;background:#1a1a0d;border:1px solid #92400e;
+                            border-radius:8px;margin-bottom:8px;font-size:13px;color:#fbbf24">
+                    ⚠ 매칭되는 규칙 없음 — 인프라 코드: <span style="font-family:monospace">invalid</span>
+                    ${expected ? '<br><span style="font-size:12px;opacity:.8">새 규칙을 추가하세요</span>' : ''}
+                </div>`;
+        }
+
+        // Conflicting rules
+        if (allMatches.length) {
+            html += `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">
+                낮은 우선순위로 매칭된 규칙 (적용 안 됨):</div>`;
+            allMatches.forEach(r => {
+                const idx = _scodeRules.indexOf(r) + 1;
+                html += `<div style="padding:6px 12px;background:var(--surface);border:1px solid var(--border);
+                              border-radius:6px;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+                    규칙 #${idx} — ${MATCH_LABELS[r.match_type]} "<span style="font-family:monospace">${r.match_value}</span>"
+                    → <span style="font-family:monospace;color:var(--text)">${r.scode}</span>
+                </div>`;
+            });
+        }
+
+        resultEl.innerHTML = html;
+    }
+
+    async function loadScodeCounts() {
+        const container = document.getElementById('scodeVmCounts');
+        if (!container) return;
+        try {
+            const res  = await fetch('/api/scode_counts');
+            const data = await res.json();
+            if (!data.counts || !data.counts.length) {
+                container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px">데이터 없음</div>';
+                return;
+            }
+            const colors = ['#3b82f6','#10b981','#a855f7','#f59e0b','#06b6d4','#ef4444','#f97316','#84cc16','#ec4899','#6366f1'];
+
+            // Group by first segment (before first "-")
+            const groups = {};
+            data.counts.forEach(item => {
+                const group = item.scode.split('-')[0] || item.scode;
+                if (!groups[group]) groups[group] = [];
+                groups[group].push(item);
+            });
+
+            let html = '';
+            let colorIdx = 0;
+            Object.keys(groups).sort().forEach(group => {
+                const items = groups[group];
+                const total = items.reduce((s, i) => s + i.count, 0);
+                const color = colors[colorIdx++ % colors.length];
+                const gid = 'sg-' + group;
+                html += `
+                <div style="background:var(--surface);border:1px solid var(--border);
+                            border-radius:10px;margin-bottom:6px;
+                            border-left:3px solid ${color};min-width:180px;flex:1;max-width:280px">
+                    <div onclick="toggleScodeGroup('${gid}')"
+                         style="padding:8px 14px;background:var(--surface2);
+                                border-radius:10px;
+                                display:flex;align-items:center;justify-content:space-between;
+                                cursor:pointer;user-select:none"
+                         id="${gid}-header"
+                         onmouseover="this.style.background='var(--surface)'"
+                         onmouseout="this.style.background='var(--surface2)'">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span id="${gid}-arrow"
+                                  style="font-size:10px;color:${color};transition:transform .2s;
+                                         display:inline-block">▼</span>
+                            <span style="font-size:12px;font-weight:700;color:${color};
+                                         font-family:monospace;letter-spacing:.03em">${group}</span>
+                        </div>
+                        <span style="font-size:12px;font-weight:600;color:var(--text)">
+                            총 <span style="color:${color}">${total.toLocaleString()}</span> VM
+                        </span>
+                    </div>
+                    <div id="${gid}"
+                         style="max-height:180px;overflow-y:auto;
+                                padding:4px 6px;display:flex;flex-direction:column;gap:1px;
+                                border-top:1px solid var(--border)">
+                        ${items.map(item => `
+                        <div onclick="window.open('/vm_search?servicecode=${encodeURIComponent(item.scode)}','_blank')"
+                             style="display:flex;align-items:center;justify-content:space-between;
+                                    gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;
+                                    transition:background .12s;width:100%"
+                             onmouseover="this.style.background='${color}22'"
+                             onmouseout="this.style.background='transparent'">
+                            <span style="font-size:12px;font-family:monospace;
+                                         color:var(--text);font-weight:500;
+                                         white-space:nowrap;flex:1;min-width:0;
+                                         overflow:hidden;text-overflow:ellipsis"
+                                  title="${item.scode}">${item.scode}</span>
+                            <span style="font-size:13px;font-weight:700;color:${color};
+                                         flex-shrink:0;min-width:32px;text-align:right;
+                                         font-family:monospace;white-space:nowrap">${item.count.toLocaleString()}</span>
+                        </div>`).join('')}
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px">로드 실패</div>';
+        }
+    }
+
+    function toggleScodeGroup(id) {
+        const el = document.getElementById(id);
+        const arrow = document.getElementById(id + '-arrow');
+        const header = document.getElementById(id + '-header');
+        if (!el) return;
+        const hidden = el.style.display === 'none';
+        el.style.display = hidden ? 'flex' : 'none';
+        if (arrow) arrow.style.transform = hidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+        if (header) header.style.borderRadius = hidden ? '10px 10px 0 0' : '10px';
+    }
+
+    function goToCmdbWithScode(scode) {
+        window.open('/vm_search?servicecode=' + encodeURIComponent(scode), '_blank');
+    }
+
+    function renderScodeRules() {
+        const container = document.getElementById('scodeRulesBody');
+        const stats = document.getElementById('scodeStats');
+        const nonDefault = _scodeRules.filter(r => !r.is_default);
+        const defaults   = _scodeRules.filter(r => r.is_default);
+        if (stats) stats.innerHTML = `<span style="color:var(--text);font-weight:600">글로벌 규칙</span>
+            <span style="margin:0 6px;opacity:.4">·</span>
+            <span>${nonDefault.length}개 패턴 규칙</span>
+            <span style="margin:0 6px;opacity:.4">·</span>
+            <span>${defaults.length}개 기본값</span>
+            <span style="margin:0 6px;opacity:.4">·</span>
+            <span style="color:var(--text-muted)">전체 프로젝트 적용</span>`;
+
+        if (!_scodeRules.length) {
+            container.innerHTML = `
+                <div style="padding:32px;text-align:center;background:var(--surface);
+                            border:1px solid var(--border);border-radius:8px">
+                    <div style="font-size:28px;margin-bottom:8px;opacity:.4">📋</div>
+                    <div style="font-size:13px;color:var(--text-muted)">규칙이 없습니다. 아래 버튼으로 추가하세요.</div>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = _scodeRules.map((r, i) => `
+            <div class="scode-rule-card ${r.is_default ? 'is-default' : ''}" data-index="${i}"
+                 draggable="${!r.is_default}"
+                 style="background:var(--surface);border:1px solid ${r.is_default ? '#1d4ed8' : 'var(--border)'};
+                        border-radius:8px;padding:12px 14px;display:flex;align-items:center;
+                        gap:10px;transition:border-color .15s,box-shadow .15s;
+                        ${r.is_default ? 'border-style:dashed;opacity:.85' : ''}">
+
+                <!-- Drag handle -->
+                ${!r.is_default ? `<div class="drag-handle" style="color:var(--text-muted);cursor:grab;padding:0 4px;font-size:16px;user-select:none" title="드래그하여 순서 변경">⠿</div>` : `<div style="width:24px;text-align:center;font-size:12px;opacity:.5">★</div>`}
+
+                <!-- Priority badge -->
+                <div style="min-width:24px;height:24px;border-radius:50%;background:var(--surface2);
+                            border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+                            font-size:11px;font-weight:700;color:var(--text-muted);flex-shrink:0">
+                    ${r.is_default ? '—' : i + 1}
+                </div>
+
+                <!-- Match type badge -->
+                ${!r.is_default ? `
+                <select data-idx="${i}" onchange="_scodeRules[parseInt(this.dataset.idx)].match_type=this.value"
+                        style="background:var(--surface2);
+                               border:1.5px solid ${MATCH_COLORS[r.match_type] || '#3b82f6'};
+                               color:${MATCH_COLORS[r.match_type] || '#3b82f6'};
+                               border-radius:5px;padding:4px 8px;font-size:12px;
+                               font-weight:600;cursor:pointer;outline:none;flex-shrink:0;
+                               min-width:70px">
+                    ${['contains','contains_all','startswith','endswith','exact'].map(t =>
+                        `<option value="${t}" ${r.match_type===t?'selected':''}
+                         style="background:var(--surface);color:var(--text)">${MATCH_LABELS[t]}</option>`
+                    ).join('')}
+                </select>` : `<span style="font-size:11px;background:#1e3a8a22;color:#60a5fa;
+                    border:1px solid #1e3a8a66;border-radius:5px;padding:4px 10px;font-weight:600;flex-shrink:0">기본값</span>`}
+
+                <!-- Pattern input -->
+                <div style="flex:1;min-width:120px">
+                    ${!r.is_default ? `
+                    <input type="text" value="${r.match_value || ''}"
+                           data-idx="${i}" oninput="_scodeRules[parseInt(this.dataset.idx)].match_value=this.value"
+                           placeholder="${r.match_type==='contains_all' ? '패턴1, 패턴2 (쉼표로 구분)' : '호스트명 패턴 (예: infra-iet)'}"
+                           style="width:100%;background:var(--surface2);border:1px solid var(--border);
+                                  border-radius:6px;padding:6px 10px;font-size:13px;
+                                  color:var(--text);outline:none;font-family:monospace;
+                                  transition:border-color .15s"
+                           onfocus="this.style.borderColor='#2196F3'"
+                           onblur="this.style.borderColor='var(--border)'">
+                    ` : `<span style="font-size:12px;color:var(--text-muted);font-style:italic">
+                        패턴 없음 — 위 규칙에 해당하지 않는 모든 VM에 적용
+                    </span>`}
+                </div>
+
+                <!-- Arrow -->
+                <div style="color:var(--text-muted);flex-shrink:0;font-size:14px">→</div>
+
+                <!-- S-Code input -->
+                <div style="min-width:130px">
+                    <input type="text" value="${r.scode || ''}"
+                           oninput="_scodeRules[${i}].scode=this.value"
+                           placeholder="인프라 코드"
+                           style="width:100%;background:var(--surface2);
+                                  border:1.5px solid ${r.scode ? '#10b981' : 'var(--border)'};
+                                  border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;
+                                  color:var(--text);outline:none;
+                                  font-family:monospace;transition:all .15s"
+                           data-idx="${i}" oninput="_scodeRules[parseInt(this.dataset.idx)].scode=this.value;updateScodeInputStyle(this)"
+                           onfocus="this.style.borderColor='#2196F3'"
+                           onblur="this.style.borderColor=this.value?'#10b981':'var(--border)'">
+                </div>
+
+                <!-- Delete -->
+                <button onclick="deleteScodeRule(${i})"
+                        style="background:transparent;border:1px solid transparent;color:var(--text-muted);
+                               border-radius:5px;padding:5px 8px;cursor:pointer;font-size:16px;
+                               transition:all .15s;flex-shrink:0"
+                        onmouseover="this.style.background='#7f1d1d44';this.style.color='#f87171';this.style.borderColor='#7f1d1d'"
+                        onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';this.style.borderColor='transparent'"
+                        title="규칙 삭제">✕</button>
+            </div>
+        `).join('');
+
+        initDragSort();
+    }
+
+    function updateScodeInputStyle(input) {
+        input.style.borderColor = input.value ? '#10b981' : 'var(--border)';
+    }
+
+    function addScodeRule() {
+        // Insert before default rules
+        const defaultIdx = _scodeRules.findIndex(r => r.is_default);
+        const newRule = { match_type: 'contains', match_value: '', scode: '', is_default: false };
+        if (defaultIdx >= 0) _scodeRules.splice(defaultIdx, 0, newRule);
+        else _scodeRules.push(newRule);
+        renderScodeRules();
+    }
+
+    function deleteScodeRule(i) {
+        const rule = _scodeRules[i];
+        const desc = rule.is_default ? '기본값 규칙' : `"${rule.match_value}" → ${rule.scode}`;
+        showConfirm(`규칙을 삭제하시겠습니까?<br><br><span style="font-family:monospace;font-size:12px;color:var(--text-muted)">${desc}</span>`, () => {
+            _scodeRules.splice(i, 1);
+            renderScodeRules();
+        });
+    }
+
+    function showConfirm(message, onConfirm) {
+        let overlay = document.getElementById('scodeConfirmOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'scodeConfirmOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+            document.body.appendChild(overlay);
+        }
+        overlay.innerHTML = `
+            <div style="background:var(--bg2,#1a2030);border:1px solid var(--border,#2a3550);
+                        border-radius:12px;padding:24px 28px;max-width:380px;width:90%;
+                        box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+                <div style="font-size:14px;color:var(--text,#e2e8f0);margin-bottom:20px;line-height:1.6">${message}</div>
+                <div style="display:flex;justify-content:flex-end;gap:10px">
+                    <button onclick="document.getElementById('scodeConfirmOverlay').remove()"
+                            style="padding:7px 18px;background:var(--surface2,#111928);
+                                   border:1px solid var(--border,#2a3550);color:var(--text,#e2e8f0);
+                                   border-radius:6px;font-size:13px;cursor:pointer">취소</button>
+                    <button id="scodeConfirmBtn"
+                            style="padding:7px 18px;background:#dc2626;border:1px solid #ef4444;
+                                   color:#fff;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">삭제</button>
+                </div>
+            </div>`;
+        document.getElementById('scodeConfirmBtn').onclick = () => {
+            overlay.remove();
+            onConfirm();
+        };
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    }
+
+    async function saveScodeRules() {
+        if (!_scodeRules) return;
+        for (const r of _scodeRules) {
+            if (!r.scode.trim()) { alert('모든 규칙에 인프라 코드 값을 입력해주세요.'); return; }
+            if (!r.is_default && !r.match_value.trim()) { alert('패턴 값을 입력해주세요.'); return; }
+        }
+        const btn = document.getElementById('btnSaveRulesBottom');
+        const orig = btn?.innerHTML;
+        if (btn) { btn.textContent = '저장 중...'; btn.disabled = true; }
+        try {
+            const res = await fetch('/api/scode_rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rules: _scodeRules })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                if (btn) { btn.textContent = '✓ 저장 완료'; btn.style.background = '#065f46'; }
+                setTimeout(() => {
+                    if (btn) { btn.textContent = '규칙 저장'; btn.disabled = false; btn.style.background = '#1d4ed8'; }
+                    loadScodeRules();
+                }, 1500);
+            }
+        } catch(e) {
+            alert('저장 실패: ' + e.message);
+            if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+        }
+    }
+
+    // Drag-to-reorder
+    function initDragSort() {
+        const cards = document.querySelectorAll('.scode-rule-card[draggable="true"]');
+        let dragged = null;
+        cards.forEach(card => {
+            card.addEventListener('dragstart', e => {
+                dragged = card;
+                card.style.opacity = '.4';
+            });
+            card.addEventListener('dragend', () => {
+                card.style.opacity = '1';
+                dragged = null;
+            });
+            card.addEventListener('dragover', e => {
+                e.preventDefault();
+                if (!dragged || dragged === card || card.classList.contains('is-default')) return;
+                card.style.boxShadow = '0 0 0 2px #2196F3';
+            });
+            card.addEventListener('dragleave', () => {
+                card.style.boxShadow = '';
+            });
+            card.addEventListener('drop', e => {
+                e.preventDefault();
+                card.style.boxShadow = '';
+                if (!dragged || dragged === card || card.classList.contains('is-default')) return;
+                const fromIdx = parseInt(dragged.dataset.index);
+                const toIdx   = parseInt(card.dataset.index);
+                const moved   = _scodeRules.splice(fromIdx, 1)[0];
+                _scodeRules.splice(toIdx, 0, moved);
+                renderScodeRules();
+            });
+        });
+    }
+
+        function openEditProject(zone, alias, accessId) {
+        document.getElementById('editZoneOld').value  = zone;
+        document.getElementById('editZoneNew').value  = zone;
+        document.getElementById('editAlias').value    = alias;
+        document.getElementById('editAccessId').value = '';
+        document.getElementById('editProjectModal').style.display = 'flex';
+    }
+    function closeEditProject() {
+        document.getElementById('editProjectModal').style.display = 'none';
+    }
+
+    let _historyOffset = 0;
+    let _historyTotal  = 0;
+    const _historyLimit = 100;
+
+    async function loadAppHistory(offset = 0) {
+        _historyOffset = offset;
+        const tbody = document.getElementById('historyTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">로딩 중...</td></tr>';
+        const type = document.getElementById('historyTypeFilter')?.value || 'all';
+        try {
+            const res  = await fetch(`/api/history?limit=${_historyLimit}&offset=${offset}&type=${type}`);
+            const data = await res.json();
+            _historyTotal = data.total || 0;
+            const events  = data.events || [];
+            const TYPE_COLORS = {
+                IAM:           'background:#0c1a2e;color:#7dd3fc',
+                VM:            'background:#0a1a0a;color:#4ade80',
+                ANSIBLE:       'background:#1a1a0a;color:#fbbf24',
+                PUPPET:        'background:#1a0a1a;color:#c084fc',
+                TOKEN_REFRESH: 'background:#0a1a1a;color:#22d3ee',
+            };
+            if (!events.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">기록이 없습니다.</td></tr>';
+            } else {
+                tbody._allRows = events.map(h => ({
+                    type: h.event_type || '', title: h.title || '',
+                    detail: h.detail || '', username: h.username || '',
+                    html: `<tr>
+                        <td><span style="font-size:11px;padding:2px 7px;border-radius:3px;font-weight:600;
+                                         ${TYPE_COLORS[h.event_type] || 'background:#1a1a2e;color:#94a3b8'}">
+                            ${h.event_type}</span></td>
+                        <td><span style="color:var(--text);font-size:13px">${h.title}</span></td>
+                        <td><span style="color:var(--text-muted);font-size:12px;white-space:pre-wrap">${h.detail || '-'}</span></td>
+                        <td><span style="color:var(--text-dim);font-size:12px">${h.username || '-'}</span></td>
+                        <td><span class="token-age">${h.created_at} KST</span></td>
+                    </tr>`
+                }));
+                filterHistoryTable();
+            }
+            const totalPages = Math.max(1, Math.ceil(_historyTotal / _historyLimit));
+            const curPage    = Math.floor(offset / _historyLimit) + 1;
+            const pageInfo   = document.getElementById('hist-page-info');
+            const totalInfo  = document.getElementById('hist-total-info');
+            const prevBtn    = document.getElementById('hist-prev');
+            const nextBtn    = document.getElementById('hist-next');
+            if (pageInfo)  pageInfo.textContent = `${curPage} / ${totalPages}`;
+            if (totalInfo) totalInfo.textContent = `총 ${_historyTotal.toLocaleString()}건`;
+            if (prevBtn)   prevBtn.disabled      = offset <= 0;
+            if (nextBtn)   nextBtn.disabled      = offset + _historyLimit >= _historyTotal;
+        } catch(e) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#f87171;padding:20px">로드 실패: ${e.message}</td></tr>`;
+        }
+    }
+
+    function historyChangePage(dir) {
+        const newOffset = _historyOffset + (dir * _historyLimit);
+        if (newOffset < 0 || newOffset >= _historyTotal) return;
+        loadAppHistory(newOffset);
+    }
+
+    function filterHistoryTable() {
+        const tbody = document.getElementById('historyTableBody');
+        if (!tbody || !tbody._allRows) { loadAppHistory(0); return; }
+        const q    = (document.getElementById('historySearch')?.value || '').toLowerCase();
+        const col  = document.getElementById('historySearchCol')?.value || 'all';
+        const type = document.getElementById('historyTypeFilter')?.value || 'all';
+        const filtered = tbody._allRows.filter(r => {
+            const typeOk = type === 'all' || r.type === type;
+            let searchOk = true;
+            if (q) {
+                if      (col === 'title')    searchOk = r.title.toLowerCase().includes(q);
+                else if (col === 'detail')   searchOk = r.detail.toLowerCase().includes(q);
+                else if (col === 'username') searchOk = r.username.toLowerCase().includes(q);
+                else                         searchOk = r.title.toLowerCase().includes(q) ||
+                                                        r.detail.toLowerCase().includes(q) ||
+                                                        r.username.toLowerCase().includes(q);
+            }
+            return typeOk && searchOk;
+        });
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">검색 결과가 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = filtered.map(r => r.html).join('');
+    }
+
+    function switchTab(tab, el) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+        document.getElementById(`tab-${tab}`)?.classList.add('active');
+        const target = el || document.querySelector(`.sidebar-item[data-tab="${tab}"]`);
+        if (target) target.classList.add('active');
+        if (tab === 'scode') loadScodeRules();
+        if (tab === 'personnel') loadScodePersonnel();
+        if (tab === 'history')   loadAppHistory();
+        history.pushState(null, '', '/iam#' + tab);
+        updateCounts();
+    }
+
+    // ── Modal helpers ─────────────────────────────────────────
+    function openModal(id)  { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+        // Clear visible inputs only — preserve hidden fields like csrf_token
+        document.querySelectorAll(`#${id} input:not([type="hidden"]), #${id} textarea, #${id} select`).forEach(el => {
+            if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+            else el.value = '';
+        });
+    }
+
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+    });
+
+    function openCreateUser() { openModal('createUserModal'); }
+
+    function openEditUser(username, role) {
+        document.getElementById('editUsername').value = username;
+        document.getElementById('editRole').value     = role;
+        document.getElementById('editUserDesc').textContent = `${username}의 역할을 변경합니다.`;
+        openModal('editUserModal');
+    }
+
+    function confirmDeleteUser(username) {
+        document.getElementById('deleteUsername').value = username;
+        document.getElementById('deleteUserDesc').textContent = `"${username}" 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
+        openModal('deleteUserModal');
+    }
+
+    function openResetPw(username) {
+        document.getElementById('resetPwUsername').value = username;
+        document.getElementById('resetPwDesc').textContent = `"${username}"의 비밀번호를 초기화합니다.`;
+        document.getElementById('resetPwInput').value = '';
+        openModal('resetPwModal');
+    }
+
+    function resetTotp(username) {
+        if (!confirm(`"${username}"의 2FA를 초기화하시겠습니까?\n다음 로그인 시 새 QR코드를 스캔해야 합니다.`)) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ url_for('iam_update_user') }}";
+        form.innerHTML = `
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="username" value="${username}">
+            <input type="hidden" name="action" value="reset_totp">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function openAddProject() { openModal('addProjectModal'); }
+
+    // ── Search/filter ─────────────────────────────────────────
+    function filterUsers() {
+        const q = document.getElementById('userSearch').value.toLowerCase();
+        let count = 0;
+        document.querySelectorAll('#userTableBody tr').forEach(tr => {
+            const name = tr.dataset.username?.toLowerCase() || '';
+            const show = name.includes(q);
+            tr.style.display = show ? '' : 'none';
+            if (show) count++;
+        });
+        document.getElementById('userCount').textContent = `${count}명`;
+    }
+
+    function filterProjects() {
+        const q = document.getElementById('projectSearch').value.toLowerCase();
+        let count = 0;
+        document.querySelectorAll('#projectTableBody tr').forEach(tr => {
+            const zone = tr.dataset.zone?.toLowerCase() || '';
+            const show = zone.includes(q);
+            tr.style.display = show ? '' : 'none';
+            if (show) count++;
+        });
+        document.getElementById('projectCount').textContent = `${count}개`;
+    }
+
+    function updateCounts() {
+        filterUsers();
+        filterProjects();
+    }
+
+    updateCounts();
+
+    // Keyboard: Escape closes modals
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay.open')
+                .forEach(m => m.classList.remove('open'));
+        }
+    });
+
+    function openApproveModal(btn) {
+        const username = btn.dataset.username;
+        const role     = btn.dataset.role;
+        const reason   = btn.dataset.reason;
+        document.getElementById('approveUsername').value = username;
+        document.getElementById('approveDesc').textContent =
+            `"${username}"의 가입 신청을 승인하시겠습니까?`;
+        const reasonBox  = document.getElementById('approveReason');
+        const reasonText = document.getElementById('approveReasonText');
+        if (reason) {
+            reasonBox.style.display = 'block';
+            reasonText.textContent  = reason;
+        } else {
+            reasonBox.style.display = 'none';
+        }
+        document.getElementById('approveRoleSelect').value = role || 'viewer';
+        openModal('approveModal');
+    }
+
+    function syncApproveRole() {
+        document.getElementById('approveRoleHidden').value =
+            document.getElementById('approveRoleSelect').value;
+    }
+
+    function openRejectModal(username) {
+        document.getElementById('rejectUsername').value = username;
+        document.getElementById('rejectDesc').textContent = `"${username}"의 가입 신청을 거절하시겠습니까?`;
+        openModal('rejectModal');
+    }
+
+    // Sidebar collapse
+    // Set nav height from actual nav
+    (function() {
+        const nav = document.querySelector('nav');
+        const h   = nav ? nav.getBoundingClientRect().height : 48;
+        document.documentElement.style.setProperty('--nav-height', h + 'px');
+    })();
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('iamSidebar');
+        const btn     = document.getElementById('sidebarToggleBtn');
+        const icon    = document.getElementById('sidebarToggleIcon');
+        const collapsed = sidebar.classList.toggle('collapsed');
+        // Move button to edge of sidebar
+        btn.style.left = collapsed ? '48px' : 'var(--sidebar-width, 220px)';
+        icon.style.transform = collapsed ? 'rotate(180deg)' : '';
+        localStorage.setItem('iam_sidebar_collapsed', collapsed);
+    }
+    // Restore sidebar state
+    (function() {
+        const sidebar = document.getElementById('iamSidebar');
+        const btn     = document.getElementById('sidebarToggleBtn');
+        const icon    = document.getElementById('sidebarToggleIcon');
+        if (localStorage.getItem('iam_sidebar_collapsed') === 'true') {
+            sidebar.classList.add('collapsed');
+            btn.style.left = '48px';
+            icon.style.transform = 'rotate(180deg)';
+        }
+    })();
+
+    // Restore tab from URL hash
+    const hash = window.location.hash.replace('#', '');
+    if (['projects', 'pending', 'history', 'users', 'scode', 'personnel'].includes(hash)) {
+        switchTab(hash);
+    } else {
+        loadScodeRules(); // preload in background
+    }
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', () => {
+        const h = window.location.hash.replace('#', '');
+        if (['projects', 'pending', 'history', 'users', 'scode', 'personnel'].includes(h)) {
+            switchTab(h);
+        }
+    });
+</script>
+</body>
+</html>

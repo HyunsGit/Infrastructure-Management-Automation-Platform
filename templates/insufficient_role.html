@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>접근 권한 없음 — InfraPilot</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0f1117;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            font-family: 'Segoe UI', Arial, sans-serif; color: #e2e8f0;
+        }
+        .card {
+            text-align: center; max-width: 420px; padding: 48px 40px;
+            background: #161b27; border: 1px solid #232d42;
+            border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .icon { font-size: 48px; margin-bottom: 20px; }
+        h1 { font-size: 22px; font-weight: 700; color: #f87171; margin-bottom: 8px; }
+        p  { font-size: 14px; color: #7a8fa6; line-height: 1.7; margin-bottom: 24px; }
+        .role-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 100px;
+            font-size: 12px; font-weight: 700; margin-bottom: 24px;
+            background: rgba(100,100,120,0.15); color: #94a3b8;
+            border: 1px solid rgba(100,100,120,0.3);
+        }
+        .btn {
+            display: inline-block; padding: 10px 24px;
+            background: #1a3a5f; color: #7dd3fc;
+            border: 1px solid #2a5580; border-radius: 8px;
+            font-size: 14px; font-weight: 600; text-decoration: none;
+            transition: background 0.15s;
+        }
+        .btn:hover { background: #1e4a6f; }
+    </style>
+</head>
+<body>
+    {% include 'top_menu.html' %}
+    <div class="card">
+        <div class="icon">🔒</div>
+        <h1>Insufficient Role</h1>
+        <p>현재 역할로는 이 페이지에 접근할 수 없습니다.<br>관리자에게 권한을 요청하세요.</p>
+        {% if current_user.is_authenticated %}
+        {% set db_me = get_db_user(current_user.get_id()) %}
+        {% if db_me %}
+        <div class="role-badge">현재 역할: {{ db_me.role or 'viewer' }}</div><br>
+        {% endif %}
+        {% endif %}
+        <a href="{{ url_for('summary') }}" class="btn">← 홈으로 돌아가기</a>
+    </div>
+</body>
+</html>

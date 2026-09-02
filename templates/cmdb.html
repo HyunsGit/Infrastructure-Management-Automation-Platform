@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>CMDB - Virtual Machine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="static/css/menu.css">
+    <link rel="stylesheet" href="/static/css/light-mode.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', Arial, sans-serif;
+            background: linear-gradient(135deg, #232946 0%, #1a2233 60%, #15334a 100%);
+            color: #f3f6fa;
+            min-height: 100vh;
+            background-size: 400% 400%;
+            animation: gradientBG 12s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+        .container {
+            max-width: 100%;
+            width: 100%;
+            margin: 40px auto 80px auto;
+            background: rgba(27,32,46,0.96);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(33, 150, 243, 0.19);
+            padding: 30px 32px 48px 32px;
+            animation: fadeIn 0.7s;
+            color: #f3f6fa;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: none; }
+        }
+        form#search-form .row {
+            margin-bottom: 1rem;
+        }
+        label {
+            font-weight: 600;
+            color: #c2f7e3;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        
+        .multi-select-input {
+            position: relative;
+            min-height: 40px;
+            background-color: rgba(27, 32, 46, 0.8);
+            border: 1.5px solid #2196F3;
+            border-radius: 0.375rem;
+            display: flex;
+            flex-wrap: wrap; /* allow wrapping */
+            gap: 6px;
+            padding: 4px 8px;
+            box-sizing: border-box;
+            color: #c2f7e3;
+            cursor: text;
+            align-items: center; /* vertically center tags and input */
+        }
+
+        .multi-select-input input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #c2f7e3;
+            min-width: 60px;
+            flex: 1 1 150px; /* flex-grow and flex-basis for responsive input */
+            height: 32px;
+            line-height: 32px;
+            padding: 0;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+            cursor: text;
+        }
+
+        .multi-select-input input:placeholder-shown {
+            height: 30px;
+            line-height: 30px;
+            padding: 0;
+            margin: 0;
+        }
+        .multi-select-input input:not(:placeholder-shown) {
+            height: 30px;
+            line-height: 30px;
+            padding: 0;
+            margin: 0;
+        }
+                
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+            overflow-x: hidden !important;
+            white-space: normal !important;
+            background: rgba(27, 32, 46, 0.95);
+            border: 1.5px solid #2196F3;
+            border-radius: 0 0 0.375rem 0.375rem;
+            z-index: 1051;
+            display: none;
+            color: #c2f7e3;
+            user-select: none;
+        }
+
+        .multi-select-dropdown div {
+            min-height: 30px;
+            line-height: 30px;
+            padding: 6px 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .multi-select-dropdown div:hover {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .tag {
+            background-color: #2196F3;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 10px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+            line-height: 28px;
+            box-sizing: border-box;
+            margin: 0; /* remove extra margin to avoid extra space */
+        }
+        
+        .tag .remove-tag {
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #2196F3;
+            border-color: #2196F3;
+            font-weight: 600;
+            border-radius: 0.375rem;
+            height: 42px;
+            padding: 0 20px;
+            transition: background-color 0.25s;
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: #1976d2;
+            border-color: #1976d2;
+            outline: none;
+        }
+        table {
+            background-color: rgba(33,37,50,0.9);
+            color: #f3f6fa;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 30px;
+            width: 100%;
+            min-width: 1100px;
+        }
+        thead tr {
+            background-color: #2196F3;
+            color: white;
+        }
+        th, td {
+            padding: 12px 15px;
+            border: none !important;
+            vertical-align: middle;
+            text-align: left;
+            user-select: text !important;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px; /* Adjust as needed */
+        }
+        tbody tr:nth-child(even) {
+            background-color: rgba(0,0,0,0.15);
+        }
+        tbody tr:hover {
+            background-color: #1976d2;
+            color: white;
+        }
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+        .pagination button {
+            padding: 6px 12px;
+            border-radius: 0.375rem;
+            background-color: rgba(33,37,50,0.8);
+            border: 1.5px solid #2196F3;
+            color: #c2f7e3;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.25s, color 0.25s;
+        }
+        .pagination button:hover, .pagination button:focus {
+            background-color: #2196f3;
+            color: white;
+            outline: none;
+        }
+        .pagination button.active {
+            background-color: #64b5f6;
+            border-color: #64b5f6;
+            color: white;
+            font-weight: 700;
+        }
+        @media (max-width: 767px) {
+            form#search-form .row > div {
+                margin-bottom: 1rem;
+            }
+        }
+        .position-relative {
+            position: relative;
+        }
+        .btn-purple {
+            color: #fff;
+            background-color: #6610f2; /* Bootstrap Indigo */
+            border-color: #6610f2;
+        }
+
+        .btn-purple:hover,
+        .btn-purple:focus,
+        .btn-purple:active,
+        .btn-purple.active,
+        .show > .btn-purple.dropdown-toggle {
+            background-color: #520dc2;
+            border-color: #520dc2;
+            color: #fff;
+            outline: none;
+            box-shadow: none;
+        }
+
+        .dropdown-item.highlighted {
+            background-color: #2196F3; /* bright blue background */
+            color: inherit; /* keep font color unchanged */
+        }
+
+        .status-tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: #2196F3;
+            color: #fff;
+            border-radius: 18px;
+            padding: 4px 16px 4px 12px;
+            font-size: 0.97rem;
+            font-weight: 600;
+            height: 32px;
+            line-height: 28px;
+            box-sizing: border-box;
+            user-select: none;
+            margin-right: 4px;
+            white-space: nowrap;
+        }
+        .status-tag.status-active {
+            background-color: #2e7d32 !important;
+            color: #fff !important;
+        }
+        .status-tag.status-shelve-offloaded,
+        .status-tag.status-shelved_offloaded {
+            background-color: #c62828 !important;
+            color: #fff !important;
+        }
+        .status-tag.status-stopped {
+            background-color: #f9a825 !important;
+            color: #212121 !important;
+        }
+        /* Container spans full browser width */
+        #results-container {
+        width: 100vw;
+        max-width: 100vw;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+}
+
+        /* Remove any margin or padding from header and body wrappers */
+        #results-header,
+        #results-body {
+        margin: 0;
+        padding: 0;
+        }
+
+        /* Both tables full width with fixed table layout */
+        #results-header table,
+        #results-body table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin: 0;
+        padding: 0;
+        border-spacing: 0;
+        }
+
+        /* Sticky header styling */
+        #results-header {
+        position: sticky;
+        top: 0;
+        background-color: #212529;
+        z-index: 10;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Uniform cell padding and text alignment */
+        #results-header th,
+        #results-body td {
+        padding: 12px 15px;
+        text-align: left;
+        border: none;
+        }
+
+        /* Scrollable body with vertical and horizontal scroll */
+        #results-body {
+        max-height: 600px; /* Adjust as needed */
+        overflow-y: auto;
+        overflow-x: auto;
+        box-sizing: border-box;
+        }
+
+        /* Remove old row coloring */
+        tbody tr.status-active, tbody tr.status-shelve-offloaded, tbody tr.status-shelved_offloaded, tbody tr.status-stopped,
+        tbody tr.status-active td, tbody tr.status-shelve-offloaded td, tbody tr.status-shelved_offloaded td, tbody tr.status-stopped td,
+        .table-dark > tbody > tr.status-active > td, .table-dark > tbody > tr.status-shelve-offloaded > td, 
+        .table-dark > tbody > tr.status-shelved_offloaded > td, .table-dark > tbody > tr.status-stopped > td, 
+        #results table.table tr.status-active, #results table.table tr.status-active td,
+        #results table.table tr.status-shelve-offloaded, #results table.table tr.status-shelve-offloaded td,
+        #results table.table tr.status-shelved_offloaded, #results table.table tr.status-shelved_offloaded td,
+        #results table.table tr.status-stopped, #results table.table tr.status-stopped td
+        {
+            background-color: unset !important;
+            color: unset !important;
+        }
+        table td:nth-child(3),
+        table th:nth-child(3) {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            max-width: none !important;
+            word-break: break-word;
+        }
+
+        /* ── Light mode table-dark override ──────────────────── */
+        body.light-mode table.table-dark,
+        body.light-mode .table-dark {
+            background-color: #ffffff !important;
+            color: #111827 !important;
+            --bs-table-bg: #ffffff !important;
+            --bs-table-color: #111827 !important;
+            --bs-table-striped-bg: #f0f9ff !important;
+            --bs-table-striped-color: #111827 !important;
+            --bs-table-hover-bg: #1976d2 !important;
+            --bs-table-hover-color: #ffffff !important;
+            --bs-table-border-color: #e2e8f0 !important;
+        }
+        body.light-mode .table-dark thead tr { background-color: #2196F3 !important; color: #ffffff !important; }
+        body.light-mode .table-dark > thead > tr > th { color: #ffffff !important; background-color: #2196F3 !important; }
+        body.light-mode .table-dark tbody,
+        body.light-mode .table-dark tbody tr,
+        body.light-mode .table-dark tbody td { background-color: #ffffff !important; color: #111827 !important; }
+        body.light-mode .table-dark tbody tr:nth-child(even),
+        body.light-mode .table-dark tbody tr:nth-child(even) td { background-color: #f0f9ff !important; }
+        body.light-mode .table-dark tbody tr:hover,
+        body.light-mode .table-dark tbody tr:hover td { background-color: #1976d2 !important; color: #ffffff !important; }
+        body.light-mode #results-header { background-color: #ffffff !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
+        body.light-mode #results-body { background-color: #ffffff !important; }
+        body.light-mode #results-container { background-color: #ffffff !important; }
+        body.light-mode {
+            background: linear-gradient(135deg, #e8f0fe 0%, #f0f4f8 60%, #e2eef8 100%) !important;
+            animation: none !important;
+            color: #111827 !important;
+        }
+        body.light-mode .container {
+            background: #ffffff !important;
+            color: #111827 !important;
+            box-shadow: 0 8px 32px rgba(33,150,243,0.10) !important;
+        }
+        body.light-mode label { color: #1d4ed8 !important; }
+        body.light-mode h1, body.light-mode h2, body.light-mode h3 { color: #111827 !important; }
+
+        /* Multi-select inputs */
+        body.light-mode .multi-select-input {
+            background-color: #ffffff !important;
+            border-color: #2196F3 !important;
+            color: #111827 !important;
+        }
+        body.light-mode .multi-select-input input { color: #111827 !important; }
+        body.light-mode .multi-select-input input::placeholder { color: #94a3b8 !important; }
+        body.light-mode .multi-select-dropdown {
+            background: #ffffff !important;
+            border-color: #2196F3 !important;
+            color: #111827 !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+        }
+        body.light-mode .multi-select-dropdown div { color: #111827 !important; }
+        body.light-mode .multi-select-dropdown div:hover {
+            background-color: #2196F3 !important;
+            color: #ffffff !important;
+        }
+
+        /* Date inputs */
+        body.light-mode input[type="date"] {
+            background: #ffffff !important;
+            border: 1.5px solid #2196F3 !important;
+            color: #111827 !important;
+        }
+
+        /* Table */
+        body.light-mode table {
+            background-color: #ffffff !important;
+            color: #111827 !important;
+        }
+        body.light-mode thead tr { background-color: #2196F3 !important; color: #ffffff !important; }
+        body.light-mode tbody td { color: #111827 !important; }
+        body.light-mode tbody tr:nth-child(even) { background-color: #f0f9ff !important; }
+        body.light-mode tbody tr:hover { background-color: #1976d2 !important; color: #ffffff !important; }
+        body.light-mode tbody tr:hover td { color: #ffffff !important; }
+
+        /* Sticky header */
+        body.light-mode #results-header { background-color: #ffffff !important; }
+
+        /* Pagination */
+        body.light-mode .pagination button {
+            background-color: #ffffff !important;
+            border-color: #2196F3 !important;
+            color: #1d4ed8 !important;
+        }
+        body.light-mode .pagination button:hover,
+        body.light-mode .pagination button:focus {
+            background-color: #2196F3 !important;
+            color: #ffffff !important;
+        }
+        body.light-mode .pagination button.active {
+            background-color: #2196F3 !important;
+            border-color: #2196F3 !important;
+            color: #ffffff !important;
+        }
+
+        /* Result count / info text */
+        body.light-mode #result-count,
+        body.light-mode .result-info { color: #374151 !important; }
+
+        /* Select All / Clear buttons */
+        body.light-mode .btn-outline-secondary {
+            color: #374151 !important;
+            border-color: #94a3b8 !important;
+        }
+        body.light-mode .btn-outline-secondary:hover {
+            background-color: #f1f5f9 !important;
+            color: #111827 !important;
+        }
+    </style>
+</head>
+<body>
+    {% include 'top_menu.html' %}
+
+<div class="container">
+    <h2 class="dashboard-title">CMDB - Virtual Machine</h2>
+    <form id="search-form">
+        <div class="row g-3">
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="status-input" style="margin: 0; padding: 0; user-select: none;">Status</label>
+                    <div>
+                        <button 
+                            type="button" 
+                            id="status-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All Statuses"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="status-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All Statuses"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                <!-- multiselect container has position: relative -->
+                <div id="status-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="status-input" autocomplete="off" placeholder="Select options" />
+                    <div id="status-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="status" id="status-hidden" />
+            </div>
+
+
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="project-input" style="margin: 0; padding: 0; user-select: none;">Project</label>
+                    <div>
+                        <button 
+                            type="button" 
+                            id="project-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All Projects"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="project-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All Projects"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                <div id="project-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="project-input" autocomplete="off" placeholder="Select options" />
+                    <div id="project-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="project" id="project-hidden" />
+            </div>
+
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="servicecode-input" style="margin: 0; padding: 0; user-select: none;">Service Code</label>
+                    <div>
+                        <button 
+                            type="button" 
+                            id="servicecode-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All Service-codes"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="servicecode-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All Service-codes"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                <div id="servicecode-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="servicecode-input" autocomplete="off" placeholder="Select options" />
+                    <div id="servicecode-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="servicecode" id="servicecode-hidden" />
+            </div>
+
+            <div class="col-md-3 position-relative" style="z-index: 1100;">
+                <label for="vm_name-input">VM Name</label>
+                <div id="vm_name-multiselect" class="multi-select-input">
+                    <input type="text" id="vm_name-input" autocomplete="off" placeholder="Type or select VM Names" />
+                    <div id="vm_name-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="vm_name" id="vm_name-hidden" />
+            </div>
+
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="availability_zone-input" style="margin: 0; padding: 0; user-select: none;">Availability Zone</label> 
+                    <div>
+                        <button 
+                            type="button" 
+                            id="availability_zone-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All AZs"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="availability_zone-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All AZs"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>                   
+                </div>
+                <div id="availability_zone-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="availability_zone-input" autocomplete="off" placeholder="Select options" />
+                    <div id="availability_zone-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="az" id="availability_zone-hidden" />                
+            </div>
+
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="vpc-input" style="margin: 0; padding: 0; user-select: none;">VPC</label> 
+                    <div>
+                        <button 
+                            type="button" 
+                            id="vpc-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All VPCs"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="vpc-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All VPCs"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>                   
+                </div>
+                <div id="vpc-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="vpc-input" autocomplete="off" placeholder="Select options" />
+                    <div id="vpc-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="vpc" id="vpc-hidden" />                
+            </div>
+
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="subnet-input" style="margin: 0; padding: 0; user-select: none;">Subnet</label> 
+                    <div>
+                        <button 
+                            type="button" 
+                            id="subnet-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All Subnets"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="subnet-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All Subnets"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>                   
+                </div>
+                <div id="subnet-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="subnet-input" autocomplete="off" placeholder="Select options" />
+                    <div id="subnet-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="subnet" id="subnet-hidden" />                
+            </div>
+
+            <div class="col-md-3 position-relative">
+            <label for="ip_address-input" style="margin: 0; padding: 0; user-select: none;">IP Address</label>
+            <div id="ip_address-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                <input type="text" id="ip_address-input" autocomplete="off" placeholder="Select options" />
+                <div id="ip_address-dropdown" class="multi-select-dropdown"></div>
+                <input type="hidden" name="ip_address" id="ip_address-hidden" />
+            </div>
+            </div>
+
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="os-input" style="margin: 0; padding: 0; user-select: none;">OS</label> 
+                    <div>
+                        <button 
+                            type="button" 
+                            id="os-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All OS"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="os-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All OS"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>                   
+                </div>
+                <div id="os-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="os-input" autocomplete="off" placeholder="Select options" />
+                    <div id="os-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="os" id="os-hidden" />                
+            </div>
+
+            <div class="col-md-3 position-relative">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <label for="flavor-input" style="margin: 0; padding: 0; user-select: none;">Flavor</label> 
+                    <div>
+                        <button 
+                            type="button" 
+                            id="flavor-select-all-btn" 
+                            style="margin-right: 8px; font-size: 0.875rem; cursor: pointer;"
+                            title="Select All Flavors"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            id="flavor-clear-all-btn"
+                            style="font-size: 0.875rem; cursor: pointer;"
+                            title="Clear All Flavor"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            Clear
+                        </button>
+                    </div>                   
+                </div>
+                <div id="flavor-multiselect" class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input type="text" id="flavor-input" autocomplete="off" placeholder="Select options" />
+                    <div id="flavor-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <input type="hidden" name="flavor" id="flavor-hidden" />                
+            </div>
+
+            <div class="col-md-3 position-relative">
+                <label for="date-start-input" style="margin: 0; padding: 0; user-select: none;">Date Start</label>
+                <div class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input 
+                        type="date" 
+                        id="date-start-input" 
+                        name="date_start" 
+                        style="
+                            background: transparent;
+                            border: none;
+                            outline: none;
+                            color: #c2f7e3;
+                            min-width: 100px;
+                            flex: 1 1 auto;
+                            height: 32px;
+                            line-height: 32px;
+                            padding: 0;
+                            margin: 0;
+                            box-sizing: border-box;
+                            cursor: text;"
+                    />
+                </div>
+            </div>
+            <div class="col-md-3 position-relative">
+                <label for="date-end-input" style="margin: 0; padding: 0; user-select: none;">Date End</label>
+                <div class="multi-select-input" tabindex="0" style="margin-top: 4px;">
+                    <input 
+                        type="date" 
+                        id="date-end-input" 
+                        name="date_end"
+                        style="
+                            background: transparent;
+                            border: none;
+                            outline: none;
+                            color: #c2f7e3;
+                            min-width: 100px;
+                            flex: 1 1 auto;
+                            height: 32px;
+                            line-height: 32px;
+                            padding: 0;
+                            margin: 0;
+                            box-sizing: border-box;
+                            cursor: text;"
+                    />
+                </div>
+            </div>
+        <div class="text-end mt-4">
+            <button type="button" class="btn btn-success px-4 ms-2" id="client-export-csv-btn" title="Export CSV">Export CSV</button>
+            <button type="button" class="btn btn-purple px-4 ms-2" id="export-text-btn" title="Export Ansible Inventory">Ansible Inventory</button>
+            <button type="button" class="btn btn-secondary px-4 ms-2" id="cmdb-refresh-btn" onclick="refreshCmdbData()" title="최신 VM 데이터로 갱신">데이터 갱신</button>
+            <button type="submit" class="btn btn-primary px-4 ms-2">Search</button>
+        </div>
+        <div id="cmdb-refresh-msg" style="text-align:right;font-size:12px;color:#5a7a99;margin-top:6px;"></div>
+    </form>
+
+    <div id="result-counts" style="text-align: left; margin-bottom: 1rem; font-weight: 600;"></div>
+<div id="results-container" style="width: 100vw; max-width: 100vw; margin: 0; padding: 0;">
+    <div id="results-header"></div>
+    <div id="results-body"></div>
+</div>
+    <div class="pagination" id="pagination"></div>
+</div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/top_menu.js') }}"></script>
+<script>
+    let currentData = [];
+    let loadedCount = 0;
+    let loading = false;
+    let currentSortColumn = null;
+    let currentSortAsc = true;
+
+    async function refreshCmdbData() {
+        const btn = document.getElementById('cmdb-refresh-btn');
+        const msg = document.getElementById('cmdb-refresh-msg');
+        btn.disabled = true;
+        btn.textContent = '갱신 중...';
+        msg.textContent = '';
+        try {
+            const resp = await fetch('/api/cmdb/refresh', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                msg.style.color = '#4caf93';
+                msg.textContent = data.message;
+                // Re-enable after 90 seconds (script takes ~1-2 min)
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = '데이터 갱신';
+                    msg.textContent = '갱신 완료. Search를 다시 눌러주세요.';
+                }, 90000);
+            } else {
+                msg.style.color = '#f87171';
+                msg.textContent = data.error || '갱신 실패';
+                btn.disabled = false;
+                btn.textContent = '데이터 갱신';
+            }
+        } catch (e) {
+            msg.style.color = '#f87171';
+            msg.textContent = '갱신 요청 실패: ' + e.message;
+            btn.disabled = false;
+            btn.textContent = '데이터 갱신';
+        }
+    }
+
+
+    const filterFields = [
+        "status", "project", "servicecode", "ip_address", "flavor", "availability_zone",
+        "vpc", "subnet", "os"
+    ];
+    const optionsCacheMap = {};
+
+
+    let selectedValues = {};
+    filterFields.forEach(f => selectedValues[f] = []);
+
+
+    async function fetchOptions(column) {
+        try {
+            const response = await fetch(`/filter_options/${column}`);
+            if (!response.ok) return [];
+            return await response.json();
+        } catch {
+            return [];
+        }
+    }
+
+    function getFilterValues() {
+        const filters = {};
+        filterFields.forEach(field => {
+            const hiddenInput = document.getElementById(`${field}-hidden`);
+            if (hiddenInput && hiddenInput.value.trim() !== '') {
+                filters[field] = hiddenInput.value.trim();
+            }
+        });
+
+        if (selectedVmNames.length > 0) {
+            filters['vm_name'] = selectedVmNames.join(',');
+        } else {
+            const typedVmName = vmNameInput.value.trim();
+            if (typedVmName !== '') {
+                filters['vm_name'] = typedVmName;
+            }
+        }
+
+
+        const dateStartEl = document.getElementById('date-start-input');
+        if (dateStartEl && dateStartEl.value.trim() !== '') {
+            filters['date_start'] = dateStartEl.value.trim();
+        }
+        const dateEndEl = document.getElementById('date-end-input');
+        if (dateEndEl && dateEndEl.value.trim() !== '') {
+            filters['date_end'] = dateEndEl.value.trim();
+        }
+
+        return filters;
+    }
+
+    function exportTableDataAsCSV(data) {
+        const headers = [
+            'Status', 'Project', 'Service Code', 'VM Name', 'VM ID', 'IP Address', 'Flavor',
+            'Availability Zone', 'VPC', 'Subnet', 'OS', 'Date'
+        ];
+        const csvRows = [
+            headers.join(',')
+        ];
+
+        data.forEach(vm => {
+            const row = [
+                vm.status || '',
+                vm.project || '',
+                vm.servicecode || '',
+                vm.vm_name || '',
+                vm.vm_id || '',
+                vm.ip_address || '',
+                vm.flavor || '',
+                vm.availability_zone || '',
+                vm.vpc || '',
+                vm.subnet || '',
+                vm.os || '',
+                vm.date || ''
+            ].map(val => `"${(val + "").replace(/"/g, '""')}"`); // Escape double quotes
+            csvRows.push(row.join(','));
+        });
+
+        const csvString = csvRows.join('\n');
+        let filename = 'vm_export.csv';
+        if (data.length > 0 && data[0].project) {
+            const project = data[0].project.replace(/\s+/g, '_').replace(/[\/\\]/g, '_');
+            filename = `${project}_vm.csv`;
+        }
+
+        const blob = new Blob([csvString], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        window.URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('client-export-csv-btn').addEventListener('click', function() {
+        exportTableDataAsCSV(currentData.slice(0, loadedCount));
+    });
+
+    function exportTextFileWithCondition(data) {
+        let textLines = [];
+        for (let i = 0; i < loadedCount; i++) {
+            const vm = data[i];
+            textLines.push(`${vm.vm_name}\tansible_host=${vm.ip_address}`);
+        }
+        const textContent = textLines.join('\n');
+
+        let projectName = 'project';
+        if (data.length > 0 && data[0].project) {
+            projectName = data[0].project.replace(/\s+/g, '_').replace(/[\/\\]/g, '_');
+        }
+        const defaultFilename = `${projectName}-ansible_inventory.txt`;
+
+        const blob = new Blob([textContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = defaultFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        window.URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('export-text-btn').addEventListener('click', function() {
+        exportTextFileWithCondition(currentData);
+    });
+
+    function updateResultCounts(data) {
+        const total = data.length;
+        let k8sCount = 0;
+        let vmCount = 0;
+        let azACount = 0;
+        let azBCount = 0;
+
+        data.forEach(vm => {
+            const osVal = (vm.os || '').toLowerCase();
+            const azVal = (vm.availability_zone || '').toLowerCase();
+
+            if (osVal.includes('k8s node')) {
+                k8sCount++;
+            } else {
+                vmCount++;
+            }
+
+            if (azVal === 'az-a') {
+                azACount++;
+            } else if (azVal === 'az-b') {
+                azBCount++;
+            }
+        });
+
+        const container = document.getElementById('result-counts');
+        const labelColor = document.body.classList.contains('light-mode') ? '#111827' : '#ffffff';
+        const azAColor   = document.body.classList.contains('light-mode') ? '#0891b2' : '#00ffff';
+        const azBColor   = document.body.classList.contains('light-mode') ? '#db2777' : '#ff69b4';
+        container.innerHTML = `
+            <span style="color: ${labelColor}; font-weight: 700; margin-right: 1.5rem;">
+                Total: <span style="color: #1a73e8;">${total}</span>
+            </span>
+            <span style="color: ${labelColor}; font-weight: 700; margin-right: 1.5rem;">
+                VM: <span style="color: #db4437;">${vmCount}</span>
+            </span>
+            <span style="color: ${labelColor}; font-weight: 700; margin-right: 1.5rem;">
+                K8s Node: <span style="color: #0f9d58;">${k8sCount}</span>
+            </span>
+            <span style="color: ${labelColor}; font-weight: 700; margin-right: 1.5rem;">
+                AZ A: <span style="color: ${azAColor};">${azACount}</span>
+            </span>
+            <span style="color: ${labelColor}; font-weight: 700;">
+                AZ B: <span style="color: ${azBColor};">${azBCount}</span>
+            </span>
+        `;
+        container.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        container.style.fontSize = '1.1rem';
+    }
+
+    function updateTagsForField(field) {
+        const container = document.getElementById(`${field}-multiselect`);
+        if (!container) return;
+        container.querySelectorAll('.tag').forEach(t => t.remove());
+        selectedValues[field].forEach(val => {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = val;
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'remove-tag';
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedValues[field] = selectedValues[field].filter(v => v !== val);
+                updateTagsForField(field);
+                updateHiddenInputForField(field);
+                if (field === 'vpc') updateVpcSubnetDependency();
+            });
+            tag.appendChild(removeBtn);
+            container.insertBefore(tag, container.querySelector('input'));
+        });
+        updatePlaceholderVisibilityForField(field);
+    }
+
+    function updateHiddenInputForField(field) {
+        const hiddenInput = document.getElementById(`${field}-hidden`);
+        if (hiddenInput) hiddenInput.value = selectedValues[field].join(',');
+    }
+
+    function updatePlaceholderVisibilityForField(field) {
+        const input = document.getElementById(`${field}-input`);
+        if (!input) return;
+        if (selectedValues[field].length > 0) {
+            input.placeholder = '';
+            input.value = '';
+            input.style.width = '100%';
+        } else {
+            input.placeholder = 'Select options';
+            input.style.width = '100%';
+        }
+    }
+
+    async function preloadAllFilterOptions() {
+        for (const field of ['status', 'project', 'servicecode', 'ip_address', 'flavor', 'availability_zone', 'vpc', 'subnet', 'os']) {
+            if (field === 'subnet') continue; // subnet depends on VPC, load dynamically
+            const options = await fetchOptions(field);
+            optionsCacheMap[field] = options || [];
+        }
+    }
+
+    function clearHighlights(dropdown) {
+        if (!dropdown) return;
+        Array.from(dropdown.children).forEach(opt => opt.classList.remove('highlighted'));
+    }
+
+    function setupKeyboardNavigation(field) {
+        const input = document.getElementById(`${field}-input`);
+        const dropdown = document.getElementById(`${field}-dropdown`);
+        let focusedIndex = -1;
+
+        input.addEventListener('keydown', e => {
+            const visibleOptions = Array.from(dropdown.children).filter(opt => opt.style.display !== 'none');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (focusedIndex === -1) {
+                    focusedIndex = 0;
+                    showDropdown();
+                } else if (focusedIndex < visibleOptions.length - 1) {
+                    focusedIndex++;
+                } else if (focusedIndex === visibleOptions.length - 1) {
+                    focusedIndex = 0;
+                }
+                updateHighlight();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (focusedIndex === -1) {
+                    focusedIndex = visibleOptions.length - 1;
+                    showDropdown();
+                } else if (focusedIndex > 0) {
+                    focusedIndex--;
+                } else if (focusedIndex === 0) {
+                    focusedIndex = visibleOptions.length - 1;
+                }
+                updateHighlight();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!dropdown.classList.contains('open')) {
+                    showDropdown();
+                } else if (focusedIndex >= 0 && visibleOptions[focusedIndex]) {
+                    visibleOptions[focusedIndex].dispatchEvent(new Event('mousedown'));
+                    focusedIndex = -1;
+                    clearHighlights(dropdown);
+                    // keep dropdown open until Escape pressed
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                focusedIndex = -1;
+                clearHighlights(dropdown);
+                closeDropdown();
+            }
+
+            function updateHighlight() {
+                visibleOptions.forEach((opt, idx) => {
+                    if (idx === focusedIndex) {
+                        opt.classList.add('highlighted');
+                        opt.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        opt.classList.remove('highlighted');
+                    }
+                });
+            }
+            function showDropdown() {
+                dropdown.style.display = 'block';
+                dropdown.classList.add('open');
+            }
+            function closeDropdown() {
+                dropdown.style.display = 'none';
+                dropdown.classList.remove('open');
+            }
+        });
+
+        input.addEventListener('input', () => focusedIndex = -1);
+
+        input.addEventListener('blur', () => {
+            // Keep dropdown open on blur until ESC explicitly pressed per user preference
+        });
+    }
+
+    function setupMultiSelect(field) {
+        const container = document.getElementById(`${field}-multiselect`);
+        const input = document.getElementById(`${field}-input`);
+        const dropdown = document.getElementById(`${field}-dropdown`);
+        const hiddenInput = document.getElementById(`${field}-hidden`);
+
+        let optionsCache = null;
+        let focusedIndex = -1;
+        let preventDropdownClose = false;
+        currentFieldBeingSetup = field; // Track which field is being setup currently
+
+        async function loadOptions() {
+            if (!optionsCache) {
+                if (field === 'subnet') {
+                    await loadSubnetOptionsByVpc();
+                } else if (field === 'servicecode') {
+                    await loadServicecodeOptionsByProject();
+                } else {
+                    optionsCache = await fetchOptions(field);
+                    optionsCacheMap[field] = optionsCache;
+                }
+                optionsCache = optionsCacheMap[field];
+            }
+        }
+
+        async function loadSubnetOptionsByVpc() {
+            const vpcArray = selectedValues['vpc'] || [];
+            if (vpcArray.length === 0) {
+                optionsCache = [];
+                optionsCacheMap['subnet'] = optionsCache;
+                populateDropdown([]);
+                return;
+            }
+            try {
+                const vpcVal = vpcArray.join(',');
+                const resp = await fetch(`/filter_subnets?vpc=${encodeURIComponent(vpcVal)}`);
+                if (resp.ok) {
+                    optionsCache = await resp.json();
+                    optionsCacheMap['subnet'] = optionsCache;
+                    selectedValues['subnet'] = selectedValues['subnet'].filter(sub => optionsCache.includes(sub));
+                    updateTagsForField('subnet');
+                    updateHiddenInputForField('subnet');
+                    populateDropdown(optionsCache);
+                } else {
+                    optionsCache = [];
+                    optionsCacheMap['subnet'] = optionsCache;
+                    populateDropdown([]);
+                }
+            } catch (e) {
+                optionsCache = [];
+                optionsCacheMap['subnet'] = optionsCache;
+                populateDropdown([]);
+                console.error('Failed fetching subnets:', e);
+            }
+        }
+
+        async function loadServicecodeOptionsByProject() {
+            const projectArray = selectedValues['project'] || [];
+            try {
+                let options;
+                if (projectArray.length === 0) {
+                    // No project selected — load all servicecodes
+                    options = await fetchOptions('servicecode');
+                } else {
+                    const projectVal = projectArray.join(',');
+                    const resp = await fetch(`/filter_servicecode?project=${encodeURIComponent(projectVal)}`);
+                    options = resp.ok ? await resp.json() : [];
+                }
+                optionsCacheMap['servicecode'] = options;
+                selectedValues['servicecode'] = selectedValues['servicecode'].filter(sc => options.includes(sc));
+                updateTagsForField('servicecode');
+                updateHiddenInputForField('servicecode');
+                if (currentFieldBeingSetup === 'servicecode') {
+                    populateDropdown(options);
+                }
+            } catch (e) {
+                optionsCacheMap['servicecode'] = [];
+                populateDropdown([]);
+                console.error('Failed fetching servicecode options:', e);
+            }
+        }
+
+        function showDropdown() {
+            if (dropdown.children.length > 0) dropdown.style.display = 'block';
+        }
+        function hideDropdown() {
+            dropdown.style.display = 'none';
+        }
+
+        function clearTags() {
+            container.querySelectorAll('.tag').forEach(t => t.remove());
+        }
+
+        function addTag(text) {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = text;
+
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'remove-tag';
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedValues[field] = selectedValues[field].filter(v => v !== text);
+                updateTagsForField(field);
+                updateHiddenInputForField(field);
+                if (field === 'vpc') updateVpcSubnetDependency();
+                if (field === 'project') {
+                    delete optionsCacheMap['servicecode'];
+                    selectedValues['servicecode'] = [];
+                    updateTagsForField('servicecode');
+                    updateHiddenInputForField('servicecode');
+                }
+            });
+
+            tag.appendChild(removeBtn);
+            container.insertBefore(tag, input);
+        }
+
+        function updatePlaceholderVisibility() {
+            if (selectedValues[field].length > 0) {
+                input.placeholder = '';
+                input.value = '';
+                input.style.width = '100%';
+            } else {
+                input.placeholder = 'Select options';
+                input.style.width = '100%';
+            }
+        }
+
+        function selectOption(opt) {
+            if (selectedValues[field].includes(opt)) {
+                selectedValues[field] = selectedValues[field].filter(v => v !== opt);
+            } else {
+                selectedValues[field].push(opt);
+            }
+            updateTagsForField(field);
+            updateHiddenInputForField(field);
+            input.value = '';
+            if (field === 'vpc') updateVpcSubnetDependency();
+            if (field === 'project') {
+                // Invalidate servicecode cache so it reloads filtered by new project selection
+                delete optionsCacheMap['servicecode'];
+                selectedValues['servicecode'] = [];
+                updateTagsForField('servicecode');
+                updateHiddenInputForField('servicecode');
+            }
+        }
+
+        function populateDropdown(options, autoShow = true) {
+            dropdown.innerHTML = '';
+            if (options.length === 0) {
+                hideDropdown();
+                return;
+            }
+
+            options.forEach(opt => {
+                const optionDiv = document.createElement('div');
+                optionDiv.classList.add('dropdown-item');
+                optionDiv.textContent = opt;
+
+                // Create checkmark element
+                const checkmark = document.createElement('span');
+                checkmark.textContent = '✔';  // Unicode checkmark
+                checkmark.style.float = 'right'; // Align right
+                checkmark.style.color = 'limegreen'; // Green color
+                checkmark.style.fontWeight = 'bold';
+
+                if (selectedValues[field].includes(opt)) {
+                    optionDiv.style.fontWeight = '700';
+                    optionDiv.style.backgroundColor = '#115293';
+                    optionDiv.style.cursor = 'pointer';
+                    optionDiv.appendChild(checkmark); // Add checkmark for selected items
+                } else {
+                    optionDiv.style.cursor = 'pointer';
+                    // no checkmark for unselected
+                }
+
+                optionDiv.addEventListener('mousedown', (e) => {
+                    preventDropdownClose = true;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectOption(opt);
+                    populateDropdown(options, true);
+                    setTimeout(() => {
+                        preventDropdownClose = false;
+                    }, 200);
+                });
+
+                dropdown.appendChild(optionDiv);
+            });
+
+            if (dropdown.children.length > 0) {
+                if (autoShow) {
+                    showDropdown(); // Always show dropdown after repopulating
+                } else {
+                    hideDropdown();
+                }
+            }
+        }
+
+        async function filterAndPopulate() {
+            if (!optionsCache) return;
+            const typed = input.value.toLowerCase();
+            const filtered = optionsCache.filter(opt => opt.toLowerCase().includes(typed));
+            populateDropdown(filtered);
+        }
+
+        input.addEventListener('keydown', (e) => {
+            const visibleOptions = Array.from(dropdown.children).filter(opt => opt.style.display !== 'none');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (focusedIndex === -1) {
+                    focusedIndex = 0;
+                    showDropdown();
+                } else if (focusedIndex < visibleOptions.length - 1) {
+                    focusedIndex++;
+                } else if (focusedIndex === visibleOptions.length - 1) {
+                    focusedIndex = 0;
+                }
+                updateHighlight();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (focusedIndex === -1) {
+                    focusedIndex = visibleOptions.length - 1;
+                    showDropdown();
+                } else if (focusedIndex > 0) {
+                    focusedIndex--;
+                } else if (focusedIndex === 0) {
+                    focusedIndex = visibleOptions.length - 1;
+                }
+                updateHighlight();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (focusedIndex >= 0 && visibleOptions[focusedIndex]) {
+                    const option = visibleOptions[focusedIndex].textContent;
+                    selectOption(option);
+                    focusedIndex = -1;
+                    clearHighlights(dropdown);
+                    populateDropdown(optionsCache, false);
+                } else {
+                    if (!dropdown.classList.contains('open')) {
+                        showDropdown();
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                focusedIndex = -1;
+                clearHighlights(dropdown);
+                hideDropdown();
+            }
+
+            function updateHighlight() {
+                visibleOptions.forEach((opt, idx) => {
+                    if (idx === focusedIndex) {
+                        opt.classList.add('highlighted');
+                        opt.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        opt.classList.remove('highlighted');
+                    }
+                });
+            }
+        });
+
+        input.addEventListener('input', () => {
+            focusedIndex = -1;
+            filterAndPopulate();
+        });
+
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (!preventDropdownClose && !container.contains(document.activeElement)) {
+                    hideDropdown();
+                    focusedIndex = -1;
+                    clearHighlights(dropdown);
+                }
+            }, 200);
+        });
+
+        input.addEventListener('focus', async () => {
+            await loadOptions();
+            filterAndPopulate();
+            showDropdown();
+        });
+
+        input.addEventListener('click', () => {
+            if (optionsCache) {
+                filterAndPopulate();
+                showDropdown();
+            }
+        });
+
+        container.addEventListener('click', () => input.focus());
+
+        document.addEventListener('mousedown', (e) => {
+            setTimeout(() => {
+                if (!preventDropdownClose && !container.contains(e.target)) {
+                    hideDropdown();
+                    focusedIndex = -1;
+                    clearHighlights(dropdown);
+                }
+            }, 150);
+        });
+
+        updateTagsForField(field);
+        updateHiddenInputForField(field);
+
+        if (['status', 'project', 'servicecode', 'flavor', 'availability_zone', 'vpc', 'subnet', 'os', 'ip_address'].includes(field)) {
+            const selectAllBtn = document.getElementById(`${field}-select-all-btn`);
+            const clearAllBtn = document.getElementById(`${field}-clear-all-btn`);
+
+            if (selectAllBtn) {
+                if (field === 'subnet') {
+                    selectAllBtn.onclick = async (e) => {
+                        e.preventDefault();
+                        await loadSubnetOptionsByVpc();
+                        const options = optionsCacheMap['subnet'] || [];
+                        selectedValues['subnet'] = options.slice();
+                        updateTagsForField('subnet');
+                        updateHiddenInputForField('subnet');
+                        populateDropdown(options, false);
+                    };
+                } else if (field === 'project') {
+                    selectAllBtn.onclick = async (e) => {
+                        e.preventDefault();
+                        if (!optionsCacheMap['project'] || optionsCacheMap['project'].length === 0) {
+                            const options = await fetchOptions('project');
+                            optionsCacheMap['project'] = options || [];
+                        }
+                        const options = optionsCacheMap['project'] || [];
+                        selectedValues['project'] = options.slice();
+                        updateTagsForField('project');
+                        updateHiddenInputForField('project');
+                        populateDropdown(options, false);
+
+                        selectedValues['servicecode'] = [];
+                        updateTagsForField('servicecode');
+                        updateHiddenInputForField('servicecode');
+                        optionsCacheMap['servicecode'] = null;
+                        setupMultiSelect('servicecode');
+                    };
+                } else if (field === 'status') {
+                    selectAllBtn.onclick = async (e) => {
+                        e.preventDefault();
+                        if (!optionsCacheMap['status'] || optionsCacheMap['status'].length === 0) {
+                            const options = await fetchOptions('status');
+                            optionsCacheMap['status'] = options || [];
+                        }
+                        const options = optionsCacheMap['status'] || [];
+                        selectedValues['status'] = options.slice();
+                        updateTagsForField('status');
+                        updateHiddenInputForField('status');
+                        populateDropdown(options, false);
+                    };
+                } else if (field === 'servicecode') {
+                    selectAllBtn.onclick = async (e) => {
+                        e.preventDefault();
+                        if (!optionsCacheMap['servicecode'] || optionsCacheMap['servicecode'].length === 0) {
+                            if (selectedValues['project'] && selectedValues['project'].length > 0) {
+                                const projectVal = selectedValues['project'].join(',');
+                                try {
+                                    const resp = await fetch(`/filter_servicecode?project=${encodeURIComponent(projectVal)}`);
+                                    if (resp.ok) {
+                                        const options = await resp.json();
+                                        optionsCacheMap['servicecode'] = options || [];
+                                    } else {
+                                        optionsCacheMap['servicecode'] = [];
+                                    }
+                                } catch {
+                                    optionsCacheMap['servicecode'] = [];
+                                }
+                            } else {
+                                optionsCacheMap['servicecode'] = [];
+                            }
+                        }
+                        const options = optionsCacheMap['servicecode'] || [];
+                        selectedValues['servicecode'] = options.slice();
+                        updateTagsForField('servicecode');
+                        updateHiddenInputForField('servicecode');
+                        populateDropdown(options, false);
+                    };
+                } else if (field === 'availability_zone') {
+                    selectAllBtn.onclick = async (e) => {
+                        e.preventDefault();
+                        if (!optionsCacheMap['availability_zone'] || optionsCacheMap['availability_zone'].length === 0) {
+                            const options = await fetchOptions('availability_zone');
+                            optionsCacheMap['availability_zone'] = options || [];
+                        }
+                        const options = optionsCacheMap['availability_zone'] || [];
+                        selectedValues['availability_zone'] = options.slice();
+                        updateTagsForField('availability_zone');
+                        updateHiddenInputForField('availability_zone');
+                        populateDropdown(options, false);
+                    };
+                } else {
+                    selectAllBtn.onclick = (e) => {
+                        e.preventDefault();
+                        const options = optionsCacheMap[field] || [];
+                        selectedValues[field] = options.slice();
+                        updateTagsForField(field);
+                        updateHiddenInputForField(field);
+                        if (field === 'vpc') updateVpcSubnetDependency();
+                    };
+                }
+            }
+
+            if (clearAllBtn) {
+                clearAllBtn.onclick = (e) => {
+                    e.preventDefault();
+                    selectedValues[field] = [];
+                    updateTagsForField(field);
+                    updateHiddenInputForField(field);
+                };
+            }
+        }
+    }
+
+
+    function updateVpcSubnetDependency() {
+        const subnetContainer = document.getElementById('subnet-multiselect');
+        if (subnetContainer && typeof subnetContainer.optionsCacheRef === "function") subnetContainer.optionsCacheRef();
+        setupMultiSelect('subnet');
+    }
+
+    filterFields.forEach(field => setupMultiSelect(field));
+
+    // New event listener to clear and reload servicecode when project changes
+    const projectInput = document.getElementById('project-input');
+    if (projectInput) {
+        projectInput.addEventListener('input', () => {
+            selectedValues['servicecode'] = [];
+            updateTagsForField('servicecode');
+            updateHiddenInputForField('servicecode');
+            optionsCacheMap['servicecode'] = null;
+            setupMultiSelect('servicecode');
+        });
+    }
+
+    const colgroupHTML = `
+    <colgroup>
+    <col style="width: 8%;">
+    <col style="width: 8%;">
+    <col style="width: 8%;">
+    <col style="width: 12%;">
+    <col style="width: 10%;">
+    <col style="width: 10%;">
+    <col style="width: 10%;">
+    <col style="width: 10%;">
+    <col style="width: 8%;">
+    <col style="width: 10%;">
+    <col style="width: 10%;">
+    <col style="width: 10%;">
+    </colgroup>`;
+
+    function renderTableHeader() {
+        const tableHeaders = [
+            { key: 'status', label: 'Status' },
+            { key: 'project', label: 'Project' },
+            { key: 'servicecode', label: 'Service Code' },            
+            { key: 'vm_name', label: 'VM Name' },
+            { key: 'vm_id', label: 'VM ID' },
+            { key: 'ip_address', label: 'IP Address' },
+            { key: 'flavor', label: 'Flavor' },
+            { key: 'availability_zone', label: 'Availability Zone' },
+            { key: 'vpc', label: 'VPC' },
+            { key: 'subnet', label: 'Subnet' },
+            { key: 'os', label: 'OS' },
+            { key: 'date', label: 'Date' }
+        ];
+
+
+        let html = `<table class="table table-dark">${colgroupHTML}<thead><tr>`;
+        tableHeaders.forEach(h => {
+            html += `<th scope="col" data-key="${h.key}" style="cursor: pointer;">${h.label}`;
+            if (currentSortColumn === h.key) {
+                html += currentSortAsc ? ' ▲' : ' ▼';
+            }
+            html += '</th>';
+        });
+        html += '</tr></thead></table>';
+
+
+        const headerContainer = document.getElementById('results-header');
+        if (!headerContainer) {
+            console.error('#results-header element not found!');
+            return;
+        }
+        headerContainer.innerHTML = html;
+
+        const headerThs = headerContainer.querySelectorAll('th[data-key]');
+        if (!headerThs || headerThs.length === 0) {
+            console.warn('No header <th> elements found to attach events.');
+            return;
+        }
+
+        headerThs.forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-key');
+                if (currentSortColumn === col) {
+                    currentSortAsc = !currentSortAsc;
+                } else {
+                    currentSortColumn = col;
+                    currentSortAsc = true;
+                }
+                currentData = sortData(currentData, currentSortColumn, currentSortAsc);
+                renderTableBody(currentData);
+                renderTableHeader();  // Update arrows
+            });
+        });
+    }
+
+    function renderTableBody(data) {
+        const keys = [
+            'status', 'project', 'servicecode', 'vm_name', 'vm_id', 'ip_address',
+            'flavor', 'availability_zone', 'vpc', 'subnet', 'os', 'date'
+        ];
+
+        let html = `<table class="table table-dark table-hover">${colgroupHTML}<tbody>`;
+
+        for (let i = 0; i < loadedCount; i++) {
+            const vm = data[i];
+            let statusClass = '';
+            if (vm.status) {
+                const s = vm.status.toLowerCase();
+                if (s === 'active') statusClass = 'status-active';
+                else if (s === 'shelved_offloaded' || s === 'shelve-offloaded') statusClass = 'status-shelve-offloaded';
+                else if (s === 'stopped') statusClass = 'status-stopped';
+            }
+            html += '<tr>';
+            keys.forEach(key => {
+                if (key === 'status') {
+                    html += `<td><span class="status-tag ${statusClass}">${vm[key] || ''}</span></td>`;
+                } else {
+                    html += `<td>${vm[key] || ''}</td>`;
+                }
+            });
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+
+        const resultsBody = document.getElementById('results-body');
+        if (!resultsBody) {
+            console.error('#results-body element not found!');
+            return;
+        }
+        resultsBody.innerHTML = html;
+
+        updateResultCounts(data);
+    }
+
+    function sortData(data, column, asc) {
+        return data.slice().sort((a, b) => {
+            let aVal = a[column] || '';
+            let bVal = b[column] || '';
+            aVal = aVal.toString().toLowerCase();
+            bVal = bVal.toString().toLowerCase();
+
+            if (aVal < bVal) return asc ? -1 : 1;
+            if (aVal > bVal) return asc ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function updateResults(data) {
+        currentData = data;
+        loadedCount = currentData.length;
+        currentSortColumn = null;
+        currentSortAsc = true;
+        renderTableHeader();
+        renderTableBody(currentData);
+    }
+
+    let vmNameOptions = [];
+    let selectedVmNames = [];
+
+    const vmNameContainer = document.getElementById('vm_name-multiselect');
+    const vmNameInput = document.getElementById('vm_name-input');
+    const vmNameDropdown = document.getElementById('vm_name-dropdown');
+    const vmNameHidden = document.getElementById('vm_name-hidden');
+
+    async function loadVmNameOptions() {
+        if (vmNameOptions.length === 0) {
+            try {
+                const resp = await fetch('/filter_options/vm_name');
+                if (resp.ok) {
+                    vmNameOptions = await resp.json();
+                }
+            } catch {}
+        }
+    }
+
+    function updateVmNameTags() {
+        const existingTags = vmNameContainer.querySelectorAll('.tag');
+        existingTags.forEach(t => t.remove());
+        selectedVmNames.forEach(name => {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = name;
+
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'remove-tag';
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedVmNames = selectedVmNames.filter(n => n !== name);
+                updateVmNameTags();
+                updateVmNameHidden();
+                filterAndPopulateVmName();
+            });
+
+            tag.appendChild(removeBtn);
+            vmNameContainer.insertBefore(tag, vmNameInput);
+        });
+        updateVmNameHidden();
+    }
+
+    function updateVmNameHidden() {
+        vmNameHidden.value = selectedVmNames.join(',');
+    }
+
+    function populateDropdown(options) {
+        vmNameDropdown.innerHTML = '';
+        if (options.length === 0) {
+            vmNameDropdown.style.display = 'none';
+            return;
+        }
+        options.forEach(opt => {
+            const div = document.createElement('div');
+            div.classList.add('dropdown-item');
+            div.textContent = opt;
+            div.addEventListener('mousedown', e => {
+                e.preventDefault();
+                if (!selectedVmNames.includes(opt)) {
+                    selectedVmNames.push(opt);
+                    updateVmNameTags();
+                    updateVmNameHidden();
+                    vmNameInput.value = '';
+                    filterAndPopulateVmName();
+                }
+                vmNameDropdown.style.display = 'none';
+            });
+            vmNameDropdown.appendChild(div);
+        });
+        vmNameDropdown.style.display = 'block';
+    }
+
+    // Wrapper for VM Name dropdown population
+    function populateVmNameDropdown(options) {
+        populateDropdown(options);
+    }
+
+    // Filter VM names by substring and update dropdown
+    function filterAndPopulateVmName() {
+        if (vmNameOptions.length === 0) return;
+        const typed = vmNameInput.value.toLowerCase();
+        const filtered = vmNameOptions.filter(opt => opt.toLowerCase().includes(typed) && !selectedVmNames.includes(opt));
+        populateVmNameDropdown(filtered);
+    }
+
+    vmNameInput.addEventListener('focus', async () => {
+        await loadVmNameOptions();
+        filterAndPopulateVmName();
+    });
+
+    vmNameInput.addEventListener('input', filterAndPopulateVmName);
+
+    vmNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && vmNameInput.value === '' && selectedVmNames.length > 0) {
+            selectedVmNames.pop();
+            updateVmNameTags();
+            updateVmNameHidden();
+            e.preventDefault();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        // Trigger the search form submission programmatically
+        document.getElementById('search-form').dispatchEvent(new Event('submit'));
+    }
+    });
+
+    vmNameContainer.addEventListener('click', () => {
+        vmNameInput.focus();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!vmNameContainer.contains(e.target)) {
+            vmNameDropdown.style.display = 'none';
+        }
+    });
+
+    document.getElementById('search-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const dateStart = document.getElementById('date-start-input').value;
+        const dateEnd = document.getElementById('date-end-input').value;
+
+        if (dateStart && dateEnd) {
+            if (new Date(dateEnd) < new Date(dateStart)) {
+                alert('End Date cannot be earlier than Start Date.');
+                return;
+            }
+        }
+
+        const params = new URLSearchParams();
+
+        filterFields.forEach(field => {
+            const val = document.getElementById(`${field}-hidden`).value.trim();
+            if (val) {
+                params.append(field, val);
+            }
+        });
+
+        if (selectedVmNames.length > 0) {
+            // Send each selected VM name separately for better substring matching on server
+            selectedVmNames.forEach(name => params.append('vm_name', name));
+        } else {
+            const typedVmName = vmNameInput.value.trim().toLowerCase();
+            if (typedVmName) {
+                params.append('vm_name', typedVmName);
+            }
+        }
+
+        if (dateStart) {
+            params.append('date_start', dateStart);
+        }
+        if (dateEnd) {
+            params.append('date_end', dateEnd);
+        }
+
+        loadData(params);
+        // Update URL to reflect current filters
+        const newUrl = params.toString() ? '/vm_search?' + params.toString() : '/vm_search';
+        history.pushState(null, '', newUrl);
+    });
+
+    async function loadData(params) {
+        try {
+            const response = await fetch('/search_vms?' + params.toString());
+            const data = await response.json();
+
+            currentData = data;
+            loadedCount = currentData.length;
+            currentSortColumn = null;
+            currentSortAsc = true;
+            renderTableHeader();
+            renderTableBody(currentData);
+        } catch (err) {
+            document.getElementById('results-body').innerHTML = '<p class="text-center text-danger fs-5">Error loading data.</p>';
+        }
+    }
+
+
+        // ── Restore filters from URL on page load ─────────────────
+        function restoreFiltersFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.toString()) return;
+
+            filterFields.forEach(field => {
+                const val = urlParams.get(field);
+                if (!val) return;
+                selectedValues[field] = val.split(',').filter(Boolean);
+                updateTagsForField(field);
+                updateHiddenInputForField(field);
+            });
+
+            const vmName = urlParams.get('vm_name');
+            if (vmName) document.getElementById('vm-name-input').value = vmName;
+
+            const ds = urlParams.get('date_start');
+            const de = urlParams.get('date_end');
+            if (ds) document.getElementById('date-start-input').value = ds;
+            if (de) document.getElementById('date-end-input').value = de;
+
+            // Auto-trigger search
+            setTimeout(() => {
+                document.querySelector('#search-form button[type="submit"]').click();
+                // After search, apply sort and limit if specified
+                const sort  = urlParams.get('sort');
+                const limit = parseInt(urlParams.get('limit') || '0');
+                if (sort === 'date_desc' || limit > 0) {
+                    setTimeout(() => {
+                        if (sort === 'date_desc') {
+                            // Sort by date descending
+                            currentData = [...currentData].sort((a, b) =>
+                                new Date(b.date) - new Date(a.date)
+                            );
+                        }
+                        if (limit > 0) {
+                            currentData = currentData.slice(0, limit);
+                        }
+                        renderTableBody(currentData);
+                    }, 500);
+                }
+            }, 100);
+        }
+
+        setTimeout(restoreFiltersFromUrl, 300);
+    filterFields.forEach(field => {
+        const input = document.getElementById(`${field}-input`);
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('search-form').requestSubmit?.() || document.getElementById('search-form').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));
+                }
+            });
+        }
+    });
+
+    document.getElementById('results-body').addEventListener('click', function(e) {
+        if (e.target.tagName.toLowerCase() === 'th') {
+            const column = e.target.getAttribute('data-key');
+            if (column) {
+                if (currentSortColumn === column) {
+                    currentSortAsc = !currentSortAsc;
+                } else {
+                    currentSortColumn = column;
+                    currentSortAsc = true;
+                }
+                currentData = sortData(currentData, currentSortColumn, currentSortAsc);
+                renderTableHeader();
+                renderTableBody(currentData);
+            }
+        }
+    });
+
+    document.getElementById('results-body').addEventListener('scroll', function () {
+        const resultsElement = document.getElementById('results-body');
+        if (!allDataLoaded && !loading && (resultsElement.scrollHeight - resultsElement.scrollTop - resultsElement.clientHeight < 20)) {
+            loading = true;
+            setTimeout(() => {
+                loadedCount = Math.min(loadedCount + RESULTS_PER_LOAD, currentData.length);
+                allDataLoaded = loadedCount >= currentData.length;
+                renderTableHeader();
+                renderTableBody(currentData);
+                loading = false;
+            }, 200);
+        }
+    });
+</script>
+</body>
+</html>

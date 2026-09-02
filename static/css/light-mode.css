@@ -1,0 +1,633 @@
+/* =======================================================
+   InfraPilot Light Mode — applies when body has .light-mode
+   ======================================================= */
+
+/* ── CSS Variables (Dark theme — default) ─────────────── */
+:root {
+    /* Backgrounds */
+    --bg-page:       #060d1a;
+    --bg-panel:      #07101f;
+    --bg-card:       #0d1424;
+    --bg-elevated:   #0a1220;
+    --bg-hover:      #0f1e30;
+    --bg-input:      #060f1e;
+    /* Borders */
+    --border:        #1e2d42;
+    --border-subtle: #0f1e30;
+    /* Text */
+    --text:          #e2e8f0;
+    --text-secondary:#8ab0cc;
+    --text-muted:    #7a9bbf;
+    --text-dim:      #4a6480;
+    /* Accent */
+    --accent:        #2196F3;
+    --accent-hover:  #1976d2;
+}
+
+/* ── CSS Variables (Light / cream override) ────────────── */
+body.light-mode {
+    --bg-page:       #f0ebe3;
+    --bg-panel:      #e8e3db;
+    --bg-card:       #faf6f0;
+    --bg-elevated:   #f5f0e8;
+    --bg-hover:      #ddd8d0;
+    --bg-input:      #fdf9f4;
+    --border:        #d0c9c0;
+    --border-subtle: #e0d8ce;
+    --text:          #1a1612;
+    --text-secondary:#3d3028;
+    --text-muted:    #6b6258;
+    --text-dim:      #9a8e83;
+    --accent:        #2196F3;
+    --accent-hover:  #1976d2;
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+body.light-mode {
+    background: #f0ebe3 !important;
+    color: #1a1612 !important;
+}
+body.light-mode * { box-sizing: border-box; }
+/* Solid colored buttons must keep their text color in light mode */
+body.light-mode .btn-blue,
+body.light-mode #btnSaveRulesBottom,
+body.light-mode .btn-primary { color: #fdf9f4 !important; }
+
+/* ── Nav bar ──────────────────────────────────────────── */
+body.light-mode nav {
+    background: #1e1a14 !important;
+    border-bottom-color: #334155 !important;
+}
+
+/* ── Page layout ──────────────────────────────────────── */
+body.light-mode .page-wrapper,
+body.light-mode .page-bg { background: #f0ebe3 !important; }
+body.light-mode .page-title { color: #1a1612 !important; }
+body.light-mode .page-subtitle { color: #6b6258 !important; }
+
+/* ── Toolbar ──────────────────────────────────────────── */
+body.light-mode .toolbar { background: #faf6f0 !important; border-color: #d8d0c4 !important; }
+body.light-mode .search-input,
+body.light-mode .search-wrap input {
+    background: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #1a1612 !important;
+}
+body.light-mode .search-input::placeholder { color: #a0aec0 !important; }
+body.light-mode .btn-toolbar {
+    background: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #4e4640 !important;
+}
+body.light-mode .btn-toolbar:hover { background: #d8d0c4 !important; color: #1a1612 !important; }
+body.light-mode .filter-select,
+body.light-mode .page-size-select {
+    background: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #4e4640 !important;
+}
+
+/* ── Project bar ──────────────────────────────────────── */
+body.light-mode .project-bar { background: #faf6f0 !important; border-color: #d8d0c4 !important; }
+body.light-mode .project-btn {
+    background: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #4e4640 !important;
+}
+body.light-mode .project-btn:hover { background: #d8d0c4 !important; border-color: #2196F3 !important; color: #1a1612 !important; }
+body.light-mode .project-btn.active { background: #dbeafe !important; border-color: #2196F3 !important; color: #1d4ed8 !important; }
+
+/* ── S-code bar ───────────────────────────────────────── */
+body.light-mode .scode-bar { background: #ece7df !important; border-color: #d8d0c4 !important; }
+body.light-mode .scode-bar-label { color: #6b6258 !important; }
+body.light-mode .scode-chip {
+    background: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #4e4640 !important;
+}
+body.light-mode .scode-chip:hover { background: #d8d0c4 !important; border-color: #2196F3 !important; color: #1d4ed8 !important; }
+body.light-mode .scode-chip.active { background: #dbeafe !important; border-color: #2196F3 !important; color: #1d4ed8 !important; }
+body.light-mode .scode-divider { background: #d8d0c4 !important; }
+body.light-mode .scode-clear { color: #2196F3 !important; }
+
+/* ── Stats chips ──────────────────────────────────────── */
+body.light-mode .stat-chip {
+    background: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #4e4640 !important;
+}
+body.light-mode .stat-chip.s-total   .val { color: #2563eb !important; }
+body.light-mode .stat-chip.s-ansible .val { color: #d97706 !important; }
+body.light-mode .stat-chip.s-puppet  .val { color: #7c3aed !important; }
+body.light-mode .stat-chip.s-done    .val { color: #059669 !important; }
+
+/* ── Table ────────────────────────────────────────────── */
+body.light-mode .table-card,
+body.light-mode .table-scroll-wrap { background: #fdf9f4 !important; border-color: #d8d0c4 !important; }
+body.light-mode thead th {
+    background: #faf6f0 !important;
+    color: #6b6258 !important;
+    border-color: #d8d0c4 !important;
+}
+body.light-mode tbody tr.data-row { border-color: #ece7df !important; }
+body.light-mode tbody tr.data-row:hover { background: #faf6f0 !important; }
+body.light-mode tbody tr.data-row td { color: #1e1a14 !important; }
+body.light-mode tbody tr.data-row.detail-open { background: #eff6ff !important; border-left-color: #2196F3 !important; }
+
+/* ── VM status ────────────────────────────────────────── */
+body.light-mode .vm-status.active  { color: #059669 !important; }
+body.light-mode .vm-status.shutoff { color: #dc2626 !important; }
+body.light-mode .vm-status.other   { color: #d97706 !important; }
+
+/* ── Pipeline ─────────────────────────────────────────── */
+body.light-mode .pip-line { background: #ccc4b8 !important; }
+body.light-mode .pip-dot  { background: #ccc4b8 !important; border-color: #d8d0c4 !important; }
+body.light-mode .pip-dot.done { background: #059669 !important; }
+body.light-mode .pip-dot.fail { background: #dc2626 !important; }
+
+/* ── Ansible/Puppet status badges ────────────────────── */
+body.light-mode .badge-prov    { background: #ece7df !important; color: #475569 !important; border-color: #ccc4b8 !important; }
+body.light-mode .badge-done    { background: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+body.light-mode .badge-running { background: #dbeafe !important; color: #1d4ed8 !important; border-color: #93c5fd !important; }
+body.light-mode .badge-pending { background: #fef9c3 !important; color: #854d0e !important; border-color: #fde047 !important; }
+body.light-mode .badge-error   { background: #fee2e2 !important; color: #991b1b !important; border-color: #fca5a5 !important; }
+body.light-mode .badge-na      { background: #ece7df !important; color: #9a8e83 !important; border-color: #d8d0c4 !important; }
+
+/* ── Action buttons ───────────────────────────────────── */
+body.light-mode .playbook-select-btn {
+    background: #1e1a14 !important;
+    color: #d8d0c4 !important;
+    border-color: #334155 !important;
+}
+body.light-mode .btn-ansible  { background: #ea580c !important; color: #fdf9f4 !important; border-color: #c2410c !important; }
+body.light-mode .btn-puppet   { background: #7c3aed !important; color: #fdf9f4 !important; border-color: #6d28d9 !important; }
+body.light-mode .btn-ansible:disabled,
+body.light-mode .btn-puppet:disabled  { opacity: 0.4 !important; }
+body.light-mode .btn-recheck  { background: #ece7df !important; color: #475569 !important; border-color: #ccc4b8 !important; }
+body.light-mode .btn-bulk-ansible { background: #ea580c !important; color: #fff !important; }
+body.light-mode .btn-bulk-clear   { background: #ece7df !important; color: #475569 !important; }
+
+/* ── PW expiry ────────────────────────────────────────── */
+body.light-mode .pw-ok       { color: #059669 !important; }
+body.light-mode .pw-warning  { color: #d97706 !important; }
+body.light-mode .pw-critical { color: #dc2626 !important; }
+body.light-mode .pw-expired  { color: #dc2626 !important; text-decoration: line-through; }
+body.light-mode .pw-error    { color: #9a8e83 !important; }
+body.light-mode .pw-never    { color: #9a8e83 !important; }
+
+/* ── Pagination ───────────────────────────────────────── */
+body.light-mode .page-btn { background: #fdf9f4 !important; border-color: #ccc4b8 !important; color: #4e4640 !important; }
+body.light-mode .page-btn:hover { background: #d8d0c4 !important; }
+body.light-mode .page-btn.active { background: #dbeafe !important; border-color: #2196F3 !important; color: #1d4ed8 !important; font-weight: 700; }
+body.light-mode .pagination-info { color: #6b6258 !important; }
+
+/* ── Filter dropdowns ─────────────────────────────────── */
+body.light-mode .img-filter-dropdown {
+    background: #fdf9f4 !important;
+    border-color: #d0d9e4 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+body.light-mode .img-filter-header { border-color: #d8d0c4 !important; }
+body.light-mode .img-filter-header span { color: #6b6258 !important; }
+body.light-mode .img-filter-item { color: #4e4640 !important; }
+body.light-mode .img-filter-item:hover { background: #ece7df !important; }
+body.light-mode .img-filter-item input[type="checkbox"] { accent-color: #2196F3; }
+
+/* ── Bulk bar ─────────────────────────────────────────── */
+body.light-mode .bulk-bar { background: #1e1a14 !important; color: #d8d0c4 !important; }
+body.light-mode .bulk-bar-count { color: #7dd3fc !important; }
+
+/* ── Play detail panel ────────────────────────────────── */
+body.light-mode .play-detail { background: #faf6f0 !important; border-color: #d8d0c4 !important; }
+body.light-mode .play-header { background: #ece7df !important; border-color: #d8d0c4 !important; color: #1e1a14 !important; }
+body.light-mode .play-item   { border-color: #ece7df !important; }
+body.light-mode .play-name   { color: #1e1a14 !important; }
+body.light-mode .play-badge        { background: #ece7df !important; border-color: #ccc4b8 !important; color: #475569 !important; }
+body.light-mode .play-badge.done   { background: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+body.light-mode .play-badge.fail   { background: #fee2e2 !important; color: #991b1b !important; border-color: #fca5a5 !important; }
+body.light-mode .play-badge.loading{ background: #faf6f0 !important; color: #9a8e83 !important; border-color: #d8d0c4 !important; }
+body.light-mode .plays-loading     { color: #6b6258 !important; }
+
+/* ── Terminal modal ───────────────────────────────────── */
+body.light-mode .terminal-modal { background: rgba(0,0,0,0.5) !important; }
+body.light-mode .terminal-header { background: #1e1a14 !important; color: #d8d0c4 !important; }
+body.light-mode .terminal-body   { background: #0f172a !important; color: #d8d0c4 !important; }
+body.light-mode .terminal-footer { background: #1e1a14 !important; border-color: #334155 !important; }
+body.light-mode .terminal-status.success { background: #dcfce7 !important; color: #166534 !important; }
+body.light-mode .terminal-status.error   { background: #fee2e2 !important; color: #991b1b !important; }
+
+/* ── Playbook dropdown ────────────────────────────────── */
+body.light-mode .playbook-dropdown {
+    background: #fdf9f4 !important;
+    border-color: #d0d9e4 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+body.light-mode .playbook-dropdown-header { color: #6b6258 !important; border-color: #d8d0c4 !important; }
+body.light-mode .playbook-option { color: #1e1a14 !important; }
+body.light-mode .playbook-option:hover { background: #ece7df !important; }
+
+/* ── Modal overlay ────────────────────────────────────── */
+body.light-mode .modal-overlay { background: rgba(0,0,0,0.4) !important; }
+
+/* ── Toast ────────────────────────────────────────────── */
+body.light-mode .toast.success { background: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+body.light-mode .toast.error   { background: #fee2e2 !important; color: #991b1b !important; border-color: #fca5a5 !important; }
+
+/* ── Detail pane ──────────────────────────────────────── */
+body.light-mode .detail-pane { background: #faf6f0 !important; border-color: #d8d0c4 !important; }
+body.light-mode .detail-row  { border-color: #ece7df !important; }
+body.light-mode .detail-grid .label { color: #6b6258 !important; }
+body.light-mode .detail-grid .value { color: #1e1a14 !important; }
+
+/* ── Notification panel & settings ───────────────────── */
+body.light-mode .notif-panel,
+body.light-mode .settings-panel {
+    background: #faf6f0 !important;
+    border-color: #d0d9e4 !important;
+}
+body.light-mode .notif-panel-header,
+body.light-mode .settings-panel-header { border-color: #d8d0c4 !important; }
+body.light-mode .notif-panel-title,
+body.light-mode .settings-panel-header span { color: #1a1612 !important; }
+body.light-mode .notif-tab { color: #6b6258 !important; }
+body.light-mode .notif-tab.active { color: #2563eb !important; border-bottom-color: #2563eb !important; }
+body.light-mode .notif-item:hover { background: rgba(33,150,243,0.05) !important; }
+body.light-mode .notif-item-title { color: #1e1a14 !important; }
+body.light-mode .notif-item-detail { color: #6b6258 !important; }
+body.light-mode .notif-item-meta   { color: #9a8e83 !important; }
+body.light-mode .notif-view-all { color: #2563eb !important; border-color: #d8d0c4 !important; }
+body.light-mode .notif-empty { color: #9a8e83 !important; }
+
+/* ── Settings panel ───────────────────────────────────── */
+body.light-mode .settings-section-label { color: #1e1a14 !important; }
+body.light-mode .settings-section-sub   { color: #6b6258 !important; }
+body.light-mode .settings-radio  { color: #4e4640 !important; }
+body.light-mode .settings-radio:hover { color: #1e1a14 !important; }
+body.light-mode .settings-divider { background: #d8d0c4 !important; }
+
+/* ── Services panel ───────────────────────────────────── */
+body.light-mode .services-card { background: #faf6f0 !important; border-color: #d0d9e4 !important; box-shadow: 4px 0 40px rgba(0,0,0,0.15) !important; }
+body.light-mode .services-backdrop { background: rgba(0,0,0,0.6) !important; }
+body.light-mode .services-categories { background: #ece7df !important; border-color: #d8d0c4 !important; }
+body.light-mode .services-cat-item { color: #4e4640 !important; }
+body.light-mode .services-cat-item:hover,
+body.light-mode .services-cat-item.active { background: #d8d0c4 !important; color: #1e1a14 !important; }
+body.light-mode .services-section-title { color: #6b6258 !important; border-color: #d8d0c4 !important; }
+body.light-mode .service-link { color: #4e4640 !important; }
+body.light-mode .service-link:hover { background: #d8d0c4 !important; color: #1e1a14 !important; }
+body.light-mode .svc-icon { background: #d8d0c4 !important; }
+body.light-mode .svc-name { color: #1e1a14 !important; }
+body.light-mode .svc-desc { color: #6b6258 !important; }
+body.light-mode .search-results-title { color: #6b6258 !important; }
+body.light-mode #searchInput { background: #fdf9f4 !important; border-color: #ccc4b8 !important; color: #1e1a14 !important; }
+body.light-mode #searchInput::placeholder { color: #a0aec0 !important; }
+
+/* ── Account dropdown ─────────────────────────────────── */
+body.light-mode .account-dd { background: #faf6f0 !important; border-color: #d0d9e4 !important; }
+body.light-mode .account-dd-header { border-color: #d8d0c4 !important; }
+body.light-mode .account-dd-name   { color: #1e1a14 !important; }
+body.light-mode .account-dd-last   { color: #9a8e83 !important; }
+body.light-mode .account-dd-item   { color: #4e4640 !important; }
+body.light-mode .account-dd-item:hover { background: #d8d0c4 !important; color: #1e1a14 !important; }
+body.light-mode .account-dd-sep { background: #d8d0c4 !important; }
+
+/* ── IAM page ─────────────────────────────────────────── */
+body.light-mode .iam-layout   { background: #f0ebe3 !important; }
+body.light-mode .iam-sidebar  { background: #fdf9f4 !important; border-color: #d8d0c4 !important; }
+body.light-mode .iam-sidebar-item { color: #4e4640 !important; }
+body.light-mode .iam-sidebar-item:hover { background: #ece7df !important; color: #1e1a14 !important; }
+body.light-mode .iam-sidebar-item.active { background: #dbeafe !important; color: #1d4ed8 !important; border-left-color: #2196F3 !important; }
+body.light-mode .iam-main     { background: #f0ebe3 !important; }
+body.light-mode .iam-card     { background: #fdf9f4 !important; border-color: #d8d0c4 !important; }
+body.light-mode .iam-table thead th { background: #faf6f0 !important; color: #6b6258 !important; border-color: #d8d0c4 !important; }
+body.light-mode .iam-table tbody td { color: #1e1a14 !important; border-color: #ece7df !important; }
+body.light-mode .iam-table tbody tr:hover td { background: #faf6f0 !important; }
+body.light-mode .iam-search   { background: #fdf9f4 !important; border-color: #ccc4b8 !important; color: #1e1a14 !important; }
+
+/* ── History page ─────────────────────────────────────── */
+body.light-mode .history-layout { background: #f0ebe3 !important; }
+body.light-mode .history-card   { background: #fdf9f4 !important; border-color: #d8d0c4 !important; }
+body.light-mode .filter-tabs    { border-color: #d8d0c4 !important; }
+body.light-mode .filter-tab     { color: #6b6258 !important; }
+body.light-mode .filter-tab.active { color: #2563eb !important; border-bottom-color: #2563eb !important; }
+body.light-mode .history-row    { border-color: #ece7df !important; }
+body.light-mode .history-row:hover { background: #faf6f0 !important; }
+body.light-mode .history-row td { color: #1e1a14 !important; }
+body.light-mode .detail-panel   { background: #fdf9f4 !important; border-color: #d8d0c4 !important; }
+body.light-mode .detail-label   { color: #9a8e83 !important; }
+body.light-mode .detail-value   { color: #1e1a14 !important; }
+
+/* ── Scrollbar ────────────────────────────────────────── */
+body.light-mode ::-webkit-scrollbar-thumb { background: #ccc4b8 !important; }
+body.light-mode ::-webkit-scrollbar-track { background: #ece7df !important; }
+
+/* ── Generic overrides for inline styles ─────────────── */
+body.light-mode [style*="color:#7a8fa6"],
+body.light-mode [style*="color: #7a8fa6"],
+body.light-mode [style*="color:#5a7a99"],
+body.light-mode [style*="color:#a0b4c8"],
+body.light-mode [style*="color:#4e4640"] { color: #6b6258 !important; }
+body.light-mode [style*="color:#d8d0c4"],
+body.light-mode [style*="color:#c2d8f0"],
+body.light-mode [style*="color:#d1dae8"] { color: #1e1a14 !important; }
+/* Override only genuinely dark backgrounds (not colored ones) */
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#060"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#07"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#08"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#09"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#0a"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#0d"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#0f"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#10"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#11"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#12"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#13"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#14"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#15"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#1a"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#1e"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#23"],
+body.light-mode :not(#summaryTreemapContainer):not(#summaryTreemapContainer *):not(#tab-dashboard):not(#tab-dashboard *)[style*="background:#232"] { background: var(--bg-card) !important; }
+
+/* ── Provisioning specific fixes ──────────────────────── */
+/* VM name cell */
+body.light-mode .vm-name-cell { color: #1e40af !important; }
+body.light-mode .vm-name-cell a { color: #1e40af !important; }
+
+/* Page title & subtitle */
+body.light-mode .page-title    { color: #1e1a14 !important; }
+body.light-mode .page-subtitle { color: #6b6258 !important; }
+
+/* Project bar label */
+body.light-mode .project-bar label { color: #1e1a14 !important; }
+
+/* Table body background (hardcoded in body tag) */
+body.light-mode .table-card { background: #fdf9f4 !important; }
+body.light-mode .table-scroll-wrap { background: #fdf9f4 !important; }
+body.light-mode table { background: #fdf9f4 !important; }
+
+/* Search & filter inputs */
+body.light-mode .search-input { color: #1e1a14 !important; background: #fdf9f4 !important; }
+body.light-mode .search-input::placeholder { color: #9a8e83 !important; }
+
+/* VM meta info */
+body.light-mode .vm-meta-item { color: #6b6258 !important; }
+body.light-mode .vm-meta-item span { color: #1e1a14 !important; }
+
+/* Log toggle */
+body.light-mode .log-toggle { color: #6b6258 !important; }
+body.light-mode .log-toggle:hover { color: #1e1a14 !important; }
+
+/* Copy button */
+body.light-mode .copy-btn { color: #9a8e83 !important; }
+body.light-mode .copy-btn:hover { color: #2196F3 !important; }
+
+/* Checkbox */
+body.light-mode input[type="checkbox"] { accent-color: #2196F3; }
+
+/* OS column text */
+body.light-mode .os-col { color: #4e4640 !important; }
+
+/* S-code column */
+body.light-mode .scode-divider { background: #d8d0c4 !important; }
+body.light-mode .scode-clear { color: #2196F3 !important; }
+body.light-mode .scode-clear:hover { color: #1d4ed8 !important; }
+
+/* Page body background */
+body.light-mode body,
+body.light-mode html { background: #f0ebe3 !important; }
+
+/* Force white background on main content area */
+body.light-mode .page-wrapper > *:not(nav) { background: transparent !important; }
+body.light-mode .table-card,
+body.light-mode .project-bar,
+body.light-mode .scode-bar,
+body.light-mode .stats-bar .stat-chip { box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; }
+
+/* Ansible/Puppet pipeline text */
+body.light-mode .pip-step { color: #6b6258 !important; font-size: 11px !important; }
+body.light-mode .pipeline span { color: #6b6258 !important; }
+
+/* Badge 완료 specific fix */
+body.light-mode .badge-done { background: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+body.light-mode td .badge-done { background: #dcfce7 !important; color: #166534 !important; }
+
+/* 확인 불가 / 대상 아님 */
+body.light-mode .badge-na { background: #ece7df !important; color: #9a8e83 !important; }
+body.light-mode .pw-error { color: #9a8e83 !important; }
+
+/* btn-recheck */
+body.light-mode .btn-recheck { background: #ece7df !important; color: #4e4640 !important; border-color: #ccc4b8 !important; }
+body.light-mode .btn-recheck:hover { color: #2196F3 !important; border-color: #2196F3 !important; }
+
+/* Fix remaining dark inline color overrides */
+body.light-mode [style*="color:#3a5070"] { color: #9a8e83 !important; }
+body.light-mode [style*="color:#4e4e7a"] { color: #9a8e83 !important; }
+body.light-mode [style*="color:#f87171"] { color: #dc2626 !important; }
+body.light-mode [style*="color:#bfc7d1"] { color: #4e4640 !important; }
+body.light-mode [style*="color:#c2d8f0"] { color: #1e1a14 !important; }
+body.light-mode [style*="color:#95c4e8"] { color: #2563eb !important; }
+body.light-mode [style*="color:#f3f6fa"] { color: #1e1a14 !important; }
+
+/* ── Filter buttons (자동화 상태, VM 상태, OS 필터) ─────── */
+body.light-mode .img-filter-btn {
+    background: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #1e1a14 !important;
+}
+body.light-mode .img-filter-btn:hover {
+    background: #ece7df !important;
+    border-color: #9a8e83 !important;
+}
+body.light-mode .img-filter-btn.active {
+    border-color: #2196F3 !important;
+    color: #1d4ed8 !important;
+    background: #eff6ff !important;
+}
+body.light-mode #autoStatusFilterCount,
+body.light-mode #vmStatusFilterCount,
+body.light-mode #imgFilterCount {
+    background: #2196F3 !important;
+    color: #fdf9f4 !important;
+}
+
+/* ── Nav search bar ───────────────────────────────────── */
+body.light-mode .nav-search input {
+    background: #ece7df !important;
+    border-color: #ccc4b8 !important;
+    color: #1e1a14 !important;
+}
+body.light-mode .nav-search input:focus {
+    background: #fdf9f4 !important;
+    border-color: #2196F3 !important;
+}
+body.light-mode .nav-search input::placeholder { color: #9a8e83 !important; }
+body.light-mode .nav-search svg { color: #9a8e83 !important; }
+
+/* ── Settings panel full light mode ──────────────────── */
+body.light-mode .settings-panel {
+    background: #fdf9f4 !important;
+    border-color: #d0d9e4 !important;
+    box-shadow: -4px 0 32px rgba(0,0,0,0.12) !important;
+}
+body.light-mode .settings-panel-header {
+    color: #1e1a14 !important;
+    border-color: #d8d0c4 !important;
+    background: #faf6f0 !important;
+}
+body.light-mode .settings-panel-header button { color: #9a8e83 !important; }
+body.light-mode .settings-panel-header button:hover { color: #1e1a14 !important; }
+body.light-mode .settings-panel-body { background: #fdf9f4 !important; }
+body.light-mode .settings-section-label { color: #1e1a14 !important; }
+body.light-mode .settings-section-sub   { color: #6b6258 !important; }
+body.light-mode .settings-radio         { color: #4e4640 !important; }
+body.light-mode .settings-radio:hover   { color: #1e1a14 !important; }
+body.light-mode .settings-radio input[type="radio"] { accent-color: #2196F3 !important; }
+body.light-mode .settings-divider       { background: #d8d0c4 !important; }
+body.light-mode .settings-link          { color: #2196F3 !important; }
+
+/* ── Notif panel full light mode ─────────────────────── */
+body.light-mode .notif-panel {
+    background: #fdf9f4 !important;
+    border-color: #d0d9e4 !important;
+    box-shadow: -4px 0 32px rgba(0,0,0,0.12) !important;
+}
+body.light-mode .notif-panel-header {
+    background: #faf6f0 !important;
+    border-color: #d8d0c4 !important;
+}
+body.light-mode .notif-panel-title { color: #1e1a14 !important; }
+body.light-mode .notif-tab { color: #6b6258 !important; border-color: transparent !important; }
+body.light-mode .notif-tab.active { color: #2563eb !important; border-bottom-color: #2563eb !important; }
+body.light-mode .notif-tab:hover  { color: #1e1a14 !important; }
+body.light-mode .notif-panel-body { background: #fdf9f4 !important; }
+body.light-mode .notif-item { border-color: #ece7df !important; }
+body.light-mode .notif-item:hover { background: #faf6f0 !important; }
+body.light-mode .notif-item-title  { color: #1e1a14 !important; }
+body.light-mode .notif-item-detail { color: #6b6258 !important; }
+body.light-mode .notif-item-meta   { color: #9a8e83 !important; }
+body.light-mode .notif-empty { color: #9a8e83 !important; }
+body.light-mode .notif-view-all {
+    color: #2563eb !important;
+    border-color: #d8d0c4 !important;
+    background: #faf6f0 !important;
+}
+body.light-mode .notif-view-all:hover { background: #eff6ff !important; }
+
+/* ── Nav search (light nav) ───────────────────────────── */
+body.light-mode .nav-search input {
+    background: #ece7df !important;
+    border-color: #ccc4b8 !important;
+    color: #1e1a14 !important;
+}
+body.light-mode .nav-search input:focus {
+    background: #fdf9f4 !important;
+    border-color: #2196F3 !important;
+}
+body.light-mode .nav-search input::placeholder { color: #9a8e83 !important; }
+body.light-mode .nav-search svg { color: #9a8e83 !important; }
+
+/* Nav brand & links on light nav */
+body.light-mode .nav-logo-text,
+body.light-mode .nav-brand { color: #1e1a14 !important; }
+body.light-mode .nav-divider { background: #d8d0c4 !important; }
+
+/* ── Infrastructure Status Dashboard ─────────────────── */
+body.light-mode .dashboard-card,
+body.light-mode [style*="background: #"] {
+    background: #fdf9f4 !important;
+}
+body.light-mode .chart-container,
+body.light-mode .chart-card {
+    background: #fdf9f4 !important;
+    border-color: #d8d0c4 !important;
+}
+body.light-mode .chart-title,
+body.light-mode .section-title,
+body.light-mode h1, body.light-mode h2, body.light-mode h3 {
+    color: #1e1a14 !important;
+}
+body.light-mode select:not(.sort-select):not(.img-filter-btn):not(.page-size-select) {
+    background-color: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #1e1a14 !important;
+}
+/* Dashboard background */
+body.light-mode .dashboard-bg,
+body.light-mode .main-dashboard {
+    background: #f0ebe3 !important;
+}
+/* Card with dark background */
+body.light-mode [class*="card"]:not(.services-card),
+body.light-mode [class*="panel"]:not(.services-panel):not(.notif-panel):not(.settings-panel),
+body.light-mode [class*="box"] {
+    background: #fdf9f4 !important;
+    color: #1e1a14 !important;
+}
+/* Chart text */
+body.light-mode .recharts-text,
+body.light-mode .recharts-legend-item-text {
+    fill: #1e1a14 !important;
+    color: #1e1a14 !important;
+}
+
+/* ── Infrastructure Status (index.html) ──────────────── */
+body.light-mode {
+    background: #f0ebe3 !important;
+    animation: none !important;
+}
+body.light-mode .container {
+    background: #fdf9f4 !important;
+    box-shadow: 0 8px 32px rgba(33,150,243,0.10) !important;
+}
+body.light-mode .container:hover {
+    box-shadow: 0 16px 40px rgba(33,150,243,0.15) !important;
+}
+body.light-mode .chart-block {
+    background: #faf6f0 !important;
+    color: #1e1a14 !important;
+    box-shadow: 0 0 10px rgba(0,0,0,0.06) !important;
+}
+body.light-mode .chart-block h3 { color: #1d4ed8 !important; }
+body.light-mode .dashboard-title { color: #1e1a14 !important; }
+
+/* Sort dropdowns */
+body.light-mode .sort-select {
+    background-color: #fdf9f4 !important;
+    border-color: #ccc4b8 !important;
+    color: #475569 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23475569' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+}
+
+/* Chart.js text — override via canvas parent */
+body.light-mode .chart-block canvas { filter: none !important; }
+
+/* Recharts SVG text */
+body.light-mode .recharts-cartesian-axis-tick text,
+body.light-mode .recharts-legend-item-text,
+body.light-mode .recharts-label,
+body.light-mode text { fill: #1e1a14 !important; }
+body.light-mode .recharts-cartesian-grid line { stroke: #d8d0c4 !important; }
+body.light-mode .recharts-tooltip-wrapper .recharts-default-tooltip {
+    background: #fdf9f4 !important;
+    border-color: #d8d0c4 !important;
+}
+
+
+
+/* ── Provisioning pipeline ────────────────────────────── */
+body.light-mode .pip-line { background-color: #ccc4b8 !important; }
+body.light-mode .pip-dot { background-color: #ccc4b8 !important; }
+body.light-mode .pip-dot.done { background-color: #0d9488 !important; box-shadow: 0 0 0 3px rgba(13,148,136,0.2) !important; }
+body.light-mode .pip-dot.na { background-color: #d8d0c4 !important; border-color: #9a8e83 !important; }
+/* Wave line: override only colors, keep animation intact */
+body.light-mode .pip-line.done {
+    background-image: repeating-linear-gradient(
+        90deg, #0d9488 0px, #14b8a6 6px, #5eead4 10px, #14b8a6 14px, #0d9488 20px
+    ) !important;
+    background-size: 20px 100% !important;
+    background-color: transparent !important;
+    animation: wave-flow 1s linear infinite !important;
+}
