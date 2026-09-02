@@ -1,4 +1,4 @@
-# DIPO — DevInfra Platform & Operations
+# Infrastructure-Management-Automation-Platform
 
 > KakaoCloud 환경에서 **1,000개 이상의 VM**을 운영하는 인프라팀을 위해 자체 개발한 사내 인프라 관리 플랫폼.  
 > VM · Kubernetes · Load Balancer · Volume · IAM · DNS 등 클라우드 리소스의 통합 관리 및 자동화를 단일 웹 인터페이스로 구현. 2025 ~ 2026 개발 및 운영.
