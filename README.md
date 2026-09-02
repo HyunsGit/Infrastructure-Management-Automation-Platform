@@ -35,7 +35,7 @@
 | **인증** | TOTP 2FA · 역할 기반 접근 제어 (admin / operator / viewer) |
 | **비동기** | Celery + Redis (볼륨 생성/연결 대규모 작업) |
 | **연동** | Ansible · Puppet · AWS Route53 · Prometheus |
-| **관련 프로젝트** | [Ansible 자동화](../ansible-portfolio) · [Puppet 드리프트 감지](../puppet-portfolio) · [통합 모니터링 자동화](../monitoring-portfolio) |
+| **관련 프로젝트** | [Ansible 자동화](https://github.com/HyunsGit/Automating-Infrastructure-with-Ansible) · [Puppet 드리프트 감지](https://github.com/HyunsGit/Detecting-Drifts-in-Infrastructure-with-Puppet) · [통합 모니터링 자동화](https://github.com/HyunsGit/Centralized-Monitoring) |
 
 ---
 
