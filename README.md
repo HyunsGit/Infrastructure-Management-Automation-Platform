@@ -1,5 +1,29 @@
 # Infrastructure-Management-Automation-Platform
 
+* [Infrastructure\-Management\-Automation\-Platform](#infrastructure-management-automation-platform)
+  * [핵심 성과](#핵심-성과)
+  * [Overview](#overview)
+  * [주요 기능](#주요-기능)
+    * [1\. 홈 대시보드](#1-홈-대시보드)
+    * [2\. 리소스 요약](#2-리소스-요약)
+    * [3\. S\-Code 트리맵 (인프라 코드 분류)](#3-s-code-트리맵-인프라-코드-분류)
+    * [4\. VM 브라우저 (CMDB)](#4-vm-브라우저-cmdb)
+    * [5\. VM 프로비저닝](#5-vm-프로비저닝)
+    * [6\. VM 생성](#6-vm-생성)
+    * [7\. 볼륨 생성 / 연결](#7-볼륨-생성--연결)
+    * [8\. 서브넷 연결 상태 모니터링](#8-서브넷-연결-상태-모니터링)
+    * [9\. IAM 관리](#9-iam-관리)
+    * [10\. 인프라 코드 관리](#10-인프라-코드-관리)
+    * [11\. 프로젝트 관리](#11-프로젝트-관리)
+    * [12\. 패치 노트](#12-패치-노트)
+    * [13\. 인증 — 2FA 및 라이트 모드](#13-인증--2fa-및-라이트-모드)
+  * [Architecture](#architecture)
+  * [File Structure](#file-structure)
+  * [DB Schema (주요 테이블)](#db-schema-주요-테이블)
+  * [Background Threads](#background-threads)
+  * [Security](#security)
+  * [Tech Stack](#tech-stack)
+
 > KakaoCloud 환경에서 **1,000개 이상의 VM**을 운영하는 인프라팀을 위해 자체 개발한 사내 인프라 관리 플랫폼.  
 > VM · Kubernetes · Load Balancer · Volume · IAM · DNS 등 클라우드 리소스의 통합 관리 및 자동화를 단일 웹 인터페이스로 구현. 2025 ~ 2026 개발 및 운영.
 
