@@ -145,13 +145,12 @@ PROJECTS = get_projects_from_dotenv()
 
 # List of hosts only
 MONITOR_HOSTS = [
-    # List of VPC subnet hosts to monitor for PING/SSH/DNS connectivity.
-    # Populate with your internal VPC subnet host identifiers.
-    # Example: "vpc-prod-a", "vpc-prod-b", ...
+    # List of VPC subnet host identifiers to monitor for PING/SSH/DNS connectivity.
+    # Example: "vpc-prod-a", "vpc-prod-b"
 ]
 
 PRIVATE_IP_MAP = {
-    # Maps host identifier → CIDR subnet string.
+    # Maps host identifier -> CIDR subnet string.
     # Example: "vpc-prod-a": "10.0.0.0/24",
 }
 
@@ -518,18 +517,18 @@ def _check_ansible_plays_detail(hostname: str, key_name: str, image: str,
 
         # ── Play 10: Register NTP Server ──────────────────────
         if is_rocky:
-            ntp = ssh_run('grep -c "ntp-server" /etc/chrony.conf 2>/dev/null || echo 0')
+            ntp = ssh_run('grep -c "infra-iet-ntp-01" /etc/chrony.conf 2>/dev/null || echo 0')
             ntp_ok = ntp.strip().splitlines()[0].strip() not in ('', '0')
-            ntp_detail = 'ntp-server NTP 등록 확인됨' if ntp_ok else 'NTP 설정 없음 ✗'
+            ntp_detail = 'infra-iet-ntp-01 NTP 등록 확인됨' if ntp_ok else 'NTP 설정 없음 ✗'
         else:
-            ntp = ssh_run('grep -c "ntp-server" /etc/chrony/chrony.conf 2>/dev/null || echo 0')
+            ntp = ssh_run('grep -c "infra-iet-ntp-01" /etc/chrony/chrony.conf 2>/dev/null || echo 0')
             ntp_chrony_ok = ntp.strip().splitlines()[0].strip() not in ('', '0')
             # Also accept if systemd-timesyncd is active
             timesyncd = ssh_run('systemctl is-active systemd-timesyncd 2>/dev/null || echo inactive')
             timesyncd_ok = timesyncd.strip() == 'active'
             ntp_ok = ntp_chrony_ok or timesyncd_ok
             if ntp_chrony_ok:
-                ntp_detail = 'ntp-server NTP 등록 확인됨'
+                ntp_detail = 'infra-iet-ntp-01 NTP 등록 확인됨'
             elif timesyncd_ok:
                 ntp_detail = 'systemd-timesyncd active 확인됨'
             else:
@@ -629,10 +628,10 @@ EXCLUDED_KEYS = {
 
 # Maps KakaoCloud project_id → (access_id, secret_key)
 PROJECT_CREDS = {
-    # Maps project_id → (access_id, secret_key)
+    # Maps project_id -> (access_id, secret_key)
     # Loaded from environment variables or a secrets manager in production.
     # Example:
-    # '<project_id>': (os.environ.get('PROJECT_ACCESS_ID_1', ''), os.environ.get('PROJECT_SECRET_KEY_1', '')),
+    # '<project_id>': (os.environ.get('KC_ACCESS_ID_1', ''), os.environ.get('KC_SECRET_KEY_1', '')),
 }
 
 
@@ -2999,6 +2998,36 @@ def get_pw_list():
     } for n in pw_notifs])
 
 
+@app.route('/api/notifications/pw_update', methods=['POST'])
+@login_required
+def pw_update():
+    """Update a single VM's PW expiry from a live SSH check result."""
+    data        = request.get_json() or {}
+    vm_name     = data.get('vm_name', '').strip()
+    days_left   = data.get('days_left')
+    project_key = data.get('project_key', '')
+    if not vm_name or days_left is None:
+        return jsonify({'error': 'vm_name and days_left required'}), 400
+    existing = Notification.query.filter_by(vm_name=vm_name, resolved=False).first()
+    if days_left > 30:
+        # Password renewed — resolve existing notification
+        if existing:
+            existing.resolved    = True
+            existing.resolved_at = datetime.utcnow()
+            db.session.commit()
+    else:
+        if existing:
+            existing.days_left  = days_left
+            existing.checked_at = datetime.utcnow()
+        else:
+            db.session.add(Notification(
+                vm_name=vm_name, project_key=project_key,
+                days_left=days_left, checked_at=datetime.utcnow(),
+            ))
+        db.session.commit()
+    return jsonify({'ok': True})
+
+
 @app.route('/api/notifications/mark_read', methods=['POST'])
 @login_required
 @csrf.exempt
@@ -3946,21 +3975,29 @@ def stream_bulk_ansible():
         ip = v.get('private_ip') or v.get('hostname')
         return f"{v['hostname']} ansible_host={ip}"
 
-    def build_group_inventory(group_vms):
+    def build_group_inventory(group_vms, playbook_path=''):
         """Build inventory splitting ubuntu and rocky into separate groups."""
         ubuntu_vms = [v for v in group_vms if 'rocky' not in v.get('image', '').lower()]
         rocky_vms  = [v for v in group_vms if 'rocky' in v.get('image', '').lower()]
+        pb          = os.path.basename(playbook_path)
+        is_pw_play  = 'password' in pb.lower()
         lines = []
-        for os_group, user, vms_subset in [('ubuntu', 'ubuntu', ubuntu_vms), ('rocky', 'rocky', rocky_vms)]:
+        for os_group, user, vms_subset in [('ubuntu', 'scv' if is_pw_play else 'ubuntu', ubuntu_vms),
+                                            ('rocky',  'scv' if is_pw_play else 'rocky',  rocky_vms)]:
             if not vms_subset:
                 continue
             first    = vms_subset[0]
             pem_path = _resolve_pem_path(first.get('key_name', ''))
             lines.append(f'[{os_group}]')
             lines += [vm_inv_line(v) for v in vms_subset]
-            lines += ['', f'[{os_group}:vars]',
-                      f'ansible_ssh_private_key_file={pem_path}',
-                      'ansible_connection=ssh', f'ansible_user={user}', '']
+            lines += ['', f'[{os_group}:vars]', 'ansible_connection=ssh', f'ansible_user={user}']
+            if is_pw_play:
+                lines.append('ansible_ssh_pass={{ vault_ssh_pass }}')
+                lines.append('ansible_become=yes')
+                lines.append('ansible_become_pass={{ vault_become_pass }}')
+            elif pem_path:
+                lines.append(f'ansible_ssh_private_key_file={pem_path}')
+            lines.append('')
         return '\n'.join(lines)
 
     # Build groups
@@ -3987,7 +4024,7 @@ def stream_bulk_ansible():
         for playbook_name, playbook_path, group_vms in groups:
             inv_path = None
             try:
-                inv_content = build_group_inventory(group_vms)
+                inv_content = build_group_inventory(group_vms, playbook_path)
                 with tempfile.NamedTemporaryFile(
                     mode='w', suffix='.ini', delete=False, prefix='ansible_bulk_inv_'
                 ) as f:
