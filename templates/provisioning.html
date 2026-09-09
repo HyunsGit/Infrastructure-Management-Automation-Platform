@@ -318,15 +318,14 @@
             50%     { border-color:#2196F3; box-shadow:0 0 0 3px rgba(33,150,243,0.18); }
         }
 
-        .pip-dot.running { background: #f59e0b; animation: pip-ripple 1s ease-out infinite; }
+        .pip-dot.running { background: #f59e0b; }
         @keyframes pip-ripple {
             0%  { box-shadow:0 0 0 0px rgba(245,158,11,0.6); }
             70% { box-shadow:0 0 0 5px rgba(245,158,11,0); }
             100%{ box-shadow:0 0 0 0px rgba(245,158,11,0); }
         }
 
-        .pip-dot.error { background: #f87171; animation: pip-shake 0.4s ease forwards; }
-        @keyframes pip-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-3px)} 60%{transform:translateX(3px)} }
+        .pip-dot.error { background: #f87171; }
 
         .pip-dot.na { background: #2a2a4a; border: 1.5px dashed #4a4a6a; }
 
@@ -702,6 +701,29 @@
                         <div id="imgFilterList"></div>
                     </div>
                 </div>
+                <!-- PW Expiry filter -->
+                <div style="position:relative">
+                    <button class="img-filter-btn" id="pwFilterBtn" onclick="togglePwFilter(event)">
+                        <span>🔑 PW 만료</span>
+                        <span id="pwFilterCount" style="font-size:11px;color:#f87171;min-width:24px;text-align:center"></span>
+                        <span>▾</span>
+                    </button>
+                    <div class="img-filter-dropdown" id="pwFilterDropdown" style="min-width:160px">
+                        <div class="img-filter-header"><span>만료 상태</span></div>
+                        <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;cursor:pointer">
+                            <input type="checkbox" value="critical" onchange="onPwFilterChange(this)"> 🔴 CRITICAL (≤7일)
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;cursor:pointer">
+                            <input type="checkbox" value="warning" onchange="onPwFilterChange(this)"> 🟡 WARNING (≤30일)
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;cursor:pointer">
+                            <input type="checkbox" value="expired" onchange="onPwFilterChange(this)"> ⚫ EXPIRED
+                        </label>
+                        <div style="padding:4px 10px;border-top:1px solid #2a3550;margin-top:4px">
+                            <button class="img-filter-clear" onclick="clearPwFilter()">전체 해제</button>
+                        </div>
+                    </div>
+                </div>
                 <button class="btn-toolbar" onclick="loadVMs(true)">🔄 새로고침</button>
                 <select id="vmSortSelect" onchange="applyVmSort()"
                         style="background:#1a2030;border:1px solid #2a3550;color:#c9d6e3;
@@ -871,7 +893,8 @@
     }
 
     /* ── S-Code filter ───────────────────────────────────────── */
-    let selectedScodes = new Set();
+    let selectedScodes       = new Set();
+    let selectedPwStatuses   = new Set();  // 'warning' | 'critical' | 'expired'
 
     /* ── Auto status filter ──────────────────────────────────── */
     let selectedAutoStatuses = new Set();
@@ -1347,6 +1370,7 @@
         if (dotC) dotC.className = `pip-dot ${accState}`;
         line.className = 'pip-line';
 
+
         if (ansibleState === 'done' && puppetState === 'done' && accState === 'done') {
             line.classList.add('done');
         } else if (ansibleState === 'done' && (puppetState === 'pending' || puppetState === 'checking')) {
@@ -1445,7 +1469,15 @@
 
             const aDot = data.ansible_done ? 'done' : 'pending';
             const pDot = !osOk ? 'na' : data.puppet_error && !data.ansible_error ? 'error' : data.puppet_done ? 'done' : 'pending';
-            const cDot = data.acc_done ? 'done' : 'pending';
+
+            // Sync acc dot color with PW expiry status
+            let cDot = data.acc_done ? 'done' : 'pending';
+            if (data.acc_done) {
+                const vmName   = row.dataset.vmName || '';
+                const daysLeft = _pwExpiryMap.hasOwnProperty(vmName) ? _pwExpiryMap[vmName] : null;
+                if (daysLeft !== null && daysLeft <= 7)  cDot = 'error';    // red — CRITICAL
+                else if (daysLeft !== null && daysLeft <= 30) cDot = 'running'; // yellow — WARNING
+            }
             setPipeline(rid, aDot, pDot, cDot);
 
             // Ansible
@@ -2255,9 +2287,25 @@
 
             // Only mark as fully checked on a definitive result
             if (data.status && data.status !== 'error') {
-                cell.dataset.checked = '1';
+                cell.dataset.checked   = '1';
+                cell.dataset.pwStatus  = data.status;
                 pwCheckCompleted++;
                 updatePwCheckProgress();
+
+                // Sync live result to DB + local map so filter stays accurate
+                if (data.days_left !== undefined && data.status !== 'na') {
+                    const vmName = row.dataset.vmName || '';
+                    _pwExpiryMap[vmName] = data.days_left;
+                    fetch('/api/notifications/pw_update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                        body: JSON.stringify({
+                            vm_name:     vmName,
+                            days_left:   data.days_left,
+                            project_key: row.dataset.project || '',
+                        })
+                    }).catch(() => {});  // fire-and-forget
+                }
             }
             delete cell.dataset.checking;
         } catch(e) {
@@ -2859,6 +2907,42 @@
         recalcStats();
     }
 
+    function togglePwFilter(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.img-filter-dropdown').forEach(d => {
+            if (d.id !== 'pwFilterDropdown') d.classList.remove('open');
+        });
+        document.getElementById('pwFilterDropdown').classList.toggle('open');
+    }
+    function onPwFilterChange(cb) {
+        if (cb.checked) selectedPwStatuses.add(cb.value);
+        else selectedPwStatuses.delete(cb.value);
+        const count = document.getElementById('pwFilterCount');
+        if (count) count.textContent = selectedPwStatuses.size > 0 ? `(${selectedPwStatuses.size})` : '';
+        document.getElementById('pwFilterBtn')?.classList.toggle('active', selectedPwStatuses.size > 0);
+        applyPagination();
+    }
+    function clearPwFilter() {
+        selectedPwStatuses.clear();
+        document.querySelectorAll('#pwFilterDropdown input[type=checkbox]').forEach(cb => cb.checked = false);
+        const count = document.getElementById('pwFilterCount');
+        if (count) count.textContent = '';
+        document.getElementById('pwFilterBtn')?.classList.remove('active');
+        applyPagination();
+    }
+
+    // ── PW expiry data from DB (covers all VMs, not just current page) ──
+    let _pwExpiryMap = {};  // vm_name -> days_left
+
+    async function loadPwExpiryMap() {
+        try {
+            const list = await fetch('/api/notifications/pw_list').then(r => r.json());
+            _pwExpiryMap = {};
+            (list || []).forEach(n => { _pwExpiryMap[n.vm_name] = n.days_left; });
+        } catch(e) { _pwExpiryMap = {}; }
+    }
+    loadPwExpiryMap();  // load once on page init
+
     function filterTable() {
         const q        = document.getElementById('searchInput').value.toLowerCase();
         document.querySelectorAll('.data-row').forEach(row => {
@@ -2883,12 +2967,60 @@
             const matchVmSt  = selectedVmStatuses.size === 0 || selectedVmStatuses.has(rowVmSt);
             const matchImg   = selectedImages.size === 0 || selectedImages.has(image);
             const matchScode = selectedScodes.size === 0 || selectedScodes.has(desc);
+
+            // PW expiry filter — use DB data so all pages are covered
+            let matchPw = true;
+            if (selectedPwStatuses && selectedPwStatuses.size > 0) {
+                const vmName   = row.dataset.vmName || '';
+                const daysLeft = _pwExpiryMap.hasOwnProperty(vmName) ? _pwExpiryMap[vmName] : null;
+                // Also check live SSH result if already loaded
+                const livePw   = document.getElementById(`pw-expiry-${rid}`)?.dataset.pwStatus;
+                const status   = livePw || (daysLeft === null ? 'ok' :
+                                    daysLeft < 0 ? 'expired' :
+                                    daysLeft <= 7 ? 'critical' :
+                                    daysLeft <= 30 ? 'warning' : 'ok');
+                matchPw = [...selectedPwStatuses].some(s => s === status);
+            }
+
             const detailRow  = document.getElementById(`detail-${rid}`);
-            const show       = matchQ && matchS && matchImg && matchScode && matchVmSt;
+            const show       = matchQ && matchS && matchImg && matchScode && matchVmSt && matchPw;
             row.style.display                      = show ? '' : 'none';
             if (detailRow) detailRow.style.display = show ? '' : 'none';
         });
     }
+
+        // ── Synchronized pip-dot pulse (single RAF loop, all dots share one clock) ──
+    (function() {
+        const YELLOW_MS = 1000;   // running dots: 1s cycle
+        const RED_MS    = 500;    // error dots:   0.5s cycle (2× faster)
+
+        function easeOut(t) {
+            // Matches CSS ease-out feel: fast expand, slow fade
+            return t < 0.7
+                ? (t / 0.7)            // 0→1 over first 70%
+                : 1 - ((t - 0.7) / 0.3); // 1→0 over last 30%
+        }
+
+        function tick(now) {
+            const tY = (now % YELLOW_MS) / YELLOW_MS;  // 0-1 yellow phase
+            const tR = (now % RED_MS)    / RED_MS;     // 0-1 red phase
+
+            const shadowY = easeOut(tY) * 5;
+            const alphaY  = easeOut(tY) * 0.6;
+            const shadowR = easeOut(tR) * 5;
+            const alphaR  = easeOut(tR) * 0.6;
+
+            document.querySelectorAll('.pip-dot.running').forEach(el => {
+                el.style.boxShadow = `0 0 0 ${shadowY.toFixed(1)}px rgba(245,158,11,${alphaY.toFixed(2)})`;
+            });
+            document.querySelectorAll('.pip-dot.error').forEach(el => {
+                el.style.boxShadow = `0 0 0 ${shadowR.toFixed(1)}px rgba(248,113,113,${alphaR.toFixed(2)})`;
+            });
+
+            requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    })();
 
     /* ── Init ────────────────────────────────────────────────── */
     document.addEventListener('DOMContentLoaded', loadVMs);
